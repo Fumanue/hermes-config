@@ -1,0 +1,6 @@
+{
+  "course_base_url": "https://dub.prod.cms.umbrella.amazon.dev/course/",
+  "transcript_base_url": "https://guided-coaching-dub.corp.amazon.com/#/employee-transcript/",
+  "role_to_course_uuid": {},
+  "station_course_key_overrides": []
+}

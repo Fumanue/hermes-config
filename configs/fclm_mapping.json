@@ -1,0 +1,552 @@
+{
+  "BCN1": {
+    "role_map": {
+      "PICK_AR": {
+        "file": "FCLM_1003001.csv",
+        "function_contains": "HighVelocity Picking"
+      },
+      "P2R_PICK": {
+        "file": "FCLM_1003001.csv",
+        "function_contains": "Pick to Rebin"
+      },
+      "P2R_PACK": {
+        "file": "FCLM_1002991.csv",
+        "function_contains": "Pack Merge"
+      },
+      "AFE_PACK": {
+        "file": "FCLM_1002969.csv",
+        "function_contains": "Scan Verify AFE"
+      },
+      "ICQA_SIMPLE_BIN_COUNT": {
+        "file": "FCLM_1003030.csv",
+        "function_contains": "SBC - Other"
+      },
+      "STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike",
+        "function_excludes": "Light"
+      },
+      "QUANTITY_STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike Light"
+      },
+      "DECANT": {
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Decant",
+        "unit_type": "CASE"
+      }
+    },
+    "role_fallback": {
+      "STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike Light",
+        "new_role": "QUANTITY_STOW"
+      }
+    },
+    "station_overrides": [
+      {
+        "station_contains": "WS11",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Slam at Pack",
+        "role_override": "SNS1",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "WS12",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "SLAP VDF",
+        "role_override": "SNS2",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_01",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Large",
+        "role_override": "SM2",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_02",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Small",
+        "role_override": "SMMIX",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_03",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Medium",
+        "role_override": "SM",
+        "process_id": "100054"
+      },
+      {
+        "employee_id_source": "Decant_Locations_1003019.csv",
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Decant",
+        "role_override": "DECANT",
+        "process_id": "100110",
+        "location_pattern": "ws-rcv|dz-",
+        "unit_type": "CASE"
+      }
+    ]
+  },
+  "BCN4": {
+    "role_map": {
+      "PICK_AR": {
+        "file": "FCLM_1003001.csv",
+        "function_contains": "HighVelocity Picking"
+      },
+      "P2R_PICK": {
+        "file": "FCLM_1003001.csv",
+        "function_contains": "Pick to Rebin"
+      },
+      "P2R_PACK": {
+        "file": "FCLM_1002991.csv",
+        "function_contains": "Pack Merge"
+      },
+      "AFE_PACK": {
+        "file": "FCLM_1002969.csv",
+        "function_contains": "Scan Verify AFE"
+      },
+      "ICQA_SIMPLE_BIN_COUNT": {
+        "file": "FCLM_1003030.csv",
+        "function_contains": "SBC - Other"
+      },
+      "STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike",
+        "function_excludes": "Light"
+      },
+      "QUANTITY_STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike Light"
+      },
+      "DECANT": {
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Decant",
+        "unit_type": "CASE"
+      }
+    },
+    "role_fallback": {
+      "STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike Light",
+        "new_role": "QUANTITY_STOW"
+      }
+    },
+    "station_overrides": [
+      {
+        "station_contains": "WS11",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Slam at Pack",
+        "role_override": "SNS1",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "WS12",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "SLAP VDF",
+        "role_override": "SNS2",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_01",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Large",
+        "role_override": "SM2",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_02",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Small",
+        "role_override": "SMMIX",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_03",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Medium",
+        "role_override": "SM",
+        "process_id": "100054"
+      },
+      {
+        "employee_id_source": "Decant_Locations_1003019.csv",
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Decant",
+        "role_override": "DECANT",
+        "process_id": "100110",
+        "location_pattern": "ws-rcv|dz-",
+        "unit_type": "CASE"
+      }
+    ]
+  },
+  "MAD7": {
+    "role_map": {
+      "PICK_AR": {
+        "file": "FCLM_1003001.csv",
+        "function_contains": "RF Pick"
+      },
+      "P2R_PICK": {
+        "file": "FCLM_1003001.csv",
+        "function_contains": "Pick to Rebin"
+      },
+      "P2R_PACK": {
+        "file": "FCLM_1002991.csv",
+        "function_contains": "Pack Merge"
+      },
+      "AFE_PACK": {
+        "file": "FCLM_1002969.csv",
+        "function_contains": "Scan Verify AFE"
+      },
+      "ICQA_SIMPLE_BIN_COUNT": {
+        "file": "FCLM_1003030.csv",
+        "function_contains": "SBC - Other"
+      },
+      "STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike",
+        "function_excludes": "Light"
+      },
+      "QUANTITY_STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike Light"
+      },
+      "DECANT": {
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Decant",
+        "unit_type": "CASE"
+      }
+    },
+    "role_fallback": {
+      "STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike Light",
+        "new_role": "QUANTITY_STOW"
+      }
+    },
+    "station_overrides": [
+      {
+        "station_contains": "WS11",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Slam at Pack",
+        "role_override": "SNS1",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "WS12",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "SLAP VDF",
+        "role_override": "SNS2",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_01_02",
+        "station_parity_mode": true,
+        "station_parity": "odd",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Medium",
+        "role_override": "SM",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_01_02",
+        "station_parity_mode": true,
+        "station_parity": "even",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Medium",
+        "role_override": "SM",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_03",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Medium",
+        "role_override": "SM",
+        "process_id": "100054"
+      },
+      {
+        "employee_id_source": "Decant_Locations_1003019.csv",
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Decant",
+        "role_override": "DECANT",
+        "process_id": "100110",
+        "location_pattern": "ws-rcv|dz-",
+        "unit_type": "CASE"
+      }
+    ]
+  },
+  "RMU1": {
+    "role_map": {
+      "PICK_AR": {
+        "file": "FCLM_1003001.csv",
+        "function_contains": "HighVelocity Picking"
+      },
+      "P2R_PICK": {
+        "file": "FCLM_1003001.csv",
+        "function_contains": "Pick to Rebin"
+      },
+      "P2R_PACK": {
+        "file": "FCLM_1002991.csv",
+        "function_contains": "Pack Merge"
+      },
+      "AFE_PACK": {
+        "file": "FCLM_1002969.csv",
+        "function_contains": "Scan Verify AFE"
+      },
+      "ICQA_SIMPLE_BIN_COUNT": {
+        "file": "FCLM_1003030.csv",
+        "function_contains": "SBC - Other"
+      },
+      "STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike",
+        "function_excludes": "Light"
+      },
+      "QUANTITY_STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike Light"
+      },
+      "DECANT": {
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Decant",
+        "unit_type": "CASE"
+      }
+    },
+    "role_fallback": {
+      "STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike Light",
+        "new_role": "QUANTITY_STOW"
+      }
+    },
+    "station_overrides": [
+      {
+        "station_contains": "WS11",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Slam at Pack",
+        "role_override": "SNS1",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "WS12",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "SLAP VDF",
+        "role_override": "SNS2",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_01",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Large",
+        "role_override": "SM2",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_02",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Small",
+        "role_override": "SMMIX",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_03",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Medium",
+        "role_override": "SM",
+        "process_id": "100054"
+      },
+      {
+        "employee_id_source": "Decant_Locations_1003019.csv",
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Decant",
+        "role_override": "DECANT",
+        "process_id": "100110",
+        "location_pattern": "ws-rcv|dz-",
+        "unit_type": "CASE"
+      }
+    ]
+  },
+  "OVD1": {
+    "role_map": {
+      "PICK_AR": {
+        "file": "FCLM_1003001.csv",
+        "function_contains": "HighVelocity Picking"
+      },
+      "P2R_PICK": {
+        "file": "FCLM_1003001.csv",
+        "function_contains": "Pick to Rebin"
+      },
+      "P2R_PACK": {
+        "file": "FCLM_1002991.csv",
+        "function_contains": "Pack Merge"
+      },
+      "AFE_PACK": {
+        "file": "FCLM_1002969.csv",
+        "function_contains": "Scan Verify AFE"
+      },
+      "ICQA_SIMPLE_BIN_COUNT": {
+        "file": "FCLM_1003030.csv",
+        "function_contains": "SBC - Other"
+      },
+      "STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike",
+        "function_excludes": "Light"
+      },
+      "QUANTITY_STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike Light"
+      },
+      "DECANT": {
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Decant",
+        "unit_type": "CASE"
+      }
+    },
+    "role_fallback": {
+      "STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike Light",
+        "new_role": "QUANTITY_STOW"
+      }
+    },
+    "station_overrides": [
+      {
+        "station_contains": "WS11",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Slam at Pack",
+        "role_override": "SNS1",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "WS12",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "SLAP VDF",
+        "role_override": "SNS2",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_01",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Large",
+        "role_override": "SM2",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_02",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Small",
+        "role_override": "SMMIX",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_03",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Medium",
+        "role_override": "SM",
+        "process_id": "100054"
+      },
+      {
+        "employee_id_source": "Decant_Locations_1003019.csv",
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Decant",
+        "role_override": "DECANT",
+        "process_id": "100110",
+        "location_pattern": "ws-rcv|dz-",
+        "unit_type": "CASE"
+      }
+    ]
+  },
+  "SVQ1": {
+    "role_map": {
+      "PICK_AR": {
+        "file": "FCLM_1003001.csv",
+        "function_contains": "HighVelocity Picking"
+      },
+      "P2R_PICK": {
+        "file": "FCLM_1003001.csv",
+        "function_contains": "Pick to Rebin"
+      },
+      "P2R_PACK": {
+        "file": "FCLM_1002991.csv",
+        "function_contains": "Pack Merge"
+      },
+      "AFE_PACK": {
+        "file": "FCLM_1002969.csv",
+        "function_contains": "Scan Verify AFE"
+      },
+      "ICQA_SIMPLE_BIN_COUNT": {
+        "file": "FCLM_1003030.csv",
+        "function_contains": "SBC - Other"
+      },
+      "STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike",
+        "function_excludes": "Light"
+      },
+      "QUANTITY_STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike Light"
+      },
+      "DECANT": {
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Decant",
+        "unit_type": "CASE"
+      }
+    },
+    "role_fallback": {
+      "STOW": {
+        "file": "FCLM_1002976.csv",
+        "function_contains": "Stow Each Nike Light",
+        "new_role": "QUANTITY_STOW"
+      }
+    },
+    "station_overrides": [
+      {
+        "station_contains": "WS11",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Slam at Pack",
+        "role_override": "SNS1",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "WS12",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "SLAP VDF",
+        "role_override": "SNS2",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_01",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Large",
+        "role_override": "SM2",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_02",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Small",
+        "role_override": "SMMIX",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_03",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Medium",
+        "role_override": "SM",
+        "process_id": "100054"
+      },
+      {
+        "employee_id_source": "Decant_Locations_1003019.csv",
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Decant",
+        "role_override": "DECANT",
+        "process_id": "100110",
+        "location_pattern": "ws-rcv|dz-",
+        "unit_type": "CASE"
+      }
+    ]
+  }
+}

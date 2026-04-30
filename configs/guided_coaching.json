@@ -1,0 +1,72 @@
+{
+  "course_base": "https://dub.prod.cms.umbrella.amazon.dev/course/",
+  "transcript_base": "https://guided-coaching-dub.corp.amazon.com/#/employee-transcript/",
+  "lookback_days": 2,
+  "role_to_course_uuid": {
+    "P2R_PICK": "b0e4ccfa-a2d2-54ea-96a4-d4e3660d9079",
+    "STOW": "9a639d7e-0b7a-5bc3-9402-7989ae335a5d",
+    "AFE_PACK": "62040a95-c1dc-54ce-8223-6d8e71633148",
+    "PICK_AR": "bd1353a7-24a6-53d2-8e29-0ad9fce1c9e5",
+    "P2R_PACK": "62040a95-c1dc-54ce-8223-6d8e71633148",
+    "SNS1": "e0d8939f-79b6-5d2e-b94d-8951ff597918",
+    "SNS2": "e0d8939f-79b6-5d2e-b94d-8951ff597918",
+    "SM2": "e0d8939f-79b6-5d2e-b94d-8951ff597918",
+    "SMMIX": "e0d8939f-79b6-5d2e-b94d-8951ff597918",
+    "SM": "74f2884f-6b1a-5123-9970-50f5f76ed60f",
+    "ICQA_SIMPLE_BIN_COUNT": "502a1d9a-335a-5977-be65-68a2b81bed2e",
+    "DECANT": "abff0629-9043-500e-8b0e-50e2aac9c7ce",
+    "Pick_UPT": "695a1953-2449-502c-b18e-7d461e88c7c0",
+    "L&D_Pack_Singles": "dc6a3e9e-83dd-5911-9cb0-4e32ecedf0b9",
+    "L&D_AFE_P2R_PACK": "e414461b-fd8f-5d14-9a37-b818a698c4f7",
+    "L&D_PICK": "bb626590-a65d-58e9-8dbb-09afab72c6a1",
+    "L&D_STOW": "23ace278-cc2e-51f9-8cf6-449705609213",
+    "PICK_UPT": "695a1953-2449-502c-b18e-7d461e88c7c0"
+  },
+  "coached_check_keys": {
+    "PICK_AR": [
+      "PICK_AR",
+      "PICK_UPT",
+      "L&D_PICK"
+    ],
+    "P2R_PICK": [
+      "P2R_PICK",
+      "L&D_PICK"
+    ],
+    "STOW": [
+      "STOW","L&D_STOW"
+    ],
+    "QUANTITY_STOW": [
+      "STOW"
+    ],
+    "AFE_PACK": [
+      "AFE_PACK",
+      "L&D_AFE_P2R_PACK"
+    ],
+    "P2R_PACK": [
+      "P2R_PACK",
+      "L&D_AFE_P2R_PACK"
+    ],
+    "SM": [
+      "SM",
+      "L&D_Pack_Singles"
+    ],
+    "SMMIX": [
+      "SMMIX"
+    ],
+    "SM2": [
+      "SM2"
+    ],
+    "SNS1": [
+      "SNS1"
+    ],
+    "SNS2": [
+      "SNS2"
+    ],
+    "ICQA_SIMPLE_BIN_COUNT": [
+      "ICQA_SIMPLE_BIN_COUNT"
+    ],
+    "DECANT": [
+      "DECANT"
+    ]
+  }
+}

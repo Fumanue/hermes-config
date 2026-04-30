@@ -1,0 +1,17 @@
+{
+  "role_to_process_id": {
+    "STOW": "100360",
+    "QUANTITY_STOW": "100360",
+    "PICK_AR": "100008",
+    "P2R_PICK": "100008",
+    "P2R_PACK": "100054",
+    "AFE_PACK": "100054",
+    "SM": "100054",
+    "SM2": "100054",
+    "SMMIX": "100054",
+    "SNS1": "100054",
+    "SNS2": "100054",
+    "ICQA_SIMPLE_BIN_COUNT": "100026",
+    "DECANT": "100110"
+  }
+}

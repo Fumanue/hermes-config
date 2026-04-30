@@ -1,0 +1,36 @@
+{
+    "min_sigma_population": 5,
+
+    "role_to_mode_group": {
+        "STOW":                    "STOW",
+        "QUANTITY_STOW":           "STOW",
+        "DECANT":                  "DECANT",
+        "PICK_AR":                 "PICK",
+        "P2R_PICK":                "PICK",
+        "P2R_PACK":                "PACK_MULTIS",
+        "AFE_PACK":                "PACK_MULTIS",
+        "SM":                      "PACK_SINGLES",
+        "SM2":                     "PACK_SINGLES",
+        "SMMIX":                   "PACK_SINGLES",
+        "SNS1":                    "PACK_SINGLES",
+        "SNS2":                    "PACK_SINGLES",
+        "SINGLES":                 "PACK_SINGLES",
+        "WS_SLAM":                 "PACK_SINGLES",
+        "WS_VDF":                  "PACK_SINGLES",
+        "ICQA_SIMPLE_BIN_COUNT":   "ICQA"
+    },
+
+    "no_sigma_groups": ["ICQA", "DECANT"],
+
+    "legacy_priority_thresholds": {
+        "priority_3_below": 80,
+        "priority_2_below": 90,
+        "priority_1_below": 100
+    },
+
+    "mode_eligibility": {
+        "mode_1_min_sigma": 1,
+        "mode_2_min_sigma": 2,
+        "mode_3_min_sigma": 3
+    }
+}

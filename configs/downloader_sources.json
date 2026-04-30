@@ -1,0 +1,54 @@
+{
+  "default_fc": "BCN4",
+  "max_workers": 4,
+  "min_hours_threshold": 1.0,
+  "fclm_process_ids": [
+    "1002969",
+    "1002976",
+    "1002991",
+    "1002993",
+    "1003001",
+    "1003019",
+    "1003030"
+  ],
+  "icqa_process_ids": [
+    "1003030"
+  ],
+  "icqa_rate_col_index": 13,
+  "location_enrichment_process_ids": [
+    "1003019"
+  ],
+  "process_inspector_processes": {
+    "100008": "Pick",
+    "100032": "Transfer-In-Stow",
+    "100054": "Pack",
+    "100360": "Transfer-In-Stow",
+    "100026": "SBC",
+    "100110": "Decant"
+  },
+  "roboscout_configs": {
+    "11355": {
+      "template": "https://roboscout.amazon.com/view_plot_data/?associateLogin=%25&current_day=false&endDateTime=2026-01-19+13%3A00%3A00&startDateTime=2026-01-19+05%3A00%3A00&viz=nvd3Table&mom_ids=301%2C290%2C26%2C313&ofm_ids=&osm_ids=4&oxm_ids=657%2C147&sites=({fc})&instance_id=0&object_id=11355&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
+      "use_datetime": true,
+      "hour_offset": -2
+    },
+    "19851": {
+      "template": "https://roboscout.amazon.com/view_plot_data/?sites=({fc})&current_day=false&startDateTime=2026-01-19+05%3A00%3A00&endDateTime=2026-01-19+13%3A00%3A00&mom_ids=428%2C2060%2C394%2C321%2C362%2C379%2C426&osm_ids=30&oxm_ids=656%2C442&ofm_ids=&viz=nvd3Table&instance_id=2210&object_id=19851&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
+      "use_datetime": true,
+      "hour_offset": -2
+    },
+    "20902": {
+      "template": "https://roboscout.amazon.com/view_plot_data/?sites=({fc})&startDateTime=-1+weeks&endDateTime=today&mom_ids=1184&osm_ids=827&oxm_ids=1703%2C1607%2C1608&ofm_ids=&viz=nvd3Table&instance_id=2359&object_id=20902&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
+      "use_datetime": false
+    },
+    "21628": {
+      "template": "https://roboscout.amazon.com/view_plot_data/?sites=({fc})&current_day=false&startDateTime=2026-01-19+05%3A00%3A00&endDateTime=2026-01-19+13%3A00%3A00&mom_ids=&osm_ids=&oxm_ids=&ofm_ids=1017&viz=nvd3Table&instance_id=0&object_id=21628&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
+      "use_datetime": true,
+      "hour_offset": -2
+    }
+  },
+  "fast_starts": {
+    "base_url": "https://fc-benchmarking.amazon.com/rest/get_fast_start_moves",
+    "max_tries": 2
+  }
+}

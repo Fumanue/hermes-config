@@ -1,3 +1,648 @@
 {
-  "test": "ok"
+  "BCN1": {
+    "roboscout_checks": [
+      {
+        "roles": [
+          "PICK_AR"
+        ],
+        "file": "RoboScout_11355.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Units_Per_Tote",
+            "min_target": 11,
+            "label": "Units Per Tote"
+          }
+        ]
+      },
+      {
+        "roles": [
+          "STOW"
+        ],
+        "file": "RoboScout_19851.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Units_Per_Face",
+            "min_target": 10,
+            "max_target": 18,
+            "label": "Units per Face"
+          },
+          {
+            "column": "Turnaway_Percentage",
+            "max_target": 10,
+            "label": "Turnaway%"
+          }
+        ]
+      },
+      {
+        "roles": [
+          "STOW",
+          "QUANTITY_STOW"
+        ],
+        "file": "RoboScout_20902.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Perc_1_Level_Upsorted_Units  Sortable-14",
+            "min_target": 40.0,
+            "label": "Upsort 11->14%"
+          },
+          {
+            "column": "Perc_1_Level_Upsorted_Units  Sortable-18.5",
+            "min_target": 60.0,
+            "label": "Upsort 14->18.5%"
+          }
+        ]
+      }
+    ],
+    "pack_line_targets": [
+      {
+        "key": "SM",
+        "target_uph": 110,
+        "applies_to_role": "SM"
+      },
+      {
+        "key": "SMMIX",
+        "target_uph": 200,
+        "applies_to_role": "SMMIX"
+      },
+      {
+        "key": "SM2",
+        "target_uph": 210,
+        "applies_to_role": "SM2"
+      },
+      {
+        "key": "SNS1",
+        "target_uph": 410,
+        "applies_to_role": "SNS1"
+      },
+      {
+        "key": "SNS2",
+        "target_uph": 280,
+        "applies_to_role": "SNS2"
+      },
+      {
+        "key": "SBC",
+        "target_uph": 200,
+        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
+      },
+      {
+        "key": "DECANT",
+        "target_uph": 60,
+        "applies_to_role": "DECANT"
+      },
+      {
+        "key": "QUANTITY_STOW",
+        "target_uph": 450,
+        "applies_to_role": "QUANTITY_STOW"
+      }
+    ],
+    "pack_applies_learning_curve": true,
+    "upa_targets": [
+      {
+        "role": "QUANTITY_STOW",
+        "min_target": 4.5,
+        "label": "UPA"
+      }
+    ]
+  },
+  "BCN4": {
+    "roboscout_checks": [
+      {
+        "roles": [
+          "PICK_AR"
+        ],
+        "file": "RoboScout_11355.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Units_Per_Tote",
+            "min_target": 11,
+            "label": "Units Per Tote"
+          }
+        ]
+      },
+      {
+        "roles": [
+          "STOW"
+        ],
+        "file": "RoboScout_19851.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Units_Per_Face",
+            "min_target": 10,
+            "label": "Units per Face"
+          },
+          {
+            "column": "Turnaway_Percentage",
+            "max_target": 12,
+            "label": "Turnaway%"
+          }
+        ]
+      },
+      {
+        "roles": [
+          "STOW",
+          "QUANTITY_STOW"
+        ],
+        "file": "RoboScout_20902.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Perc_1_Level_Upsorted_Units  Sortable-14",
+            "min_target": 40.0,
+            "label": "Upsort 11->14%"
+          },
+          {
+            "column": "Perc_1_Level_Upsorted_Units  Sortable-18.5",
+            "min_target": 60.0,
+            "label": "Upsort 14->18.5%"
+          }
+        ]
+      }
+    ],
+    "pack_line_targets": [
+      {
+        "key": "SM",
+        "target_uph": 110,
+        "applies_to_role": "SM"
+      },
+      {
+        "key": "SMMIX",
+        "target_uph": 200,
+        "applies_to_role": "SMMIX"
+      },
+      {
+        "key": "SM2",
+        "target_uph": 210,
+        "applies_to_role": "SM2"
+      },
+      {
+        "key": "SNS1",
+        "target_uph": 410,
+        "applies_to_role": "SNS1"
+      },
+      {
+        "key": "SNS2",
+        "target_uph": 280,
+        "applies_to_role": "SNS2"
+      },
+      {
+        "key": "SBC",
+        "target_uph": 200,
+        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
+      },
+      {
+        "key": "DECANT",
+        "target_uph": 60,
+        "applies_to_role": "DECANT"
+      },
+      {
+        "key": "QUANTITY_STOW",
+        "target_uph": 450,
+        "applies_to_role": "QUANTITY_STOW"
+      }
+    ],
+    "pack_applies_learning_curve": true,
+    "upa_targets": [
+      {
+        "role": "QUANTITY_STOW",
+        "min_target": 4.5,
+        "label": "UPA"
+      }
+    ]
+  },
+  "MAD7": {
+    "roboscout_checks": [
+      {
+        "roles": [
+          "PICK_AR"
+        ],
+        "file": "RoboScout_11355.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Units_Per_Tote",
+            "min_target": 11,
+            "label": "Units Per Tote"
+          }
+        ]
+      },
+      {
+        "roles": [
+          "STOW"
+        ],
+        "file": "RoboScout_19851.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Units_Per_Face",
+            "min_target": 10,
+            "label": "Units per Face"
+          },
+          {
+            "column": "Turnaway_Percentage",
+            "max_target": 12,
+            "label": "Turnaway%"
+          }
+        ]
+      },
+      {
+        "roles": [
+          "STOW",
+          "QUANTITY_STOW"
+        ],
+        "file": "RoboScout_20902.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Perc_1_Level_Upsorted_Units  Sortable-14",
+            "min_target": 40.0,
+            "label": "Upsort 11->14%"
+          },
+          {
+            "column": "Perc_1_Level_Upsorted_Units  Sortable-18.5",
+            "min_target": 60.0,
+            "label": "Upsort 14->18.5%"
+          }
+        ]
+      }
+    ],
+    "pack_line_targets": [
+      {
+        "key": "SM",
+        "target_uph": 110,
+        "applies_to_role": "SM"
+      },
+      {
+        "key": "SMMIX",
+        "target_uph": 200,
+        "applies_to_role": "SMMIX"
+      },
+      {
+        "key": "SM3",
+        "target_uph": 220,
+        "applies_to_role": "SM3"
+      },
+      {
+        "key": "SNS1",
+        "target_uph": 400,
+        "applies_to_role": "SNS1"
+      },
+      {
+        "key": "SNS2",
+        "target_uph": 220,
+        "applies_to_role": "SNS2"
+      },
+      {
+        "key": "SBC",
+        "target_uph": 200,
+        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
+      },
+      {
+        "key": "DECANT",
+        "target_uph": 60,
+        "applies_to_role": "DECANT"
+      },
+      {
+        "key": "QUANTITY_STOW",
+        "target_uph": 450,
+        "applies_to_role": "QUANTITY_STOW"
+      }
+    ],
+    "pack_applies_learning_curve": true,
+    "upa_targets": [
+      {
+        "role": "QUANTITY_STOW",
+        "min_target": 4.5,
+        "label": "UPA"
+      }
+    ]
+  },
+  "RMU1": {
+    "roboscout_checks": [
+      {
+        "roles": [
+          "PICK_AR"
+        ],
+        "file": "RoboScout_11355.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Units_Per_Tote",
+            "min_target": 11,
+            "label": "Units Per Tote"
+          }
+        ]
+      },
+      {
+        "roles": [
+          "STOW"
+        ],
+        "file": "RoboScout_19851.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Units_Per_Face",
+            "min_target": 10,
+            "max_target": 18,
+            "label": "Units per Face"
+          },
+          {
+            "column": "Turnaway_Percentage",
+            "max_target": 10,
+            "label": "Turnaway%"
+          }
+        ]
+      },
+      {
+        "roles": [
+          "STOW",
+          "QUANTITY_STOW"
+        ],
+        "file": "RoboScout_20902.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Perc_1_Level_Upsorted_Units  Sortable-14",
+            "min_target": 40.0,
+            "label": "Upsort 11->14%"
+          },
+          {
+            "column": "Perc_1_Level_Upsorted_Units  Sortable-18.5",
+            "min_target": 60.0,
+            "label": "Upsort 14->18.5%"
+          }
+        ]
+      }
+    ],
+    "pack_line_targets": [
+      {
+        "key": "SM",
+        "target_uph": 110,
+        "applies_to_role": "SM"
+      },
+      {
+        "key": "SMMIX",
+        "target_uph": 200,
+        "applies_to_role": "SMMIX"
+      },
+      {
+        "key": "SM2",
+        "target_uph": 210,
+        "applies_to_role": "SM2"
+      },
+      {
+        "key": "SNS1",
+        "target_uph": 410,
+        "applies_to_role": "SNS1"
+      },
+      {
+        "key": "SNS2",
+        "target_uph": 280,
+        "applies_to_role": "SNS2"
+      },
+      {
+        "key": "SBC",
+        "target_uph": 200,
+        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
+      },
+      {
+        "key": "DECANT",
+        "target_uph": 60,
+        "applies_to_role": "DECANT"
+      },
+      {
+        "key": "QUANTITY_STOW",
+        "target_uph": 450,
+        "applies_to_role": "QUANTITY_STOW"
+      }
+    ],
+    "pack_applies_learning_curve": true,
+    "upa_targets": [
+      {
+        "role": "QUANTITY_STOW",
+        "min_target": 4.5,
+        "label": "UPA"
+      }
+    ]
+  },
+  "OVD1": {
+    "roboscout_checks": [
+      {
+        "roles": [
+          "PICK_AR"
+        ],
+        "file": "RoboScout_11355.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Units_Per_Tote",
+            "min_target": 11,
+            "label": "Units Per Tote"
+          }
+        ]
+      },
+      {
+        "roles": [
+          "STOW"
+        ],
+        "file": "RoboScout_19851.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Units_Per_Face",
+            "min_target": 10,
+            "max_target": 18,
+            "label": "Units per Face"
+          },
+          {
+            "column": "Turnaway_Percentage",
+            "max_target": 10,
+            "label": "Turnaway%"
+          }
+        ]
+      },
+      {
+        "roles": [
+          "STOW",
+          "QUANTITY_STOW"
+        ],
+        "file": "RoboScout_20902.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Perc_1_Level_Upsorted_Units  Sortable-14",
+            "min_target": 40.0,
+            "label": "Upsort 11->14%"
+          },
+          {
+            "column": "Perc_1_Level_Upsorted_Units  Sortable-18.5",
+            "min_target": 60.0,
+            "label": "Upsort 14->18.5%"
+          }
+        ]
+      }
+    ],
+    "pack_line_targets": [
+      {
+        "key": "SM",
+        "target_uph": 110,
+        "applies_to_role": "SM"
+      },
+      {
+        "key": "SMMIX",
+        "target_uph": 200,
+        "applies_to_role": "SMMIX"
+      },
+      {
+        "key": "SM2",
+        "target_uph": 210,
+        "applies_to_role": "SM2"
+      },
+      {
+        "key": "SNS1",
+        "target_uph": 410,
+        "applies_to_role": "SNS1"
+      },
+      {
+        "key": "SNS2",
+        "target_uph": 280,
+        "applies_to_role": "SNS2"
+      },
+      {
+        "key": "SBC",
+        "target_uph": 200,
+        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
+      },
+      {
+        "key": "DECANT",
+        "target_uph": 60,
+        "applies_to_role": "DECANT"
+      },
+      {
+        "key": "QUANTITY_STOW",
+        "target_uph": 450,
+        "applies_to_role": "QUANTITY_STOW"
+      }
+    ],
+    "pack_applies_learning_curve": true,
+    "upa_targets": [
+      {
+        "role": "QUANTITY_STOW",
+        "min_target": 4.5,
+        "label": "UPA"
+      }
+    ]
+  },
+  "SVQ1": {
+    "roboscout_checks": [
+      {
+        "roles": [
+          "PICK_AR"
+        ],
+        "file": "RoboScout_11355.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Units_Per_Tote",
+            "min_target": 11,
+            "label": "Units Per Tote"
+          }
+        ]
+      },
+      {
+        "roles": [
+          "STOW"
+        ],
+        "file": "RoboScout_19851.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Units_Per_Face",
+            "min_target": 10,
+            "max_target": 18,
+            "label": "Units per Face"
+          },
+          {
+            "column": "Turnaway_Percentage",
+            "max_target": 10,
+            "label": "Turnaway%"
+          }
+        ]
+      },
+      {
+        "roles": [
+          "STOW",
+          "QUANTITY_STOW"
+        ],
+        "file": "RoboScout_20902.csv",
+        "login_column": "User_Id",
+        "metrics": [
+          {
+            "column": "Perc_1_Level_Upsorted_Units  Sortable-14",
+            "min_target": 40.0,
+            "label": "Upsort 11->14%"
+          },
+          {
+            "column": "Perc_1_Level_Upsorted_Units  Sortable-18.5",
+            "min_target": 60.0,
+            "label": "Upsort 14->18.5%"
+          }
+        ]
+      }
+    ],
+    "pack_line_targets": [
+      {
+        "key": "SM",
+        "target_uph": 110,
+        "applies_to_role": "SM"
+      },
+      {
+        "key": "SMMIX",
+        "target_uph": 200,
+        "applies_to_role": "SMMIX"
+      },
+      {
+        "key": "SM2",
+        "target_uph": 210,
+        "applies_to_role": "SM2"
+      },
+      {
+        "key": "SNS1",
+        "target_uph": 410,
+        "applies_to_role": "SNS1"
+      },
+      {
+        "key": "SNS2",
+        "target_uph": 280,
+        "applies_to_role": "SNS2"
+      },
+      {
+        "key": "SBC",
+        "target_uph": 200,
+        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
+      },
+      {
+        "key": "DECANT",
+        "target_uph": 60,
+        "applies_to_role": "DECANT"
+      },
+      {
+        "key": "QUANTITY_STOW",
+        "target_uph": 450,
+        "applies_to_role": "QUANTITY_STOW"
+      }
+    ],
+    "pack_applies_learning_curve": true,
+    "upa_targets": [
+      {
+        "role": "QUANTITY_STOW",
+        "min_target": 4.5,
+        "label": "UPA"
+      }
+    ]
+  }
 }

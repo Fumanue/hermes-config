@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "files": {
     "custom_targets.json": "configs/custom_targets.json",
     "fclm_mapping.json": "configs/fclm_mapping.json",

@@ -37,8 +37,7 @@
       },
       {
         "roles": [
-          "STOW",
-          "QUANTITY_STOW"
+          "STOW"
         ],
         "file": "RoboScout_20902.csv",
         "login_column": "User_Id",
@@ -105,7 +104,11 @@
         "min_target": 4.5,
         "label": "UPA"
       }
-    ]
+    ],
+    "feature_flags": {
+      "idle_comment_enabled": false,
+      "idle_comment_threshold": 10.0
+    }
   },
   "BCN4": {
     "roboscout_checks": [
@@ -144,8 +147,7 @@
       },
       {
         "roles": [
-          "STOW",
-          "QUANTITY_STOW"
+          "STOW"
         ],
         "file": "RoboScout_20902.csv",
         "login_column": "User_Id",
@@ -212,7 +214,11 @@
         "min_target": 4.5,
         "label": "UPA"
       }
-    ]
+    ],
+    "feature_flags": {
+      "idle_comment_enabled": true,
+      "idle_comment_threshold": 10.0
+    }
   },
   "MAD7": {
     "roboscout_checks": [
@@ -251,8 +257,7 @@
       },
       {
         "roles": [
-          "STOW",
-          "QUANTITY_STOW"
+          "STOW"
         ],
         "file": "RoboScout_20902.csv",
         "login_column": "User_Id",
@@ -319,7 +324,11 @@
         "min_target": 4.5,
         "label": "UPA"
       }
-    ]
+    ],
+    "feature_flags": {
+      "idle_comment_enabled": false,
+      "idle_comment_threshold": 10.0
+    }
   },
   "RMU1": {
     "roboscout_checks": [
@@ -359,8 +368,7 @@
       },
       {
         "roles": [
-          "STOW",
-          "QUANTITY_STOW"
+          "STOW"
         ],
         "file": "RoboScout_20902.csv",
         "login_column": "User_Id",
@@ -427,7 +435,11 @@
         "min_target": 4.5,
         "label": "UPA"
       }
-    ]
+    ],
+    "feature_flags": {
+      "idle_comment_enabled": false,
+      "idle_comment_threshold": 10.0
+    }
   },
   "OVD1": {
     "roboscout_checks": [
@@ -467,8 +479,7 @@
       },
       {
         "roles": [
-          "STOW",
-          "QUANTITY_STOW"
+          "STOW"
         ],
         "file": "RoboScout_20902.csv",
         "login_column": "User_Id",
@@ -535,7 +546,11 @@
         "min_target": 4.5,
         "label": "UPA"
       }
-    ]
+    ],
+    "feature_flags": {
+      "idle_comment_enabled": false,
+      "idle_comment_threshold": 10.0
+    }
   },
   "SVQ1": {
     "roboscout_checks": [
@@ -575,8 +590,7 @@
       },
       {
         "roles": [
-          "STOW",
-          "QUANTITY_STOW"
+          "STOW"
         ],
         "file": "RoboScout_20902.csv",
         "login_column": "User_Id",
@@ -643,6 +657,10 @@
         "min_target": 4.5,
         "label": "UPA"
       }
-    ]
+    ],
+    "feature_flags": {
+      "idle_comment_enabled": false,
+      "idle_comment_threshold": 10.0
+    }
   }
 }

@@ -64,6 +64,14 @@
         "H2_start": 600,
         "H2_end": 840
       },
+    "Central": {
+      "shift_start": 600,
+      "shift_end": 1080,
+      "H1_start": 600,
+      "H1_end": 810,
+      "H2_start": 840,
+      "H2_end": 1080
+    },
       "Evening": {
         "shift_start": 840,
         "shift_end": 1320,
@@ -90,6 +98,14 @@
         "H2_start": 630,
         "H2_end": 840
       },
+    "Central": {
+      "shift_start": 600,
+      "shift_end": 1080,
+      "H1_start": 600,
+      "H1_end": 840,
+      "H2_start": 870,
+      "H2_end": 1080
+    },
       "Evening": {
         "shift_start": 840,
         "shift_end": 1320,

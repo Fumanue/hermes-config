@@ -1,6 +1,6 @@
 {
   "default_fc": "BCN4",
-  "max_workers": 2,
+  "max_workers": 4,
   "min_hours_threshold": 1.0,
   "fclm_process_ids": [
     "1002969",

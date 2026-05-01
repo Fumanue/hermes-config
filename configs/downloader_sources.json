@@ -28,23 +28,25 @@
   },
   "roboscout_configs": {
     "11355": {
-      "template": "https://roboscout.amazon.com/view_plot_data/?associateLogin=%25&current_day=false&endDateTime=2026-01-19+13%3A00%3A00&startDateTime=2026-01-19+05%3A00%3A00&viz=nvd3Table&mom_ids=301%2C290%2C26%2C313&ofm_ids=&osm_ids=4&oxm_ids=657%2C147&sites=(BCN4)&instance_id=0&object_id=11355&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
+      "template": "https://roboscout.amazon.com/view_plot_data/?associateLogin=%25&current_day=false&viz=nvd3Table&mom_ids=301%2C290%2C26%2C313&ofm_ids=&osm_ids=4&oxm_ids=657%2C147&sites=({fc})&instance_id=0&object_id=11355&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
       "use_datetime": true,
       "hour_offset": -2
     },
     "19851": {
-      "template": "https://roboscout.amazon.com/view_plot_data/?sites=(BCN4)&current_day=false&startDateTime=2026-01-19+05%3A00%3A00&endDateTime=2026-01-19+13%3A00%3A00&mom_ids=428%2C2060%2C394%2C321%2C362%2C379%2C426&osm_ids=30&oxm_ids=656%2C442&ofm_ids=&viz=nvd3Table&instance_id=2210&object_id=19851&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
+      "template": "https://roboscout.amazon.com/view_plot_data/?sites=({fc})&current_day=false&mom_ids=428%2C2060%2C394%2C321%2C362%2C379%2C426&osm_ids=30&oxm_ids=656%2C442&ofm_ids=&viz=nvd3Table&instance_id=2210&object_id=19851&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
       "use_datetime": true,
       "hour_offset": -2
     },
     "20902": {
-      "template": "https://roboscout.amazon.com/view_plot_data/?sites=(BCN4)&startDateTime=-1+weeks&endDateTime=today&mom_ids=1184&osm_ids=827&oxm_ids=1703%2C1607%2C1608&ofm_ids=&viz=nvd3Table&instance_id=2359&object_id=20902&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
-      "use_datetime": false
+      "template": "https://roboscout.amazon.com/view_plot_data/?sites=({fc})&startDateTime=-1+weeks&endDateTime=today&mom_ids=1184&osm_ids=827&oxm_ids=1703%2C1607%2C1608&ofm_ids=&viz=nvd3Table&instance_id=2359&object_id=20902&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
+      "use_datetime": false,
+      "skip_hours_filter": true
     },
     "21628": {
-      "template": "https://roboscout.amazon.com/view_plot_data/?endDateTime=2026-04-06+12%3A00%3A00&startDateTime=2026-04-06+04%3A00%3A00&mom_ids=&ofm_ids=1017&osm_ids=&oxm_ids=&sites=(BCN4)&instance_id=0&object_id=21628&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
+      "template": "https://roboscout.amazon.com/view_plot_data/?sites=({fc})&mom_ids=&ofm_ids=1017&osm_ids=&oxm_ids=&instance_id=0&object_id=21628&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
       "use_datetime": true,
-      "hour_offset": -2
+      "hour_offset": -2,
+      "skip_hours_filter": true
     }
   },
   "fast_starts": {

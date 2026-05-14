@@ -1,43 +1,43 @@
 {
-version: "2.0.0"
-files: {
-area_roles.json: "configs/area_roles.json"
-cleaning_rules.json: "configs/cleaning_rules.json"
-custom_targets.json: "configs/custom_targets.json"
-downloader_sources.json: "configs/downloader_sources.json"
-fclm_mapping.json: "configs/fclm_mapping.json"
-guided_coaching.json: "configs/guided_coaching.json"
-guided_coaching_courses.json: "configs/guided_coaching_courses.json"
-guided_coaching_manual_reasons.json: "configs/guided_coaching_manual_reasons.json"
-process_mapping.json: "configs/process_mapping.json"
-quality_config.json: "configs/quality_config.json"
-quality_courses.json: "configs/quality_courses.json"
-quality_mode.json: "configs/quality_mode.json"
-shift_config.json: "configs/shift_config.json"
-sigma_coaching.json: "configs/sigma_coaching.json"
-tenure_curves.json: "tenure_curves.json"
-src/core/auth_config.py: "src/core/auth_config.py"
-src/core/auth_midway.py: "src/core/auth_midway.py"
-src/core/config_store.py: "src/core/config_store.py"
-src/core/config_updater.py: "src/core/config_updater.py"
-src/core/logger.py: "src/core/logger.py"
-src/domains/atlas_quality.py: "src/domains/atlas_quality.py"
-src/domains/auth_phonetool.py: "src/domains/auth_phonetool.py"
-src/domains/diver_quality.py: "src/domains/diver_quality.py"
-src/domains/fast_starts.py: "src/domains/fast_starts.py"
-src/domains/guided_coaching_history.py: "src/domains/guided_coaching_history.py"
-src/domains/guided_coaching_index.py: "src/domains/guided_coaching_index.py"
-src/domains/guided_coaching_uploader.py: "src/domains/guided_coaching_uploader.py"
-src/domains/necro_targets.py: "src/domains/necro_targets.py"
-src/domains/quality_pipeline.py: "src/domains/quality_pipeline.py"
-src/domains/roster_scc.py: "src/domains/roster_scc.py"
-src/domains/tenure_hours.py: "src/domains/tenure_hours.py"
-src/services/cleaner.py: "src/services/cleaner.py"
-src/services/dashboard_builder.py: "src/services/dashboard_builder.py"
-src/services/downloader.py: "src/services/downloader.py"
-src/services/pipeline.py: "src/services/pipeline.py"
-src/ui/server.py: "src/ui/server.py"
-src/ui/static/app.js: "src/ui/static/app.js"
-src/ui/static/index.html: "src/ui/static/index.html"
-}
+    "version": "2.0.0",
+    "files": {
+        "area_roles.json": "configs/area_roles.json",
+        "cleaning_rules.json": "configs/cleaning_rules.json",
+        "custom_targets.json": "configs/custom_targets.json",
+        "downloader_sources.json": "configs/downloader_sources.json",
+        "fclm_mapping.json": "configs/fclm_mapping.json",
+        "guided_coaching.json": "configs/guided_coaching.json",
+        "guided_coaching_courses.json": "configs/guided_coaching_courses.json",
+        "guided_coaching_manual_reasons.json": "configs/guided_coaching_manual_reasons.json",
+        "process_mapping.json": "configs/process_mapping.json",
+        "quality_config.json": "configs/quality_config.json",
+        "quality_courses.json": "configs/quality_courses.json",
+        "quality_mode.json": "configs/quality_mode.json",
+        "shift_config.json": "configs/shift_config.json",
+        "sigma_coaching.json": "configs/sigma_coaching.json",
+        "tenure_curves.json": "tenure_curves.json",
+        "core/auth_config.py": "core/auth_config.py",
+        "core/auth_midway.py": "core/auth_midway.py",
+        "core/config_store.py": "core/config_store.py",
+        "core/config_updater.py": "core/config_updater.py",
+        "core/logger.py": "core/logger.py",
+        "domains/atlas_quality.py": "domains/atlas_quality.py",
+        "domains/auth_phonetool.py": "domains/auth_phonetool.py",
+        "domains/diver_quality.py": "domains/diver_quality.py",
+        "domains/fast_starts.py": "domains/fast_starts.py",
+        "domains/guided_coaching_history.py": "domains/guided_coaching_history.py",
+        "domains/guided_coaching_index.py": "domains/guided_coaching_index.py",
+        "domains/guided_coaching_uploader.py": "domains/guided_coaching_uploader.py",
+        "domains/necro_targets.py": "domains/necro_targets.py",
+        "domains/quality_pipeline.py": "domains/quality_pipeline.py",
+        "domains/roster_scc.py": "domains/roster_scc.py",
+        "domains/tenure_hours.py": "domains/tenure_hours.py",
+        "services/cleaner.py": "services/cleaner.py",
+        "services/dashboard_builder.py": "services/dashboard_builder.py",
+        "services/downloader.py": "services/downloader.py",
+        "services/pipeline.py": "services/pipeline.py",
+        "ui/server.py": "ui/server.py",
+        "ui/static/app.js": "ui/static/app.js",
+        "ui/static/index.html": "ui/static/index.html"
+    }
 }

@@ -1,0 +1,74 @@
+{
+  "BCN1": {
+    "default": {
+      "mode": "urgent",
+      "sigma_threshold": 1
+    },
+    "errors": {
+      "MULTIPLE_EVENT": { "mode": "urgent", "sigma_threshold": 1 },
+      "PICK_ERROR_INDICATOR": { "mode": "urgent", "sigma_threshold": 1 },
+      "BIN_FILTER_VIOLATIONS": { "mode": "urgent", "sigma_threshold": 1 },
+      "FALSE_PICK_SHORT": { "mode": "urgent", "sigma_threshold": 1 }
+    }
+  },
+  "BCN4": {
+    "default": {
+      "mode": "urgent",
+      "sigma_threshold": 1
+    },
+    "errors": {
+      "MULTIPLE_EVENT": { "mode": "urgent", "sigma_threshold": 1 },
+      "PICK_ERROR_INDICATOR": { "mode": "urgent", "sigma_threshold": 1 },
+      "BIN_FILTER_VIOLATIONS": { "mode": "urgent", "sigma_threshold": 1 },
+      "FALSE_PICK_SHORT": { "mode": "urgent", "sigma_threshold": 1 }
+    }
+  },
+  "MAD7": {
+    "default": {
+      "mode": "improvement",
+      "sigma_threshold": 2
+    },
+    "errors": {
+      "MULTIPLE_EVENT": { "mode": "improvement", "sigma_threshold": 2 },
+      "PICK_ERROR_INDICATOR": { "mode": "improvement", "sigma_threshold": 2 },
+      "BIN_FILTER_VIOLATIONS": { "mode": "improvement", "sigma_threshold": 2 },
+      "FALSE_PICK_SHORT": { "mode": "improvement", "sigma_threshold": 2 }
+    }
+  },
+  "OVD1": {
+    "default": {
+      "mode": "urgent",
+      "sigma_threshold": 1
+    },
+    "errors": {
+      "MULTIPLE_EVENT": { "mode": "urgent", "sigma_threshold": 1 },
+      "PICK_ERROR_INDICATOR": { "mode": "urgent", "sigma_threshold": 1 },
+      "BIN_FILTER_VIOLATIONS": { "mode": "urgent", "sigma_threshold": 1 },
+      "FALSE_PICK_SHORT": { "mode": "urgent", "sigma_threshold": 1 }
+    }
+  },
+  "RMU1": {
+    "default": {
+      "mode": "urgent",
+      "sigma_threshold": 1
+    },
+    "errors": {
+      "MULTIPLE_EVENT": { "mode": "urgent", "sigma_threshold": 1 },
+      "PICK_ERROR_INDICATOR": { "mode": "urgent", "sigma_threshold": 1 },
+      "BIN_FILTER_VIOLATIONS": { "mode": "urgent", "sigma_threshold": 1 },
+      "FALSE_PICK_SHORT": { "mode": "urgent", "sigma_threshold": 1 }
+    }
+  },
+  "SVQ1": {
+    "default": {
+      "mode": "urgent",
+      "sigma_threshold": 1
+    },
+    "errors": {
+      "MULTIPLE_EVENT": { "mode": "urgent", "sigma_threshold": 1 },
+      "PICK_ERROR_INDICATOR": { "mode": "urgent", "sigma_threshold": 1 },
+      "BIN_FILTER_VIOLATIONS": { "mode": "urgent", "sigma_threshold": 1 },
+      "FALSE_PICK_SHORT": { "mode": "urgent", "sigma_threshold": 1 }
+    }
+  }
+}

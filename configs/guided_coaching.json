@@ -20,7 +20,8 @@
     "L&D_AFE_P2R_PACK": "e414461b-fd8f-5d14-9a37-b818a698c4f7",
     "L&D_PICK": "bb626590-a65d-58e9-8dbb-09afab72c6a1",
     "L&D_STOW": "23ace278-cc2e-51f9-8cf6-449705609213",
-    "PICK_UPT": "695a1953-2449-502c-b18e-7d461e88c7c0"
+    "PICK_UPT": "695a1953-2449-502c-b18e-7d461e88c7c0",
+    "QUANTITY_STOW":"9a0d4ba3-188c-5307-be24-56e74979af2e"
   },
   "coached_check_keys": {
     "PICK_AR": [
@@ -36,7 +37,7 @@
       "STOW","L&D_STOW"
     ],
     "QUANTITY_STOW": [
-      "STOW"
+      "QUANTITY_STOW"
     ],
     "AFE_PACK": [
       "AFE_PACK",

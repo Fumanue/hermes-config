@@ -105,9 +105,20 @@
         "label": "UPA"
       }
     ],
+    "gap_thresholds": {
+      "STOW": 2.0,
+      "QUANTITY_STOW": 2.0,
+      "PICK_AR": 5.0,
+      "P2R_PICK": 5.0,
+      "ICQA_SIMPLE_BIN_COUNT": 5.0,
+      "DEFAULT": 5.0
+    },
     "feature_flags": {
       "idle_comment_enabled": false,
       "idle_comment_threshold": 10.0
+    },
+    "decant": {
+      "location_pattern": "ws-rcv|dz-"
     }
   },
   "BCN4": {
@@ -215,9 +226,20 @@
         "label": "UPA"
       }
     ],
+    "gap_thresholds": {
+      "STOW": 2.0,
+      "QUANTITY_STOW": 2.0,
+      "PICK_AR": 5.0,
+      "P2R_PICK": 5.0,
+      "ICQA_SIMPLE_BIN_COUNT": 5.0,
+      "DEFAULT": 5.0
+    },
     "feature_flags": {
       "idle_comment_enabled": true,
       "idle_comment_threshold": 10.0
+    },
+    "decant": {
+      "location_pattern": "ws-rcv|dz-"
     }
   },
   "MAD7": {
@@ -325,9 +347,20 @@
         "label": "UPA"
       }
     ],
+    "gap_thresholds": {
+      "STOW": 2.0,
+      "QUANTITY_STOW": 2.0,
+      "PICK_AR": 5.0,
+      "P2R_PICK": 5.0,
+      "ICQA_SIMPLE_BIN_COUNT": 5.0,
+      "DEFAULT": 5.0
+    },
     "feature_flags": {
-      "idle_comment_enabled": false,
+      "idle_comment_enabled": true,
       "idle_comment_threshold": 10.0
+    },
+    "decant": {
+      "location_pattern": "ws-rcv|dz-"
     }
   },
   "RMU1": {
@@ -436,9 +469,20 @@
         "label": "UPA"
       }
     ],
+    "gap_thresholds": {
+      "STOW": 2.0,
+      "QUANTITY_STOW": 2.0,
+      "PICK_AR": 5.0,
+      "P2R_PICK": 5.0,
+      "ICQA_SIMPLE_BIN_COUNT": 5.0,
+      "DEFAULT": 5.0
+    },
     "feature_flags": {
       "idle_comment_enabled": false,
       "idle_comment_threshold": 10.0
+    },
+    "decant": {
+      "location_pattern": "ws-rcv|dz-"
     }
   },
   "OVD1": {
@@ -547,9 +591,20 @@
         "label": "UPA"
       }
     ],
+    "gap_thresholds": {
+      "STOW": 2.0,
+      "QUANTITY_STOW": 2.0,
+      "PICK_AR": 5.0,
+      "P2R_PICK": 5.0,
+      "ICQA_SIMPLE_BIN_COUNT": 5.0,
+      "DEFAULT": 5.0
+    },
     "feature_flags": {
       "idle_comment_enabled": false,
       "idle_comment_threshold": 10.0
+    },
+    "decant": {
+      "location_pattern": "ws-rcv|dz-"
     }
   },
   "SVQ1": {
@@ -658,9 +713,20 @@
         "label": "UPA"
       }
     ],
+    "gap_thresholds": {
+      "STOW": 2.0,
+      "QUANTITY_STOW": 2.0,
+      "PICK_AR": 5.0,
+      "P2R_PICK": 5.0,
+      "ICQA_SIMPLE_BIN_COUNT": 5.0,
+      "DEFAULT": 5.0
+    },
     "feature_flags": {
       "idle_comment_enabled": false,
       "idle_comment_threshold": 10.0
+    },
+    "decant": {
+      "location_pattern": "ws-rcv|dz-"
     }
   }
 }

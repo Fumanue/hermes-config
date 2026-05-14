@@ -1,0 +1,198 @@
+{
+  "version": "0.0.1",
+  "enabled": true,
+  "downloader": {
+    "enabled": true,
+    "department": "combined",
+    "output_raw_json": "Atlas_Quality_Raw.json",
+    "output_raw_flat": "rawReports_flat.csv",
+    "output_quality_flat": "quality_flat.csv",
+    "timeout_ms": [
+      30000,
+      30000,
+      30000,
+      60000
+    ]
+  },
+  "comment_settings": {
+    "enabled": true,
+    "prefix": "Quality Opportunities",
+    "max_topics": 3,
+    "min_defects": 1,
+    "sort_by_defects_desc": true
+  },
+  "processes": {
+    "Stow": {
+      "enabled": true,
+      "subprocesses": {
+        "-": {
+          "enabled": true,
+          "topics": [
+            {
+              "name": "Scan Out Of Sequence",
+              "label": "Scan Out Of Sequence",
+              "applies_to_roles": [
+                "STOW",
+                "QUANTITY_STOW"
+              ]
+            },
+            {
+              "name": "Bin Filter Violation",
+              "label": "Bin Filter Violation",
+              "applies_to_roles": [
+                "STOW",
+                "QUANTITY_STOW"
+              ]
+            },
+            {
+              "name": "Nike Multiple Events",
+              "label": "Nike Multiple Events",
+              "applies_to_roles": [
+                "STOW"
+              ]
+            }
+          ]
+        },
+        "STOW ARS": {
+          "enabled": true,
+          "aliases": [
+            "STOW ARS",
+            "Stow ARS",
+            "ARS",
+            "-"
+          ],
+          "topics": [
+            {
+              "name": "Scan Out Of Sequence",
+              "label": "Scan Out Of Sequence",
+              "applies_to_roles": [
+                "STOW"
+              ]
+            },
+            {
+              "name": "Bin Filter Violation",
+              "label": "Bin Filter Violation",
+              "applies_to_roles": [
+                "STOW"
+              ]
+            },
+            {
+              "name": "Nike Multiple Events",
+              "label": "Nike Multiple Events",
+              "applies_to_roles": [
+                "STOW"
+              ]
+            }
+          ]
+        },
+        "QUANTITY STOW": {
+          "enabled": true,
+          "aliases": [
+            "QUANTITY STOW",
+            "Quantity Stow"
+          ],
+          "topics": [
+            {
+              "name": "Scan Out Of Sequence",
+              "label": "Scan Out Of Sequence",
+              "applies_to_roles": [
+                "QUANTITY_STOW"
+              ]
+            },
+            {
+              "name": "Bin Filter Violation",
+              "label": "Bin Filter Violation",
+              "applies_to_roles": [
+                "QUANTITY_STOW"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "Pick": {
+      "enabled": true,
+      "subprocesses": {
+        "-": {
+          "enabled": true,
+          "topics": [
+            {
+              "name": "Error Indicator",
+              "label": "Error Indicator",
+              "applies_to_roles": [
+                "PICK_AR",
+                "P2R_PICK"
+              ]
+            },
+            {
+              "name": "Short",
+              "label": "Short",
+              "applies_to_roles": [
+                "PICK_AR",
+                "P2R_PICK"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "Pack": {
+      "enabled": true,
+      "subprocesses": {
+        "Other": {
+          "enabled": true,
+          "topics": [
+            {
+              "name": "Other Item Missing",
+              "label": "Item Missing",
+              "applies_to_roles": [
+                "SINGLES",
+                "P2R_PACK",
+                "AFE_PACK"
+              ]
+            }
+          ]
+        },
+        "Single": {
+          "enabled": true,
+          "topics": [
+            {
+              "name": "Single Item Missing",
+              "label": "Item Missing",
+              "applies_to_roles": [
+                "SINGLES"
+              ]
+            }
+          ]
+        },
+        "AFE 1": {
+          "enabled": true,
+          "topics": [
+            {
+              "name": "AFE1 Item Missing",
+              "label": "Item Missing",
+              "applies_to_roles": [
+                "AFE_PACK",
+                "P2R_PACK"
+              ]
+            }
+          ]
+        },
+        "VRET": {
+          "enabled": false,
+          "topics": [
+            {
+              "name": "VRET Item Missing",
+              "label": "Item Missing",
+              "applies_to_roles": [
+                "SINGLES",
+                "P2R_PACK",
+                "AFE_PACK"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

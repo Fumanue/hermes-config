@@ -1,0 +1,10 @@
+{
+  "course_base": "https://dub.prod.cms.umbrella.amazon.dev/course/",
+  "default_course_uuid": "",
+  "errors": {
+    "MULTIPLE_EVENT": "fb9ad2f5-6a87-507e-b80e-199459de007f",
+    "PICK_ERROR_INDICATOR": "ee58d67f-d14a-5d5c-8500-43cf682d5fa4",
+    "BIN_FILTER_VIOLATIONS": "a0eda47c-90ec-56e7-936c-166191a0d144",
+    "FALSE_PICK_SHORT": "1c245fcf-784c-56b6-9672-f27c287b8200"
+  }
+}

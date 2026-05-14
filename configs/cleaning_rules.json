@@ -1,0 +1,34 @@
+{
+  "fclm": {
+    "default": {
+      "allowed_unit_types": ["EACH"],
+      "require_size_total": true,
+      "min_hours": 1
+    },
+    "overrides": {
+      "1003019": {
+        "allowed_unit_types": ["EACH", "CASE"],
+        "require_size_total": true,
+        "min_hours": 1
+      },
+      "1002976": {
+        "preserve_size_breakdown": true,
+        "allowed_unit_types": ["EACH"],
+        "min_hours": 1
+      }
+    }
+  },
+  "roboscout": {
+    "default": {
+      "min_hours": 1
+    },
+    "overrides": {
+      "20902": {
+        "ignore_hours_filter": true
+      },
+      "21628": {
+        "ignore_hours_filter": true
+      }
+    }
+  }
+}

@@ -279,6 +279,23 @@ def _quality_mode_for(fc: str, error_key: str) -> dict:
     return {"mode": mode, "sigma_threshold": sigma}
 
 
+def _is_error_enabled(fc: str, error_key: str) -> bool:
+    """Check if an error type is enabled for tracking in a given FC.
+    
+    Errors with "enabled": false in quality_mode.json are skipped.
+    Errors not explicitly configured default to enabled (backward compat).
+    """
+    cfg = _load_json("quality_mode.json", {})
+    fc_cfg = cfg.get(str(fc).upper(), {}) if isinstance(cfg, dict) else {}
+    if not isinstance(fc_cfg, dict):
+        return True
+    errors = fc_cfg.get("errors", {})
+    if not isinstance(errors, dict):
+        return True
+    error_cfg = errors.get(error_key, {})
+    return error_cfg.get("enabled", True)  # default enabled if not specified
+
+
 def _course_for_error(error_key: str) -> tuple[str, str]:
     cfg = _load_json("quality_courses.json", {})
     base = str(cfg.get("course_base", "https://dub.prod.cms.umbrella.amazon.dev/course/")).strip()
@@ -434,6 +451,13 @@ def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: dateti
     modes = out["ErrorKey"].apply(lambda k: _quality_mode_for(fc, k))
     out["Mode"] = modes.apply(lambda x: x["mode"])
     out["Sigma Threshold"] = modes.apply(lambda x: float(x["sigma_threshold"]))
+
+    # ─── Filter out disabled errors ────────────────────────────────────
+    enabled_mask = out["ErrorKey"].apply(lambda k: _is_error_enabled(fc, k))
+    disabled_count = (~enabled_mask).sum()
+    if disabled_count > 0:
+        log.info(f"Quality filter: removing {disabled_count} rows of disabled error types")
+    out = out[enabled_mask].copy()
 
     def _sigma(row) -> float:
         total = float(row.get("Total Errors WK", 0) or 0)

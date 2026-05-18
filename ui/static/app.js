@@ -1,3 +1,24 @@
+// ═══ THEME TOGGLE ═══
+(function(){
+  const saved = localStorage.getItem("argos-theme") || "light";
+  document.documentElement.setAttribute("data-theme", saved);
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("themeToggle");
+    const icon = document.getElementById("themeIcon");
+    if(!btn) return;
+    function apply(t){
+      document.documentElement.setAttribute("data-theme", t);
+      localStorage.setItem("argos-theme", t);
+      if(icon) icon.textContent = t === "dark" ? "🌙" : "☀️";
+    }
+    apply(saved);
+    btn.addEventListener("click", () => {
+      const curr = document.documentElement.getAttribute("data-theme");
+      apply(curr === "dark" ? "light" : "dark");
+    });
+  });
+})();
+
 /* ============================================================
    Project Argos — app.js v3
    ─ Rate & % to Target in separate columns (no label in cell)
@@ -135,12 +156,13 @@ function norm(r){
     !/^(🏷️\s*)?NH\s*(1|2|3|4|1-2|3-4)\b/i.test(n)
   );
 
+  const employee_id   = String(r.employee_id??"").trim();
   const course_id     = String(r.course_id??r.courseId??"").trim();
   const transcript_url= `https://guided-coaching-dub.corp.amazon.com/#/employee-transcript/${encodeURIComponent(login)}`;
   const photo_url     = String(r.photo_url??"").trim()
     ||(login?`https://badgephotos.amazon.com/?Region=Master&FullsizeImage=Yes&uid=${encodeURIComponent(login)}`:"");
 
-  return{login,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,notes,rate,pct,course_id,transcript_url,photo_url,process:inferProcess(role)};
+  return{login,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,notes,rate,pct,course_id,employee_id,transcript_url,photo_url,process:inferProcess(role)};
 }
 
 // Build the notes string to upload (rate + pct + comments)
@@ -241,7 +263,7 @@ async function loadUserInfo(){
     const d = _authCache.data;
     const u = d.user || {};
     name.textContent = u.login || "—";
-    const rp = [u.job_title, u.job_level!=null?`L${u.job_level}`:"", u.building_code].filter(Boolean);
+    const rp = [u.job_title].filter(Boolean);
     role.textContent = rp.length ? rp.join(" · ") : "Acceso básico";
     dot.className = "t-user-dot";
     if(d.permissions) _applyPermissions(d.permissions);
@@ -262,8 +284,8 @@ async function loadUserInfo(){
 
     name.textContent = login;
     // If phonetool failed, show simpler label
-    const roleparts = [title, level, site].filter(Boolean);
-    role.textContent = roleparts.length ? roleparts.join(" · ") : "Acceso básico";
+    const roleparts = [title].filter(Boolean);
+    role.textContent = roleparts.length ? roleparts.join(" · ") : "";
     dot.className    = "t-user-dot";
     $("userPill").title = `${login}${title ? " | "+title : ""}${level ? " "+level : ""}${site ? " | "+site : ""}`;
 
@@ -411,11 +433,15 @@ function msLabelFor(msId, selectedSet, allCount){
   if(!lab) return;
   if(!selectedSet || !(selectedSet instanceof Set) || selectedSet.size===0 || selectedSet.size>=allCount){
     lab.textContent="All";
+    const btn=$(msId+"Btn");
+    if(btn) btn.classList.remove("active");
     return;
   }
   const arr=Array.from(selectedSet).sort();
   if(arr.length<=2) lab.textContent=arr.join(", ");
   else lab.textContent=`${arr.slice(0,2).join(", ")} +${arr.length-2}`;
+  const btn=$(msId+"Btn");
+  if(btn) btn.classList.add("active");
 }
 
 function msRender(msId, options, selectedSet, onChange){
@@ -678,7 +704,7 @@ function renderTable(){
       if (!raw) return "";
       if (/^(🏷️\s*)?NH\s*(1|2|3|4|1-2|3-4)\b/i.test(raw)) return "";
 
-      raw = raw.replace(/^[📊🟣🧩⌛🏷️💤↟⏱️🕑⚠️📦🍀]+\s*/u, "");
+      raw = raw.replace(/^[📊🟣🧩⌛🏷️💤↟⏱️🕑🕒⚠️📦🍀]+\s*/u, "");
 
       let cls = "note-row note-default";
       let label = "Note";
@@ -710,10 +736,15 @@ function renderTable(){
         cls = "note-row note-rs";
         label = "RoboScout";
         text = raw.replace(/^RoboScout\s*:?\s*/i, "").trim();
-      } else if (/\bIDLE\b|Unproductive/i.test(raw)) {
+      } else if (/\bIDLE\b|Idle|Unproductive/i.test(raw)) {
         cls = "note-row note-idle";
         label = "Idle";
-        text = raw.replace(/^Idle\s*:?\s*/i, "").trim();
+        text = raw.replace(/^.*?IDLE\s*:?\s*/i, "").trim();
+      } else if (/Bin\s*Filter|Multiple\s*Event|Pick.*Short|Error\s*Indicator|Scan.*Sequence/i.test(raw)) {
+        cls = "note-row note-quality";
+        label = "Quality";
+        const m = raw.match(/^(.+?)\s*:\s*(\d+)/);
+        text = m ? `${m[1].trim()} (${m[2]})` : raw;
       }
 
       // Safety cleanup if an old renderer concatenated label+text.
@@ -747,16 +778,16 @@ function renderTable(){
           </div>
           <div class="ident">
             <a class="login-link" href="${esc(r.transcript_url)}" target="_blank" rel="noopener">${esc(r.login||"—")}</a>
-            <a class="history-link" href="#" data-hist-login="${esc(r.login)}">⏱ History</a>
+            <a class="fclm-link" href="https://fclm-portal.amazon.com/employee/timeDetails?warehouseId=${encodeURIComponent(currentFC)}&employeeId=${encodeURIComponent(r.employee_id||"")}" target="_blank" rel="noopener">📋 FCLM</a>
           </div>
         </div>
       </td>
       <td><span class="td-dept">${esc(r.dept)}</span></td>
       <td><span class="td-dept">${esc(r.cohort||"—")}</span>${(()=>{
-        if(r.curve==="VETERAN") return '<div style="font-size:10px;font-weight:900;color:#186429;margin-top:3px">VET</div>';
-        if(r.curve==="XT") return `<div style="font-size:10px;font-weight:900;color:#2563eb;margin-top:3px">XT T${r.tenure_wk}${r.homeProcess?' ('+esc(r.homeProcess)+')':''}</div>`;
-        if(r.curve==="NH"&&r.tenure_wk) return `<div style="font-size:10px;font-weight:900;color:#92580a;margin-top:3px">NH T${r.tenure_wk}</div>`;
-        return r.nhFlag?`<div style="font-size:10px;font-weight:900;color:#e8711a;margin-top:3px">${esc(r.nhFlag)}</div>`:'';
+        if(r.curve==="VETERAN") return '<div class="curve-label curve-vet">VET</div>';
+        if(r.curve==="XT") return `<div class="curve-label curve-xt">XT T${r.tenure_wk}${r.homeProcess?' ('+esc(r.homeProcess)+')':''}</div>`;
+        if(r.curve==="NH"&&r.tenure_wk) return `<div class="curve-label curve-nh">NH T${r.tenure_wk}</div>`;
+        return r.nhFlag?`<div class="curve-label curve-nh">${esc(r.nhFlag)}</div>`:'';
       })()}</td>
       <td><span class="role-badge">${esc(r.role)}</span></td>
       <td title="${esc(r.stationRaw||r.station)}"><span class="td-station">${esc(r.station)}</span></td>
@@ -972,7 +1003,7 @@ function renderMetricsTable(metrics){
       ?`<span class="metric-val metric-max">≤ ${m.max_value}</span>`
       :`<span style="color:#ccc">—</span>`;
     return`<tr>
-      <td style="text-align:left;font-weight:700;color:#111;font-family:inherit">${esc(m.metric)}</td>
+      <td style="text-align:left;font-weight:700;color:#111;font-family:inherit">${esc(m.label||m.metric||"")}</td>
       <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#777">${esc(roleList)}</span></td>
       <td>${minCell}</td>
       <td>${maxCell}</td>
@@ -1060,6 +1091,7 @@ $("btnTargetsRefresh").addEventListener("click",loadTargets);
 let qualityRows = [];
 let qualityPresentOnly = false;
 let qFilterProcess = "";
+let qualityHideCoached = false;
 let qFilterError = "";
 let qSortKey = "total_errors_wk";
 let qSortAsc = false;
@@ -1083,6 +1115,7 @@ $("btnQualitySyncGC") && $("btnQualitySyncGC").addEventListener("click", async (
 });
 $("btnQualityRun") && $("btnQualityRun").addEventListener("click",runQuality);
 $("qualityPresentOnly") && $("qualityPresentOnly").addEventListener("click",()=>{qualityPresentOnly=!qualityPresentOnly; $("qualityPresentOnly").classList.toggle("active",qualityPresentOnly); if($("qualityPresentIcon")) $("qualityPresentIcon").textContent=qualityPresentOnly?"●":"○"; renderQuality();});
+$("qualityHideCoached") && $("qualityHideCoached").addEventListener("click",()=>{qualityHideCoached=!qualityHideCoached; $("qualityHideCoached").classList.toggle("active",qualityHideCoached); if($("qualityHideCoachedIcon")) $("qualityHideCoachedIcon").textContent=qualityHideCoached?"●":"○"; renderQuality();});
 $("qualitySearchInput") && $("qualitySearchInput").addEventListener("input",renderQuality);
 $("qFilterProcess") && $("qFilterProcess").addEventListener("change",e=>{qFilterProcess=e.target.value;renderQuality();});
 $("qFilterError") && $("qFilterError").addEventListener("change",e=>{qFilterError=e.target.value;renderQuality();});
@@ -1195,6 +1228,12 @@ function renderQuality(){
   if(qualityPresentOnly){
     rows = rows.filter(qualityPresentValue);
   }
+  if(qualityHideCoached){
+    rows = rows.filter(r => {
+      const v = qualityValue(r,["coached","Coached"],"");
+      return !(String(v).toLowerCase()==="true" || String(v).toUpperCase()==="YES");
+    });
+  }
   if(search){
     rows = rows.filter(r => {
       const login = String(qualityValue(r,["login","Login"],"")).toLowerCase();
@@ -1232,7 +1271,7 @@ function renderQuality(){
   _renderQualitySummary(rows);
 
   if(!rows.length){
-    body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:#999">No quality opportunities found.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:#999">No quality opportunities found.</td></tr>`;
     return;
   }
 
@@ -1259,18 +1298,19 @@ function renderQuality(){
       </td>
       <td style="text-align:left"><span style="font-weight:800;font-size:12px">${esc(errorType)}</span></td>
       <td><span class="td-rate">${esc(total)}</span></td>
+      <td><span class="quality-cohort">${esc(qualityValue(r,["cohort","Cohort"],""))}</span></td>
       <td><span class="pr ${qualitySigmaClass(sigma)}">Σ${Number.isFinite(sigma)?sigma.toFixed(1):'0.0'}</span></td>
       <td>${(()=>{
         const curve = qualityValue(r,["curve","Curve"],"");
         const tenure = Number(qualityValue(r,["tenure","Tenure"],0));
         const home = qualityValue(r,["home_process","HomeProcess"],"");
-        if(curve==="VETERAN") return '<span style="font-size:10px;font-weight:900;color:#186429">VET</span>';
-        if(curve==="XT") return `<span style="font-size:10px;font-weight:900;color:#2563eb">XT T${tenure}</span><span style="font-size:9px;color:#6b7280;margin-left:3px">(${esc(home)})</span>`;
-        if(curve==="NH") return `<span style="font-size:10px;font-weight:900;color:#92580a">NH T${tenure}</span>`;
+        if(curve==="VETERAN") return '<span class="curve-label curve-vet">VET</span>';
+        if(curve==="XT") return `<span class="curve-label curve-xt">XT T${tenure} (${esc(home)})</span>`;
+        if(curve==="NH") return `<span class="curve-label curve-nh">NH T${tenure}</span>`;
         return '<span style="color:#ccc">—</span>';
       })()}</td>
-      <td><span style="font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:${mode.toLowerCase()==='urgent'?'#c0392b':mode.toLowerCase()==='improvement'?'#92580a':'#186429'}">${esc(mode)}</span></td>
-      <td>${present?'<span style="color:#186429;font-weight:900">✓</span>':'<span style="color:#ccc">—</span>'}</td>
+      <td><span class="mode-label mode-${mode.toLowerCase()}">${esc(mode)}</span></td>
+      <td>${present?'<span class="present-chk">✓</span>':'<span class="present-dash">—</span>'}</td>
       <td>${coached?'<span class="coached-chk"><span class="chk-circle">✓</span></span>':'—'}</td>
       <td><button class="row-btn quality-upload" data-login="${esc(login)}" data-course="${esc(courseId)}" data-error="${esc(errorType)}" data-total="${total}" data-sigma="${sigma}" ${coached ? 'disabled style="opacity:.35;cursor:not-allowed"' : !courseId ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>${coached?'✓ Done':!courseId?'No Course':'↑ Upload'}</button></td>
     </tr>`;
@@ -1416,13 +1456,13 @@ async function bulkQualityUpload(){
 
 async function loadQuality(){
   const body = $("qualityTbody");
-  if(body) body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:#999">Loading quality data…</td></tr>`;
+  if(body) body.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:#999">Loading quality data…</td></tr>`;
   try{
     const d = await jget(`${API}/api/quality/dashboard?fc=${encodeURIComponent(currentFC)}`);
     qualityRows = d.data || [];
     renderQuality();
   }catch(e){
-    if(body) body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:#c0392b">Error loading quality: ${esc(e.message)}</td></tr>`;
+    if(body) body.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:#c0392b">Error loading quality: ${esc(e.message)}</td></tr>`;
   }
 }
 

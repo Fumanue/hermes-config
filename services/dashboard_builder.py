@@ -1129,6 +1129,8 @@ def _load_roster(fc: str) -> pd.DataFrame:
         tenure_df = load_tenure_data(fc)
         # Build lookup: (login, main_process) → {tenure, curve, home_process}
         tenure_lookup = {}
+        # Also build per-login best process (highest hours) for fallback
+        login_best = {}  # login → {tenure, curve, home_process} of their top process
         for _, tr in tenure_df.iterrows():
             tenure_lookup[(str(tr["login"]).lower(), tr["main_process"])] = {
                 "tenure": int(tr["tenure"]),
@@ -1136,11 +1138,25 @@ def _load_roster(fc: str) -> pd.DataFrame:
                 "home_process": str(tr.get("home_process", "")),
             }
 
+        # Build login_best: for each login, pick the entry with most hours (highest tenure)
+        for _, tr in tenure_df.iterrows():
+            login_key = str(tr["login"]).lower()
+            entry = {
+                "tenure": int(tr["tenure"]),
+                "curve": str(tr["curve"]),
+                "home_process": str(tr.get("home_process", "")),
+            }
+            if login_key not in login_best or entry["tenure"] > login_best[login_key]["tenure"]:
+                login_best[login_key] = entry
+
         def _resolve_tenure(row):
             login = str(row.get("Login", "")).strip().lower()
             role = str(row.get("Role", "")).strip().upper()
             proc = map_process(role)
-            info = tenure_lookup.get((login, proc), {"tenure": 1, "curve": "NH", "home_process": ""})
+            info = tenure_lookup.get((login, proc))
+            if info is None:
+                # Fallback: use best process for this login (handles NaN/unknown roles)
+                info = login_best.get(login, {"tenure": 1, "curve": "NH", "home_process": ""})
             return pd.Series(info)
 
         tenure_cols = roster.apply(_resolve_tenure, axis=1)
@@ -1736,10 +1752,19 @@ def run(fc: str = "BCN4") -> Path:
     if "Station" in dash.columns and "Role" in dash.columns:
         dash["Station"] = dash.apply(lambda r: normalize_display_station(r.get("Role", ""), r.get("Station", "")), axis=1)
 
+    # DECANT station filter: only keep ws-rcv-XX-XX stations (real decant workstations)
+    if "Role" in dash.columns and "Station" in dash.columns:
+        decant_mask = dash["Role"].str.upper() == "DECANT"
+        valid_ws = dash["Station"].str.lower().str.startswith("ws-rcv-", na=False)
+        drop_mask = decant_mask & ~valid_ws
+        if drop_mask.any():
+            log.info(f"DECANT filter: removing {drop_mask.sum()} rows with non ws-rcv stations")
+            dash = dash[~drop_mask].copy()
+
     full_cols = [
         "Dept", "Cohort", "NH_Flag", "Login", "Station", "Role", "Rate",
         "% to OP2", "Sigma", "SigmaLevel", "ModeGroup", "Mode",
-        "TenureInDays", "TenureWk",
+        "TenureInDays", "TenureWk", "Curve", "HomeProcess",
         "H1_OnTarget", "H2_OnTarget", "%IDLE", "%Unproductive",
         "Comments", "FC", "EmployeeId", "PackLine", "Coached",
     ]

@@ -267,9 +267,9 @@ def _do_update() -> Dict[str, Any]:
                 continue
 
             # Determine local destination based on file type
-            if local_name.startswith("src/"):
-                # Code files: src/core/logger.py → SRC_DIR/core/logger.py
-                rel = local_name[4:]  # strip "src/" prefix
+            if local_name.endswith(".py") or local_name.endswith(".js") or local_name.endswith(".html"):
+                # Code/UI files: core/logger.py → SRC_DIR/core/logger.py
+                rel = local_name
                 local_path = SRC_DIR / rel
             elif local_name == "tenure_curves.json":
                 # Root-level file

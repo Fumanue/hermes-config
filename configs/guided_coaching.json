@@ -1,7 +1,7 @@
 {
   "course_base": "https://dub.prod.cms.umbrella.amazon.dev/course/",
   "transcript_base": "https://guided-coaching-dub.corp.amazon.com/#/employee-transcript/",
-  "lookback_days": 2,
+  "lookback_days": 3,
   "role_to_course_uuid": {
     "P2R_PICK": "b0e4ccfa-a2d2-54ea-96a4-d4e3660d9079",
     "STOW": "9a639d7e-0b7a-5bc3-9402-7989ae335a5d",

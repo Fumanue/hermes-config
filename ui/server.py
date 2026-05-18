@@ -344,7 +344,8 @@ def load_targets(fc: str) -> list[dict]:
         necro = {}
 
     ct           = _load_config("custom_targets.json", {})
-    pack_targets = ct.get("pack_line_targets", [])
+    fc_ct        = ct.get(fc.upper(), ct)  # FC-specific or top-level fallback
+    pack_targets = fc_ct.get("pack_line_targets", [])
     curves_path  = paths.root / "tenure_curves.json"
     curves: dict = {}
     if curves_path.exists():
@@ -357,9 +358,21 @@ def load_targets(fc: str) -> list[dict]:
 
     fc_curves = curves.get(fc.upper(), {})
 
+    # Mapping: role → curve key in tenure_curves.json
+    CURVE_KEY_MAP = {
+        "SM": "SINGLES", "SMMIX": "SINGLES", "SM2": "SINGLES",
+        "SNS1": "SINGLES", "SNS2": "SINGLES",
+        "ICQA_SIMPLE_BIN_COUNT": "ICQA",
+    }
+    # Display name overrides
+    DISPLAY_NAME_MAP = {
+        "ICQA_SIMPLE_BIN_COUNT": "SBC",
+    }
+
     def _f(role: str, wk: int) -> float:
         try:
-            return float(fc_curves.get(role, {}).get(str(wk), 1.0))
+            curve_key = CURVE_KEY_MAP.get(role, role)
+            return float(fc_curves.get(curve_key, {}).get(str(wk), 1.0))
         except Exception:
             return 1.0
 
@@ -372,8 +385,9 @@ def load_targets(fc: str) -> list[dict]:
         if not role or target <= 0:
             continue
         seen.add(role)
+        display_role = DISPLAY_NAME_MAP.get(role, role)
         r: dict = {
-            "role":   role,
+            "role":   display_role,
             "source": f"Pack ({p.get('key', '')})",
             "base":   int(target),
         }
@@ -446,18 +460,26 @@ def _row_first(row, names: list[str], default=""):
 def _nh_week_label(row) -> str:
     """
     Return tenure label based on hours-based curve system.
-    Examples: "NH 3", "XT 2 (PACK)", "VET"
+    Examples: "NH 3", "XT 4 (STOW)", "VET"
     """
     curve = str(_row_first(row, ["Curve", "curve"], "") or "").strip()
     tenure_wk = _row_first(row, ["TenureWk", "Process Tenure Week", "Tenure Week"], None)
     home = str(_row_first(row, ["HomeProcess", "home_process"], "") or "").strip()
+    nh_flag = str(_row_first(row, ["NH_Flag", "nh_flag"], "") or "").strip()
+    dept = str(_row_first(row, ["Dept", "dept"], "") or "").strip()
+
+    # If Curve column is missing but NH_Flag already has the computed value, use it directly
+    if not curve or curve.lower() == "nan":
+        if nh_flag and nh_flag.lower() not in ("nan", ""):
+            return nh_flag.replace(" T", " ")  # "XT T4 (STOW)" → "XT 4 (STOW)"
 
     try:
         wk = int(float(str(tenure_wk).strip()))
     except Exception:
         wk = 0
 
-    if curve == "VETERAN":
+    # Detect VETERAN: explicit Curve column, or infer from Dept=Ops + empty NH_Flag
+    if curve == "VETERAN" or (dept == "Ops" and (not nh_flag or nh_flag.lower() == "nan")):
         return "VET"
     elif curve == "XT":
         label = f"XT {wk}" if wk > 0 else "XT"
@@ -528,13 +550,23 @@ def api_dashboard(fc: str = DEFAULT_FC, shift: str = ""):
         except Exception:
             pct = None
 
+        # Derive curve from nh_flag (reliable even when Curve column missing from CSV)
+        if nh_flag.startswith("VET"):
+            _curve = "VETERAN"
+        elif nh_flag.startswith("XT"):
+            _curve = "XT"
+        elif nh_flag.startswith("NH"):
+            _curve = "NH"
+        else:
+            _curve = "VETERAN"  # empty nh_flag = veteran in dashboard_builder
+
         records.append({
             "login":          login,
             "dept":           dept,
             "cohort":         cohort,
             "nh_flag":        nh_flag,
-            "curve":          str(row.get("Curve", "")),
-            "home_process":   str(row.get("HomeProcess", "")),
+            "curve":          _curve,
+            "home_process":   str(row.get("HomeProcess", "")) or (nh_flag.split("(")[-1].rstrip(")") if "(" in nh_flag else ""),
             "role":           role,
             "station":        station,
             "rate":           rate,
@@ -544,6 +576,7 @@ def api_dashboard(fc: str = DEFAULT_FC, shift: str = ""):
             "comments":       comments,
             "course_key":     ck,
             "course_id":      cid,
+            "employee_id":    str(row.get("EmployeeId", "") or "").strip(),
             "has_route":      bool(cid),
             "coached":        coached,
             "coached_label":  clbl,
@@ -622,7 +655,8 @@ def api_roboscout_metrics(fc: str = DEFAULT_FC):
     """Return RoboScout metric thresholds from custom_targets.json."""
     try:
         ct = _load_config("custom_targets.json", {})
-        checks = ct.get("roboscout_checks", [])
+        fc_ct = ct.get(fc.upper(), ct)  # FC-specific or top-level fallback
+        checks = fc_ct.get("roboscout_checks", [])
         metrics = []
         for check in checks:
             for m in check.get("metrics", []):
@@ -979,11 +1013,22 @@ def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False):
             except Exception as e:
                 log.info("roster eid mapping failed: {e}")
 
+            # Build login → cohort mapping from Dashboard_Full.csv
+            cohort_map: dict[str, str] = {}
+            try:
+                dash_fp = OUTPUT_DIR / "Dashboard_Full.csv"
+                if dash_fp.exists():
+                    dash_df = pd.read_csv(dash_fp, usecols=["Login", "Cohort"], dtype=str)
+                    for _, dr in dash_df.iterrows():
+                        cohort_map[str(dr.get("Login", "")).strip().lower()] = str(dr.get("Cohort", "")).strip()
+            except Exception:
+                pass
+
             log.info("GC history for {fc_upper}: {len(gc_data.get('coachingInstances', []))} instances found")
             log.info("eid_to_login entries: {len(eid_to_login)}")
 
             for it in gc_data.get("coachingInstances", []):
-                # Navigate the real GC structure: instance → coachingInstanceData
+                    # Navigate the real GC structure: instance → coachingInstanceData
                 cid = it.get("coachingInstanceData") or it
                 coachee = cid.get("coachee") or {}
                 employee_id = str(coachee.get("employeeID") or "").strip()
@@ -1061,6 +1106,7 @@ def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False):
             records.append({
                 "fc": str(row.get("FC", fc)),
                 "login": login_val,
+                "cohort": cohort_map.get(login_val.lower(), ""),
                 "process": str(row.get("Process", "")),
                 "error_type": str(row.get("Error Type", "")),
                 "error_key": str(row.get("ErrorKey", "")),

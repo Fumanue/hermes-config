@@ -39,7 +39,7 @@ log = get_logger(__name__)
 
 # ─── Config ───────────────────────────────────────────────────────────────
 # UNC path to the shared hours file
-HOURS_UNC_PATH = Path(r"\\ant\dept- eu\BCN4\Public\Professor_data\Hours_Historical.csv")
+HOURS_UNC_PATH = Path(r"\\ant\dept-eu\BCN4\Public\Professor_data\Hours_Historical.csv")
 
 paths = get_paths()
 CACHE_DIR = Path(paths.cache)
@@ -49,6 +49,7 @@ CACHE_MAX_AGE_HOURS = 24  # Re-read from network once a day
 
 # ─── Process Mapping ──────────────────────────────────────────────────────
 PROCESS_MAP = {
+    # Hours_Historical process names
     "Pack Singles": "PACK",
     "Pack Multis": "PACK",
     "Chuting": "PACK",
@@ -60,13 +61,26 @@ PROCESS_MAP = {
     "PICK_AR": "PICK",
     "P2R_PICK": "PICK",
     "IC-QA-CS": "ICQA",
-    # Role-based mappings (from dashboard_builder Role column)
+    # ─── Role-based mappings (from Roster DetectedRole column) ───
+    # Pick
+    # (PICK_AR and P2R_PICK already above)
+    # Pack Singles roles
     "SM": "PACK", "SMMIX": "PACK", "SM2": "PACK",
-    "AFE_PACK": "PACK", "P2R_PACK": "PACK",
     "SNS1": "PACK", "SNS2": "PACK", "SINGLES": "PACK",
-    "WS_SLAM": "PACK", "WS_VDF": "PACK",
+    # Pack Multis roles
+    "P2R_PACK": "PACK",
+    "WS_SLAM": "PACK", "WS_VDF": "PACK",  # also multis area
+    # Chuting roles
+    "AFE_PACK": "PACK",
+    "AFE_REBIN": "PACK",  # AFE rebin = chuting area
+    "INDUCT": "PACK",     # induct feeds into pack
+    # ICQA roles
+    "ICQA_SIMPLE_BIN_COUNT": "ICQA",
+    "ICQA_SIMPLE_COUNT": "ICQA",
+    # Stow roles
     "STOW": "STOW", "QUANTITY_STOW": "STOW", "QUANTITY_STOYW": "STOW",
     "EACH_TRANSFER_IN": "STOW", "EACH TRANSFER IN": "STOW",
+    # Decant roles
     "TRANSFER_IN_DOCK": "DECANT", "TRANSFER IN DOCK": "DECANT",
     "DECANT": "DECANT",
 }
@@ -79,9 +93,21 @@ TENURE_BLOCK = 40  # hours per tenure level
 # Stores processed tenure DataFrames keyed by FC, refreshed once per day.
 _tenure_cache: dict[str, pd.DataFrame] = {}
 _tenure_cache_date: str = ""  # ISO date string of when cache was built
+_tenure_cache_file_mtime: float = 0.0  # mtime of CSV when cache was built
 
 def _cache_is_fresh() -> bool:
-    return _tenure_cache_date == datetime.now().strftime("%Y-%m-%d")
+    """Check if in-memory cache is still valid (same day AND file hasn't changed)."""
+    if _tenure_cache_date != datetime.now().strftime("%Y-%m-%d"):
+        return False
+    # If cache file was deleted, force refresh
+    if not CACHE_FILE.exists():
+        return False
+    # Also invalidate if the CSV file was updated since we cached
+    if CACHE_FILE.exists():
+        current_mtime = CACHE_FILE.stat().st_mtime
+        if current_mtime > _tenure_cache_file_mtime:
+            return False
+    return True
 
 
 # ─── Helpers ────────────────────────────────────────────────────────────
@@ -120,24 +146,36 @@ def _read_hours_csv() -> pd.DataFrame:
     if CACHE_FILE.exists():
         age = datetime.now() - datetime.fromtimestamp(CACHE_FILE.stat().st_mtime)
         if age < timedelta(hours=CACHE_MAX_AGE_HOURS):
-            log.info("Using cached hours data ({age.seconds//60}m old)")
+            log.info("Using cached hours data (%dm old)", age.seconds // 60)
             return pd.read_csv(CACHE_FILE, dtype=str)
+        log.info("Cache is stale (%dh old), will try to refresh from network", age.total_seconds() // 3600)
 
     # Try to read from UNC path
-    if HOURS_UNC_PATH.exists():
-        log.info("Reading from network: {HOURS_UNC_PATH}")
-        df = pd.read_csv(HOURS_UNC_PATH, dtype=str)
-        # Cache it
+    try:
+        log.info("Trying network read: %s", HOURS_UNC_PATH)
+        df = pd.read_csv(str(HOURS_UNC_PATH), dtype=str)
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
         df.to_csv(CACHE_FILE, index=False)
-        log.info("Cached {len(df)} rows")
+        log.info("Refreshed cache from network: %d rows", len(df))
         return df
+    except Exception as e:
+        log.warning("Network read failed (%s): %s", HOURS_UNC_PATH, e)
 
     # Fallback to existing cache even if stale
     if CACHE_FILE.exists():
-        log.info("Network unavailable, using stale cache")
+        log.info("Using stale cache as fallback")
         return pd.read_csv(CACHE_FILE, dtype=str)
 
-    log.info("WARNING: No hours data available")
+    # Last resort: try to seed from bundled data (PyInstaller frozen app)
+    bundled = paths.root / "data" / "cache" / "hours_historical_cache.csv"
+    if bundled.exists() and str(bundled) != str(CACHE_FILE):
+        import shutil
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(str(bundled), str(CACHE_FILE))
+        log.info("Seeded cache from bundled data: %s", bundled)
+        return pd.read_csv(CACHE_FILE, dtype=str)
+
+    log.warning("No hours data available — cache missing, network unreachable, no bundle")
     return pd.DataFrame(columns=["warehouse_id", "login", "hire_date", "process_name", "total_hours"])
 
 
@@ -146,7 +184,7 @@ def load_tenure_data(fc: Optional[str] = None) -> pd.DataFrame:
     Load and process tenure data. Returns DataFrame with columns:
     [warehouse_id, login, main_process, total_hours, tenure, is_veteran, curve]
     """
-    global _tenure_cache, _tenure_cache_date
+    global _tenure_cache, _tenure_cache_date, _tenure_cache_file_mtime
 
     cache_key = (fc or "ALL").strip().upper()
 
@@ -214,6 +252,7 @@ def load_tenure_data(fc: Optional[str] = None) -> pd.DataFrame:
     # Store in memory cache
     _tenure_cache[cache_key] = agg
     _tenure_cache_date = datetime.now().strftime("%Y-%m-%d")
+    _tenure_cache_file_mtime = CACHE_FILE.stat().st_mtime if CACHE_FILE.exists() else 0.0
 
     return agg
 

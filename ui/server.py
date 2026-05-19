@@ -580,6 +580,7 @@ def api_dashboard(fc: str = DEFAULT_FC, shift: str = ""):
             "has_route":      bool(cid),
             "coached":        coached,
             "coached_label":  clbl,
+            "exempt":         bool(row.get("Exempt", False)),
             "photo_url":      badge_photo_url(login),
             "transcript_url": transcript_url(login),
         })
@@ -612,6 +613,26 @@ def api_dashboard(fc: str = DEFAULT_FC, shift: str = ""):
 @app.get("/api/targets")
 def api_targets(fc: str = DEFAULT_FC):
     return {"targets": load_targets(fc)}
+
+
+@app.get("/api/targets/quality")
+def api_targets_quality(fc: str = DEFAULT_FC):
+    """Return DPMO quality targets for the given FC."""
+    try:
+        from project_hermes.domains.quality_pipeline import _load_dpmo_targets
+        targets = _load_dpmo_targets()
+        fc_targets = targets.get(fc.strip().upper(), {})
+        # Return structured data for the UI
+        result = []
+        for error_key, data in fc_targets.items():
+            result.append({
+                "error_key": error_key,
+                "process": data.get("process", ""),
+                "curves": data.get("curves", {}),
+            })
+        return {"fc": fc.strip().upper(), "targets": result}
+    except Exception as e:
+        return {"fc": fc, "targets": [], "error": str(e)}
 
 
 @app.get("/api/coaching/history")
@@ -1111,6 +1132,10 @@ def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False):
                 "error_type": str(row.get("Error Type", "")),
                 "error_key": str(row.get("ErrorKey", "")),
                 "total_errors_wk": int(float(row.get("Total Errors WK", 0) or 0)),
+                "opportunities": int(float(row.get("Opportunities", 0) or 0)),
+                "dpmo_target": int(float(row.get("DPMO_Target", 0) or 0)),
+                "target_errors": round(float(row.get("Target_Errors", 0) or 0), 1),
+                "pct_to_target": round(float(row.get("Pct_to_Target", 0) or 0), 1),
                 "site_avg": float(row.get("Site Avg", 0) or 0),
                 "site_std": float(row.get("Site Std", 0) or 0),
                 "sigma": float(row.get("Sigma", 0) or 0),

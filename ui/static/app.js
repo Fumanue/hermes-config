@@ -1028,12 +1028,14 @@ async function loadTargets(){
   const wrap=$("targetsWrap");
   wrap.innerHTML=`<div class="targets-loading">Loading targets for ${currentFC}…</div>`;
   try{
-    const [dTargets, dMetrics] = await Promise.all([
+    const [dTargets, dMetrics, dQuality] = await Promise.all([
       jget(`${API}/api/targets?fc=${encodeURIComponent(currentFC)}`),
       jget(`${API}/api/roboscout/metrics?fc=${encodeURIComponent(currentFC)}`).catch(()=>({metrics:[]})),
+      jget(`${API}/api/targets/quality?fc=${encodeURIComponent(currentFC)}`).catch(()=>({targets:[]})),
     ]);
     const targets=dTargets.targets||[];
     const metrics=dMetrics.metrics||[];
+    const qualityTargets=dQuality.targets||[];
     const metricsHtml=renderMetricsTable(metrics);
 
     if(!targets.length){
@@ -1080,10 +1082,48 @@ async function loadTargets(){
         <span><span class="gl-dot" style="background:#186429"></span>100–110%</span>
         <span><span class="gl-dot" style="background:#0d5c25"></span>&gt;110%</span>
         of base target
-      </div>`;
+      </div>
+      ${_renderQualityDpmoTargets(qualityTargets)}`;
   }catch(e){
     wrap.innerHTML=`<div class="targets-loading" style="color:#c0392b">Error: ${esc(e.message)}</div>`;
   }
+}
+
+function _renderQualityDpmoTargets(targets){
+  if(!targets||!targets.length) return "";
+  let html = `<div class="targets-section-title" style="margin-top:24px">Quality DPMO Targets — ${esc(currentFC)}</div>`;
+  html += `<p style="color:var(--text-secondary);font-size:12px;margin:4px 0 12px">Target Errors = (DPMO × Volume) / 1,000,000. &lt;100% = needs coaching.</p>`;
+  
+  for(const t of targets){
+    const errKey = t.error_key||"";
+    const process = t.process||"";
+    const curves = t.curves||{};
+    const curveNames = Object.keys(curves);
+    if(!curveNames.length) continue;
+    
+    html += `<div style="margin-bottom:16px"><b style="font-size:13px">${esc(errKey.replace(/_/g,' '))} (${esc(process)})</b>`;
+    html += `<table class="targets-table" style="margin-top:6px;font-size:12px"><thead><tr><th>Curve</th><th>Scale</th>`;
+    for(let i=1;i<=10;i++) html += `<th>${i}</th>`;
+    html += `</tr></thead><tbody>`;
+    
+    for(const cName of curveNames){
+      const cData = curves[cName]||{};
+      // Day scale
+      if(cData.day && Object.keys(cData.day).length){
+        html += `<tr><td>${esc(cName)}</td><td>Day</td>`;
+        for(let i=1;i<=10;i++) html += `<td>${cData.day[String(i)]||'—'}</td>`;
+        html += `</tr>`;
+      }
+      // Week scale
+      if(cData.week && Object.keys(cData.week).length){
+        html += `<tr><td>${esc(cName)}</td><td>Week</td>`;
+        for(let i=1;i<=10;i++) html += `<td>${cData.week[String(i)]||'—'}</td>`;
+        html += `</tr>`;
+      }
+    }
+    html += `</tbody></table></div>`;
+  }
+  return html;
 }
 $("btnTargetsRefresh").addEventListener("click",loadTargets);
 
@@ -1092,6 +1132,7 @@ let qualityRows = [];
 let qualityPresentOnly = false;
 let qFilterProcess = "";
 let qualityHideCoached = false;
+let qualityHideOnTarget = true;  // Hide >=100% by default
 let qFilterError = "";
 let qSortKey = "total_errors_wk";
 let qSortAsc = false;
@@ -1121,6 +1162,7 @@ $("qFilterProcess") && $("qFilterProcess").addEventListener("change",e=>{qFilter
 $("qFilterError") && $("qFilterError").addEventListener("change",e=>{qFilterError=e.target.value;renderQuality();});
 $("btnQualityBulk") && $("btnQualityBulk").addEventListener("click",bulkQualityUpload);
 $("btnQualityExport") && $("btnQualityExport").addEventListener("click",exportQualityCSV);
+$("qualityHideOnTarget") && $("qualityHideOnTarget").addEventListener("click",()=>{qualityHideOnTarget=!qualityHideOnTarget; $("qualityHideOnTarget").classList.toggle("active",qualityHideOnTarget); if($("qualityHideOnTargetIcon")) $("qualityHideOnTargetIcon").textContent=qualityHideOnTarget?"\u25cf":"\u25cb"; renderQuality();});
 $("btnQualitySummary") && $("btnQualitySummary").addEventListener("click",(e)=>{
   e.stopPropagation();
   const pop=$("qualitySummary");
@@ -1234,6 +1276,12 @@ function renderQuality(){
       return !(String(v).toLowerCase()==="true" || String(v).toUpperCase()==="YES");
     });
   }
+  if(qualityHideOnTarget){
+    rows = rows.filter(r => {
+      const pct = parseFloat(qualityValue(r,["pct_to_target","Pct_to_Target"],"0"));
+      return isNaN(pct) || pct < 100;
+    });
+  }
   if(search){
     rows = rows.filter(r => {
       const login = String(qualityValue(r,["login","Login"],"")).toLowerCase();
@@ -1257,6 +1305,9 @@ function renderQuality(){
       } else if(qSortKey==="sigma"){
         va = Number(qualityValue(a,["sigma","Sigma"],0));
         vb = Number(qualityValue(b,["sigma","Sigma"],0));
+      } else if(qSortKey==="pct_to_target"){
+        va = Number(qualityValue(a,["pct_to_target","Pct_to_Target"],0));
+        vb = Number(qualityValue(b,["pct_to_target","Pct_to_Target"],0));
       } else {
         va = Number(qualityValue(a,["total_errors_wk","Total Errors WK"],0));
         vb = Number(qualityValue(b,["total_errors_wk","Total Errors WK"],0));
@@ -1279,6 +1330,8 @@ function renderQuality(){
     const login = String(qualityValue(r,["login","Login"],"")).trim();
     const errorType = qualityErrorLabel(r);
     const total = qualityValue(r,["total_errors_wk","Total Errors WK","total_errors","Total WK","defectCount"],0);
+    const targetErrors = Number(qualityValue(r,["target_errors","Target_Errors"],0));
+    const pctTarget = Number(qualityValue(r,["pct_to_target","Pct_to_Target"],0));
     const sigma = Number(qualityValue(r,["sigma","Sigma","sigma_value","Sigma Value"],0));
     const mode = qualityValue(r,["mode","Mode"],"");
     const present = qualityPresentValue(r);
@@ -1298,6 +1351,8 @@ function renderQuality(){
       </td>
       <td style="text-align:left"><span style="font-weight:800;font-size:12px">${esc(errorType)}</span></td>
       <td><span class="td-rate">${esc(total)}</span></td>
+      <td><span class="td-rate" style="font-size:11px">${targetErrors>0?targetErrors.toFixed(1):'—'}</span></td>
+      <td><span class="pr ${pctTarget>=100?'pct-good':pctTarget>0?'pct-bad':'pct-none'}">${pctTarget>0&&pctTarget<999?pctTarget.toFixed(0)+'%':'—'}</span></td>
       <td><span class="quality-cohort">${esc(qualityValue(r,["cohort","Cohort"],""))}</span></td>
       <td><span class="pr ${qualitySigmaClass(sigma)}">Σ${Number.isFinite(sigma)?sigma.toFixed(1):'0.0'}</span></td>
       <td>${(()=>{

@@ -144,7 +144,7 @@ def _fetch_remote_manifest(cfg: RemoteConfig, token: str) -> Optional[Dict]:
     try:
         resp = requests.get(url, headers=headers, timeout=cfg.timeout_seconds)
         if resp.status_code == 200:
-            return resp.json()
+            return json.loads(resp.content.decode("utf-8-sig"))
         log.warning("GitHub manifest fetch returned %d", resp.status_code)
         return None
     except Exception as e:

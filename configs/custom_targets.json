@@ -235,7 +235,7 @@
       "DEFAULT": 5.0
     },
     "feature_flags": {
-      "idle_comment_enabled": true,
+      "idle_comment_enabled": false,
       "idle_comment_threshold": 10.0
     },
     "decant": {

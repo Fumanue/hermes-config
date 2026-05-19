@@ -32,6 +32,7 @@ from project_hermes.domains.guided_coaching_history import fetch_guided_coaching
 from project_hermes.domains.guided_coaching_index import build_guided_coaching_course_index
 from project_hermes.domains.atlas_quality import quality_comments_for_dash
 from project_hermes.core.logger import get_logger
+from project_hermes.domains.exemptions import get_exempt_logins_for_process
 log = get_logger(__name__)
 
 
@@ -1591,6 +1592,36 @@ def run(fc: str = "BCN4") -> Path:
     pack_assigned = int((dash["PackLine"].astype(str).str.len() > 0).sum())
     log.info("Pack line targets assigned: {pack_assigned}")
 
+    # ─── Exemptions: remove coaching priority for exempt associates ─────
+    try:
+        from project_hermes.domains.tenure_hours import map_process
+        exempt_all = get_exempt_logins_for_process("ALL")
+        exempt_by_proc: dict[str, set] = {}
+        for proc in ["PICK", "PACK", "STOW", "RECEIVE", "ICQA", "DECANT"]:
+            exempt_by_proc[proc] = get_exempt_logins_for_process(proc)
+
+        def _is_exempt(row):
+            login = str(row.get("Login", "")).strip().lower()
+            if login in exempt_all:
+                return True
+            role = str(row.get("Role", "")).strip().upper()
+            proc = map_process(role)
+            return login in exempt_by_proc.get(proc, set())
+
+        exempt_mask = dash.apply(_is_exempt, axis=1)
+        n_exempt = exempt_mask.sum()
+        if n_exempt > 0:
+            dash.loc[exempt_mask, "SigmaLevel"] = 0
+            dash.loc[exempt_mask, "Sigma"] = 0
+            dash.loc[exempt_mask, "Mode"] = 0
+            dash["Exempt"] = exempt_mask
+            log.info("Exemptions applied: %d associates removed from coaching flags", n_exempt)
+        else:
+            dash["Exempt"] = False
+    except Exception as e:
+        log.warning("Exemption check failed (non-fatal): %s", e)
+        dash["Exempt"] = False
+
     # PHASE 3 comments maps
     _upa_map: dict[str, float] = {}
     try:
@@ -1766,7 +1797,7 @@ def run(fc: str = "BCN4") -> Path:
         "% to OP2", "Sigma", "SigmaLevel", "ModeGroup", "Mode",
         "TenureInDays", "TenureWk", "Curve", "HomeProcess",
         "H1_OnTarget", "H2_OnTarget", "%IDLE", "%Unproductive",
-        "Comments", "FC", "EmployeeId", "PackLine", "Coached",
+        "Comments", "FC", "EmployeeId", "PackLine", "Coached", "Exempt",
     ]
     full_df = dash[[c for c in full_cols if c in dash.columns]].copy()
 

@@ -27,7 +27,7 @@ PERMISSIONS_PAGE = f"https://permissions.amazon.com/a/team/{TEAM_NAME}"
 PERMISSIONS_POST = "https://permissions.amazon.com/a/team/index/check_membership"
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
-ALLOWED_SITES: set[str] = {"BCN1", "BCN4", "MAD7", "RMU1", "OVD1", "SVQ1"}
+ALLOWED_SITES: set[str] = {"BCN1", "BCN4", "MAD4", "MAD6", "MAD7", "MAD9", "OVD1", "RMU1", "SVQ1", "VLC1"}
 
 _MEMBERSHIP_CACHE: dict[str, tuple[bool, float]] = {}
 CACHE_TTL_SECONDS = 300

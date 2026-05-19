@@ -9,6 +9,7 @@ import shutil
 from dataclasses import dataclass
 from datetime import datetime, timedelta, time
 from pathlib import Path
+from math import ceil
 from typing import Any
 
 import pandas as pd
@@ -35,6 +36,8 @@ OUTPUT_DIR = Path(getattr(paths, "output", ROOT_DIR / "data" / "output"))
 CONFIG_DIR = ROOT_DIR / "config" / "hermes"
 DOCUMENTS_QUALITY_DIR = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Documents" / "Quality TO"
 DOCUMENTS_QUALITY_DIR.mkdir(parents=True, exist_ok=True)
+
+DPMO_TARGETS_PATH = CONFIG_DIR / "dpmo_targets.json"
 
 QUALITY_OUTPUT_NAME = "Quality_Coaching.csv"
 
@@ -126,6 +129,79 @@ def normalize_error_key(error_type: str) -> str:
 
 def display_error_name(error_key: str) -> str:
     return str(error_key or "").replace("_", " ").title()
+
+
+# ─── DPMO Target Lookup ─────────────────────────────────────────────────────
+_dpmo_cache: dict | None = None
+
+
+def _load_dpmo_targets() -> dict:
+    """Load DPMO targets config (cached in memory)."""
+    global _dpmo_cache
+    if _dpmo_cache is not None:
+        return _dpmo_cache
+    if not DPMO_TARGETS_PATH.exists():
+        _dpmo_cache = {}
+        return _dpmo_cache
+    try:
+        data = json.loads(DPMO_TARGETS_PATH.read_text(encoding="utf-8-sig"))
+        _dpmo_cache = data.get("targets", data)
+        return _dpmo_cache
+    except Exception as e:
+        log.warning("Could not load dpmo_targets.json: %s", e)
+        _dpmo_cache = {}
+        return _dpmo_cache
+
+
+def hours_to_dpmo_scale(hours: float) -> tuple[str, int]:
+    """Convert hours worked to DPMO tenure scale (day/week) and level.
+
+    Returns:
+        ('day', 1-10) for early tenure (0-80h)
+        ('week', 3-10) for established tenure (81-400h+)
+    """
+    hours = max(0, float(hours or 0))
+    if hours <= 14:
+        return ("day", 1)
+    if hours <= 80:
+        return ("day", min(10, 1 + ceil((hours - 14) / 8)))
+    if hours <= 400:
+        return ("week", min(10, 2 + ceil(hours / 40)))
+    return ("week", 10)  # Veteran
+
+
+def get_dpmo_target(fc: str, error_key: str, curve: str, hours: float) -> int:
+    """Look up the DPMO target for a given FC, error, curve, and hours.
+
+    Args:
+        fc: Fulfillment center (e.g. "BCN4")
+        error_key: Normalized error key (e.g. "PICK_ERROR_INDICATOR")
+        curve: One of "NH", "XT_NH", "XT", "LAPSED_XT", "VETERAN"
+        hours: Total hours in the process
+
+    Returns:
+        DPMO target value (int). 0 if not found.
+    """
+    targets = _load_dpmo_targets()
+    fc_data = targets.get(fc.upper(), {})
+    error_data = fc_data.get(error_key, {})
+    curves = error_data.get("curves", {})
+
+    # Veterans always use week 10 of XT (or NH if XT missing)
+    if curve == "VETERAN":
+        scale, level = "week", 10
+        curve_key = "XT" if "XT" in curves else "NH"
+    else:
+        scale, level = hours_to_dpmo_scale(hours)
+        curve_key = curve if curve in curves else "NH"
+
+    level_data = curves.get(curve_key, {}).get(scale, {})
+    target = level_data.get(str(level), 0)
+    # Fallback: if specific level not found, try closest available
+    if not target and level_data:
+        available = sorted(level_data.keys(), key=int)
+        target = int(level_data.get(available[-1], 0))  # use highest (strictest)
+    return int(target)
 
 
 def _known_quality_error_keys(fc: str) -> set[str]:
@@ -371,6 +447,12 @@ def _load_quality_source(path: Path, fc: str) -> pd.DataFrame:
         out["_count"] = pd.to_numeric(df.loc[out.index, count_col], errors="coerce").fillna(1)
     else:
         out["_count"] = 1
+    # Preserve MetricValue as Opportunities (volume/units processed)
+    metric_col = _find_col(df, ["MetricValue", "Metric Value", "metric_value", "Opportunities", "opportunities"])
+    if metric_col:
+        out["_opportunities"] = pd.to_numeric(df.loc[out.index, metric_col], errors="coerce").fillna(0)
+    else:
+        out["_opportunities"] = 0
     out = out[(out["Login"].str.len() > 0) & (out["ErrorKey"].str.len() > 0)].copy()
     return out
 
@@ -386,6 +468,7 @@ def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: dateti
     """
     empty_cols = [
         "FC", "Login", "Process", "Error Type", "ErrorKey", "Total Errors WK",
+        "Opportunities", "DPMO_Target", "Target_Errors", "Pct_to_Target",
         "Site Avg", "Site Std", "Sigma", "Mode", "Sigma Threshold", "Threshold",
         "Present", "PunchType", "Coached", "Course UUID", "Course ID",
         "Transcript URL", "Photo URL", "Week Start", "Week End",
@@ -404,6 +487,7 @@ def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: dateti
         .agg(
             **{
                 "Total Errors WK": ("_count", "sum"),
+                "Opportunities": ("_opportunities", "sum"),
                 "Process": ("Process", lambda x: ", ".join(
                     sorted({
                         str(v).strip()
@@ -548,8 +632,60 @@ def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: dateti
     out["Week Start"] = week_start.strftime("%Y-%m-%d")
     out["Week End"] = week_end.strftime("%Y-%m-%d %H:%M")
 
+    # ─── DPMO Target Calculation ────────────────────────────────────────
+    # Requires tenure hours data for curve/hours lookup
+    try:
+        from project_hermes.domains.tenure_hours import load_tenure_data, get_tenure_for, map_process
+        tenure_df = load_tenure_data(fc)
+        _tenure_ok = tenure_df is not None and not tenure_df.empty
+    except Exception as e:
+        log.info("DPMO: tenure data unavailable: %s", e)
+        tenure_df = None
+        _tenure_ok = False
+
+    dpmo_targets_data = _load_dpmo_targets()
+    dpmo_list, target_errors_list, pct_list = [], [], []
+
+    for _, row in out.iterrows():
+        error_key = str(row.get("ErrorKey", ""))
+        login = str(row.get("Login", "")).strip()
+        process_raw = str(row.get("Process", "")).strip()
+        opportunities = float(row.get("Opportunities", 0) or 0)
+        actual_errors = float(row.get("Total Errors WK", 0) or 0)
+
+        # Determine curve and hours from tenure data
+        curve, hours = "NH", 0.0
+        if _tenure_ok:
+            try:
+                proc_mapped = map_process(process_raw) if process_raw else ""
+                if proc_mapped:
+                    info = get_tenure_for(tenure_df, login, proc_mapped)
+                    curve = info.get("curve", "NH")
+                    hours = info.get("hours", 0.0)
+                    if curve == "VETERAN":
+                        curve = "VETERAN"
+                    elif curve == "XT":
+                        curve = "XT"
+                    elif curve == "NH" and info.get("home_process"):
+                        curve = "XT_NH"
+            except Exception:
+                pass
+
+        dpmo = get_dpmo_target(fc, error_key, curve, hours)
+        target_err = (dpmo * opportunities) / 1_000_000 if opportunities > 0 else 0
+        pct = round((target_err / actual_errors) * 100, 1) if actual_errors > 0 else 999.0
+
+        dpmo_list.append(dpmo)
+        target_errors_list.append(round(target_err, 2))
+        pct_list.append(pct)
+
+    out["DPMO_Target"] = dpmo_list
+    out["Target_Errors"] = target_errors_list
+    out["Pct_to_Target"] = pct_list
+
     ordered = [
         "FC", "Login", "Process", "Error Type", "ErrorKey", "Total Errors WK",
+        "Opportunities", "DPMO_Target", "Target_Errors", "Pct_to_Target",
         "Site Avg", "Site Std", "Sigma", "Mode", "Sigma Threshold", "Threshold",
         "Population", "Max Errors", "Present", "PunchType", "Coached",
         "Course UUID", "Course ID", "Transcript URL", "Photo URL",

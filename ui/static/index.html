@@ -335,6 +335,11 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 [data-theme="dark"] .curve-vet{color:#86efac}
 [data-theme="dark"] .curve-xt{color:#bfdbfe}
 [data-theme="dark"] .curve-nh{color:#fdba74}
+.pct-good{color:#16a34a;font-weight:700}
+.pct-bad{color:#dc2626;font-weight:700}
+.pct-none{color:var(--text-muted)}
+[data-theme="dark"] .pct-good{color:#86efac}
+[data-theme="dark"] .pct-bad{color:#fca5a5}
 .fclm-link{color:var(--text-muted);font-size:10px;text-decoration:none;transition:color .15s}
 .fclm-link:hover{color:var(--accent)}
 
@@ -415,10 +420,14 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
       <select id="fcSelect" class="t-fc-sel">
         <option value="BCN1">BCN1</option>
         <option value="BCN4" selected>BCN4</option>
+        <option value="MAD4">MAD4</option>
+        <option value="MAD6">MAD6</option>
         <option value="MAD7">MAD7</option>
-        <option value="RMU1">RMU1</option>
+        <option value="MAD9">MAD9</option>
         <option value="OVD1">OVD1</option>
+        <option value="RMU1">RMU1</option>
         <option value="SVQ1">SVQ1</option>
+        <option value="VLC1">VLC1</option>
       </select>
       <button id="btnDefaultFc" title="Establecer como FC predeterminado"
         style="background:none;border:none;cursor:pointer;font-size:18px;padding:0 2px 0 4px;color:#f5a623;line-height:1;vertical-align:middle">☆</button>
@@ -551,6 +560,7 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
     <div style="display:flex;gap:8px;align-items:center">
       <button class="toggle-btn" id="qualityPresentOnly"><span id="qualityPresentIcon">○</span> Present only</button>
       <button class="toggle-btn" id="qualityHideCoached"><span id="qualityHideCoachedIcon">○</span> Hide Coached</button>
+      <button class="toggle-btn active" id="qualityHideOnTarget"><span id="qualityHideOnTargetIcon">●</span> Hide On-Target</button>
       <button class="act-btn act-pipeline" id="btnQualityRun">▶ Run Pipeline</button>
       <button class="act-btn act-secondary" id="btnQualityRefresh">↻ Refresh</button>
       <button class="act-btn act-secondary" id="btnQualitySyncGC" title="Force refresh Guided Coaching history">⟳ Sync GC</button>
@@ -603,6 +613,8 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
           <th style="width:180px;text-align:left;padding-left:20px;cursor:pointer" data-qsort="login">Associate ⇅</th>
           <th style="width:240px;text-align:left;cursor:pointer" data-qsort="error_key">Error Type ⇅</th>
           <th style="width:100px;cursor:pointer" data-qsort="total_errors_wk">Errors WK ⇅</th>
+          <th style="width:80px">Target</th>
+          <th style="width:90px;cursor:pointer" data-qsort="pct_to_target">% Target ⇅</th>
           <th style="width:90px">Cohort</th>
           <th style="width:90px;cursor:pointer" data-qsort="sigma">σ Score ⇅</th>
           <th style="width:110px">Tenure</th>
@@ -614,7 +626,7 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
       </thead>
       <tbody id="qualityTbody">
         <tr>
-          <td colspan="10" style="text-align:center;padding:40px;color:#999">
+          <td colspan="12" style="text-align:center;padding:40px;color:#999">
             Click <b>▶ Run Pipeline</b> or <b>↻ Refresh</b> to load quality data…
           </td>
         </tr>

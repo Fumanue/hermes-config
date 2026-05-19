@@ -70,6 +70,7 @@ class RemoteConfig:
     owner: str = ""
     repo: str = ""
     branch: str = "main"
+    token: str = ""
     token_env: str = DEFAULT_TOKEN_ENV
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS
 
@@ -85,6 +86,7 @@ def _load_remote_config() -> RemoteConfig:
             owner=data.get("owner", ""),
             repo=data.get("repo", ""),
             branch=data.get("branch", "main"),
+            token=data.get("token", ""),
             token_env=data.get("token_env", DEFAULT_TOKEN_ENV),
             timeout_seconds=data.get("timeout_seconds", DEFAULT_TIMEOUT_SECONDS),
         )
@@ -127,9 +129,11 @@ def _save_status(status: Dict[str, Any]) -> None:
 
 
 # ─── GitHub API ─────────────────────────────────────────────────────────────
-def _get_github_token(env_var: str) -> Optional[str]:
-    """Get GitHub PAT from environment."""
-    token = os.environ.get(env_var, "").strip()
+def _get_github_token(cfg: RemoteConfig) -> Optional[str]:
+    """Get GitHub PAT — first from embedded token, then from environment."""
+    if cfg.token:
+        return cfg.token
+    token = os.environ.get(cfg.token_env, "").strip()
     return token if token else None
 
 
@@ -219,11 +223,11 @@ def _do_update() -> Dict[str, Any]:
             "changed_files": [], "checked_at": now, "error": "missing owner/repo",
         }
 
-    token = _get_github_token(cfg.token_env)
+    token = _get_github_token(cfg)
     if not token:
         return {
             "ok": False, "status": "error",
-            "message": f"GitHub token not found in env var '{cfg.token_env}'.",
+            "message": f"GitHub token not found (checked 'token' field and env var '{cfg.token_env}').",
             "local_version": None, "remote_version": None,
             "changed_files": [], "checked_at": now, "error": "no token",
         }

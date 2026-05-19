@@ -10,7 +10,7 @@
         "metrics": [
           {
             "column": "Units_Per_Tote",
-            "min_target": 12,
+            "min_target": 13,
             "label": "Units Per Tote"
           }
         ]

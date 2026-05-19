@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import concurrent.futures
 import math
 import os
 import re
@@ -374,7 +375,7 @@ def _load_quality_source(path: Path, fc: str) -> pd.DataFrame:
     return out
 
 
-def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: datetime, week_end: datetime) -> pd.DataFrame:
+def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: datetime, week_end: datetime, roster_df: pd.DataFrame | None = None) -> pd.DataFrame:
     """Build weekly Quality Coaching opportunities.
 
     Important rules:
@@ -524,7 +525,7 @@ def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: dateti
     out["Course ID"] = courses.apply(lambda x: x[1])
 
     # Presence from Roster_SCC PunchType
-    presence = _read_roster_presence(fc)
+    presence = roster_df if (roster_df is not None and not roster_df.empty) else _read_roster_presence(fc)
     if not presence.empty:
         out = out.merge(presence, on="Login", how="left")
     else:
@@ -572,7 +573,38 @@ def run(fc: str = "BCN4", force_download: bool = True) -> Path:
     log.info("Documents output: {DOCUMENTS_QUALITY_DIR}")
     log.info("=" * 70)
 
-    src_path = _fetch_weekly_atlas(fc, week_start, week_end) if force_download else _find_latest_quality_csv()
+    # ─── Parallel fetch: Atlas + Diver + Roster ─────────────────────────
+    fps_df = None
+    roster_df = None
+
+    def _task_atlas():
+        return _fetch_weekly_atlas(fc, week_start, week_end) if force_download else _find_latest_quality_csv()
+
+    def _task_diver():
+        if fetch_and_build_fps is None:
+            return None
+        start_str = week_start.strftime("%Y-%m-%d")
+        end_str = week_end.strftime("%Y-%m-%d")
+        return fetch_and_build_fps(fc, start_str, end_str, force_refresh=force_download)
+
+    def _task_roster():
+        return _read_roster_presence(fc)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+        fut_atlas = pool.submit(_task_atlas)
+        fut_diver = pool.submit(_task_diver)
+        fut_roster = pool.submit(_task_roster)
+
+        src_path = fut_atlas.result()
+        try:
+            fps_df = fut_diver.result()
+        except Exception as e:
+            log.warning("Diver FPS fetch failed (non-fatal): {e}")
+        try:
+            roster_df = fut_roster.result()
+        except Exception as e:
+            log.warning("Roster pre-fetch failed (non-fatal): {e}")
+
     if not src_path:
         raise FileNotFoundError("No Atlas Quality CSV found/generated.")
 
@@ -589,24 +621,16 @@ def run(fc: str = "BCN4", force_download: bool = True) -> Path:
     source_df = _load_quality_source(src_path, fc)
     log.info("Filtered source rows: {len(source_df)}")
 
-    # ─── False Pick Short from Diver QTS ────────────────────────────────
-    if fetch_and_build_fps is not None:
-        try:
-            start_str = week_start.strftime("%Y-%m-%d")
-            end_str = week_end.strftime("%Y-%m-%d")
-            fps_df = fetch_and_build_fps(fc, start_str, end_str, force_refresh=force_download)
-            if fps_df is not None and not fps_df.empty:
-                log.info("Diver FPS rows: {len(fps_df)}")
-                # Ensure same columns as source_df for concat
-                for col in source_df.columns:
-                    if col not in fps_df.columns:
-                        fps_df[col] = ""
-                source_df = pd.concat([source_df, fps_df[source_df.columns]], ignore_index=True)
-                log.info("Combined source rows: {len(source_df)}")
-        except Exception as e:
-            log.info("Diver FPS fetch failed (non-fatal): {e}")
+    # ─── Merge Diver FPS if available ───────────────────────────────────
+    if fps_df is not None and not fps_df.empty:
+        log.info("Diver FPS rows: {len(fps_df)}")
+        for col in source_df.columns:
+            if col not in fps_df.columns:
+                fps_df[col] = ""
+        source_df = pd.concat([source_df, fps_df[source_df.columns]], ignore_index=True)
+        log.info("Combined source rows: {len(source_df)}")
 
-    quality_df = build_quality_dashboard(source_df, fc, week_start, week_end)
+    quality_df = build_quality_dashboard(source_df, fc, week_start, week_end, roster_df=roster_df)
     log.info("Flagged rows: {len(quality_df)}")
 
     out_doc = DOCUMENTS_QUALITY_DIR / QUALITY_OUTPUT_NAME

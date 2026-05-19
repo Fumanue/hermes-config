@@ -198,7 +198,7 @@ def build_payload_actuals_vs_op2(fc: str, year: int, week: int) -> str:
 
 
 def parse_prod_table(html: str) -> pd.DataFrame:
-    tables = pd.read_html(StringIO(html))
+    tables = pd.read_html(StringIO(html), flavor="html5lib")
     if not tables:
         raise RuntimeError("No HTML tables found in Necro response.")
     for t in tables:

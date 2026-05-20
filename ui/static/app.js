@@ -4,7 +4,7 @@ const I18N = {
     subtitle: "Tu herramienta L&D / Operacional todo-en-uno",
     tab_performance: "Performance", tab_history: "Historial", tab_targets: "Targets", tab_quality: "Calidad",
     lbl_process: "Proceso", lbl_sub: "Sub", lbl_all: "Todos", lbl_fc: "FC",
-    lbl_updated: "Actualizado", lbl_live: "Live", lbl_created: "Creado y Desarrollado por",
+    lbl_updated: "Actualizado", lbl_live: "Live", lbl_created: "Creado y Desarrollado por", lbl_theme: "Tema", lbl_lang: "Idioma",
     kpi_p3: "Prioridad 3", kpi_p3_sub: "Por debajo de 80%",
     kpi_p2: "Prioridad 2",
     kpi_p1: "Prioridad 1",
@@ -40,7 +40,7 @@ const I18N = {
     subtitle: "Your L&D / Operational One Stop Tool",
     tab_performance: "Performance", tab_history: "History", tab_targets: "Targets", tab_quality: "Quality",
     lbl_process: "Process", lbl_sub: "Sub", lbl_all: "All", lbl_fc: "FC",
-    lbl_updated: "Updated", lbl_live: "Live", lbl_created: "Created and Developed by",
+    lbl_updated: "Updated", lbl_live: "Live", lbl_created: "Created and Developed by", lbl_theme: "Theme", lbl_lang: "Language",
     kpi_p3: "Priority 3", kpi_p3_sub: "Below 80%",
     kpi_p2: "Priority 2",
     kpi_p1: "Priority 1",
@@ -1917,7 +1917,7 @@ $("tenureFilter") && $("tenureFilter").addEventListener("change",e=>{
   state.tenureFilter = e.target.value;
   renderAll();
 });
-$("btnRefresh").addEventListener("click",loadDashboard);
+$("btnRefresh") && $("btnRefresh").addEventListener("click",loadDashboard);
 $("searchInput").addEventListener("input",e=>{ state.q=e.target.value.trim(); renderAll(); });
 $("maxInput").addEventListener("input",e=>{
   const v=parseInt(e.target.value,10);

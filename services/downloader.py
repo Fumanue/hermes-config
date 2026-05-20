@@ -793,6 +793,9 @@ def download_fclm(process_id: str, fc: str, start_dt: datetime, end_dt: datetime
                 )
                 df = df[mask].reset_index(drop=True)
                 log.info(f"FCLM {process_id} (Decant): filtered to Case+Total → {len(df)} rows")
+                if df.empty:
+                    log.warning(f"FCLM {process_id} (Decant): no Case+Total rows found — returning empty")
+                    return DownloadResult(name, True, "", count=0, cleaned=True)
 
         df_cleaned = clean_fclm(df)
         return DownloadResult(name, True, df_to_csv(df_cleaned), count=len(df_cleaned), cleaned=True)

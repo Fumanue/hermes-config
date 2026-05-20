@@ -27,8 +27,14 @@ RULES = load_cleaning_rules()
 
 # ---------------- helpers ----------------
 def read_csv_smart(path: Path) -> pd.DataFrame:
+    # Guard: skip empty files
+    if path.stat().st_size == 0:
+        return pd.DataFrame()
     try:
-        return pd.read_csv(path)
+        df = pd.read_csv(path)
+        return df
+    except pd.errors.EmptyDataError:
+        return pd.DataFrame()
     except UnicodeDecodeError:
         return pd.read_csv(path, encoding="latin-1")
 
@@ -195,6 +201,10 @@ def run(output_dir: Path | None = None) -> Path:
         name = csv_path.name
 
         df = read_csv_smart(csv_path)
+
+        if df.empty:
+            log.info("⚠️ Empty file skipped: {name}")
+            continue
 
         if name.startswith("FCLM_"):
             cleaned = clean_fclm(df, file_name=name)

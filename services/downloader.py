@@ -149,7 +149,7 @@ def clean_fclm(df: pd.DataFrame) -> pd.DataFrame:
     if col_unit:
         unit_norm = norm_str_series(out[col_unit])
         # Accept both EACH and CASE as valid (Decant uses CASE)
-        out["_Unit_Is_Each"] = (unit_norm == "EACH") | (unit_norm == "CASE")
+        out["_Unit_Is_Each"] = (unit_norm == "EACH") | (unit_norm == "CASE") | (unit_norm == "BINS")
     else:
         out["_Unit_Is_Each"] = True
 
@@ -823,6 +823,21 @@ def download_fclm_icqa(process_id: str, fc: str, start_dt: datetime, end_dt: dat
         url = build_fclm_url(process_id, fc, start_dt, end_dt)
         raw_csv = winhttp_request(url, cookie)
         df = csv_to_df(raw_csv)
+
+        # ICQA SBC: Use Unit Type = Bins only (not EACH)
+        col_unit = find_col(df, ["Unit Type"])
+        col_size = find_col(df, ["Size"])
+        if col_unit and col_size:
+            mask = (
+                df[col_unit].astype(str).str.strip().str.upper() == "BINS"
+            ) & (
+                df[col_size].astype(str).str.strip().str.upper() == "TOTAL"
+            )
+            df = df[mask].reset_index(drop=True)
+            log.info(f"FCLM {process_id} (ICQA): filtered to Bins+Total → {len(df)} rows")
+            if df.empty:
+                log.warning(f"FCLM {process_id} (ICQA): no Bins+Total rows found — returning empty")
+                return DownloadResult(name, True, "", count=0, cleaned=True)
 
         # Identify JPH column by index (fallback: search for JPH in name)
         jph_col = None

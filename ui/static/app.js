@@ -1862,71 +1862,49 @@ $("bulk-submit").addEventListener("click",async()=>{
 });
 
 // ── Pipeline ───────────────────────────────────────────────
-$("btnPipeline").addEventListener("click",()=>{
-  $("pipelineTitle").textContent="▶ Run Pipeline";
-  $("pipelineLog").textContent="Ready. Click Start to run.";
-  $("pipelineRunBtn").style.display="";
-  $("pipelineRefreshBtn").style.display="none";
-  openModal("modalPipeline");
-});
-$("pipelineRunBtn").addEventListener("click",()=>{
-  const log=$("pipelineLog"),btn=$("pipelineRunBtn");
-  const wrap=$("pipelineProgressWrap");
-  const bar=$("pipelineProgressBar");
-  const msg=$("pipelineProgressMsg");
-  const pct=$("pipelineProgressPct");
-
-  btn.style.display="none";
-  wrap.style.display="";
-  bar.style.width="0%";
-  bar.style.background="linear-gradient(90deg,#f6913e,#e85d26)";
-  msg.textContent="Iniciando…";
-  pct.textContent="0%";
-  log.innerHTML=`<span class="log-dim">Starting pipeline…</span>`;
-  $("pipelineTitle").textContent="⏳ Running…";
-
-  const evtSrc=new EventSource(`${API}/api/pipeline/stream?fc=${encodeURIComponent(currentFC)}&shift=${encodeURIComponent(currentShift)}`);
-  evtSrc.onmessage=async(e)=>{
-    try{
-      const d=JSON.parse(e.data);
-      const p=Math.min(d.pct||0,100);
-      bar.style.width=p+"%";
-      pct.textContent=p+"%";
-      if(d.msg) msg.textContent=d.msg;
-      if(p>=100){
+$("btnPipeline").addEventListener("click", ()=>{
+  const btn = $("btnPipeline");
+  const sb = document.querySelector("#panel-dashboard .statusbar .sb-l");
+  const origSb = sb ? sb.innerHTML : "";
+  btn.disabled = true;
+  btn.textContent = "⏳ Running…";
+  if(sb) sb.innerHTML = `<span style="display:flex;align-items:center;gap:8px;width:100%">
+    <span style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+      <span id="perfPipeBar" style="display:block;width:0%;height:100%;background:var(--accent);transition:width .3s"></span>
+    </span>
+    <span id="perfPipeMsg" style="font-size:10px;color:var(--accent);font-weight:600;white-space:nowrap">Iniciando…</span>
+  </span>`;
+  const evtSrc = new EventSource(`${API}/api/pipeline/stream?fc=${encodeURIComponent(currentFC)}&shift=${encodeURIComponent(currentShift)}`);
+  evtSrc.onmessage = async (e) => {
+    try {
+      const d = JSON.parse(e.data);
+      const p = Math.min(d.pct || 0, 100);
+      const bar = $("perfPipeBar");
+      const msg = $("perfPipeMsg");
+      if(bar) bar.style.width = p + "%";
+      if(msg && d.msg) msg.textContent = d.msg;
+      if(p >= 100){
         evtSrc.close();
-        if(d.log){
-          const lines=String(d.log).split("\n").map(l=>{
-            if(!l.trim()) return "";
-            const cls=l.includes("✓")||l.includes("OK")?"log-ok":
-              l.includes("✗")||l.includes("Error")||l.includes("❌")?"log-err":
-              l.includes("⚠")||l.toLowerCase().includes("warn")?"log-warn":
-              l.startsWith("[")?"log-info":"";
-            return cls?`<span class="${cls}">${esc(l)}</span>`:`<span class="log-dim">${esc(l)}</span>`;
-          }).filter(Boolean);
-          log.innerHTML=lines.join("\n")||`<span class="log-dim">(no output)</span>`;
-        }
-        if(d.ok!==false){
-          $("pipelineTitle").textContent="✅ Pipeline Completed";
-          $("pipelineRefreshBtn").style.display="";
+        btn.disabled = false;
+        btn.textContent = t("btn_run_pipeline");
+        if(d.ok !== false){
+          if(sb) sb.innerHTML = `<span style="color:var(--green);font-weight:700">✓ Pipeline completado</span>`;
+          setTimeout(()=>{ if(sb) sb.innerHTML = origSb; }, 3000);
           await loadDashboard();
-        }else{
-          $("pipelineTitle").textContent="❌ Pipeline Error";
-          bar.style.background="#e53e3e";
-          btn.style.display="";btn.textContent="↻ Retry";
+        } else {
+          if(sb) sb.innerHTML = `<span style="color:#e53e3e;font-weight:700">❌ Error: ${esc(String(d.error||"pipeline failed"))}</span>`;
+          setTimeout(()=>{ if(sb) sb.innerHTML = origSb; }, 8000);
         }
       }
-    }catch(err){ console.error("SSE parse error",err); }
+    } catch(err){ console.error("SSE parse error", err); }
   };
-  evtSrc.onerror=()=>{
+  evtSrc.onerror = () => {
     evtSrc.close();
-    log.innerHTML=`<span class="log-err">Connection error — check server</span>`;
-    $("pipelineTitle").textContent="❌ Pipeline Error";
-    bar.style.background="#e53e3e";
-    btn.style.display="";btn.textContent="↻ Retry";
+    btn.disabled = false;
+    btn.textContent = t("btn_run_pipeline");
+    if(sb){ sb.innerHTML = `<span style="color:#e53e3e">❌ Connection error</span>`; setTimeout(()=>{ sb.innerHTML = origSb; }, 5000); }
   };
 });
-$("pipelineRefreshBtn").addEventListener("click",async()=>{ await loadDashboard(); closeModal("modalPipeline"); });
 
 // ── Toolbar ────────────────────────────────────────────────
 document.querySelectorAll("[data-curve]").forEach(btn=>{

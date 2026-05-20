@@ -1,5 +1,5 @@
 ﻿{
-    "version":  "2.0.9",
+    "version":  "2.0.10",
     "files":  {
                   "area_roles.json":  "configs/area_roles.json",
                   "cleaning_rules.json":  "configs/cleaning_rules.json",

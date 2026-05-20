@@ -58,6 +58,27 @@ log.info("index.html    = {(STATIC_DIR / 'index.html').exists()}")
 log.info("app.js        = {(STATIC_DIR / 'app.js').exists()}")
 log.info("Dashboard CSV = {DASHBOARD_CSV.exists()}")
 
+# ─────────────────────────────────────────────────────────
+# Usage telemetry (fire-and-forget, non-blocking)
+# ─────────────────────────────────────────────────────────
+_USAGE_LOG = Path(r"\\ant\dept-eu\BCN4\Public\Professor_data\argos_usage.csv")
+
+def _log_usage(fc: str, username: str, pipeline_type: str):
+    """Append usage line to shared CSV. Runs in daemon thread — zero impact on pipeline."""
+    import threading
+    def _write():
+        try:
+            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            line = f"{ts},{fc},{username},{pipeline_type}\n"
+            if not _USAGE_LOG.exists():
+                _USAGE_LOG.write_text("timestamp,fc,username,pipeline_type\n" + line, encoding="utf-8")
+            else:
+                with open(_USAGE_LOG, "a", encoding="utf-8") as f:
+                    f.write(line)
+        except Exception:
+            pass
+    threading.Thread(target=_write, daemon=True).start()
+
 if not STATIC_DIR.exists():
     raise RuntimeError(f"Static directory not found: {STATIC_DIR}")
 
@@ -858,6 +879,7 @@ def api_run_pipeline(req: PipelineRequest):
         )
     # ──────────────────────────────────────────────────────────
     shift          = req.shift or auto_detect_shift(fc_upper)
+    _log_usage(fc_upper, os.environ.get("USERNAME", "unknown"), "Performance")
     start_dt, end_dt = compute_shift_range(shift, fc_upper)
     buf = StringIO()
     try:
@@ -881,6 +903,7 @@ def api_pipeline_stream(fc: str = DEFAULT_FC, shift: str = ""):
         raise HTTPException(status_code=403, detail="Site no habilitado")
 
     shift = shift or auto_detect_shift(fc_upper)
+    _log_usage(fc_upper, os.environ.get("USERNAME", "unknown"), "Performance")
     start_dt, end_dt = compute_shift_range(shift, fc_upper)
     q: queue.Queue = queue.Queue()
 
@@ -1179,6 +1202,7 @@ def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False):
 @app.post("/api/quality/run")
 def api_quality_run(req: QualityRunRequest):
     fc_upper = str(req.fc or DEFAULT_FC).strip().upper()
+    _log_usage(fc_upper, os.environ.get("USERNAME", "unknown"), "Quality")
     if fc_upper not in ALLOWED_SITES:
         raise HTTPException(status_code=403, detail="Site no habilitado")
     buf = StringIO()

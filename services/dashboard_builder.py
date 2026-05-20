@@ -1507,6 +1507,17 @@ def run(fc: str = "BCN4") -> Path:
         dash.loc[qs_mask, "Role"] = "QUANTITY_STOW"
         log.info("✓ QUANTITY_STOW assigned: {int(qs_mask.sum())} employees")
 
+    # ICQA SBC: assign role to employees found in FCLM_1003030
+    _icqa_fclm = fclm_cache.get("FCLM_1003030.csv")
+    if _icqa_fclm is not None and "Employee Id" in _icqa_fclm.columns:
+        _icqa_eids = set(_icqa_fclm["Employee Id"].astype(str).str.strip())
+        _icqa_mask = (
+            dash["EmployeeId"].astype(str).str.strip().isin(_icqa_eids)
+            & (dash["Role"].astype(str).str.strip().isin(["", "NAN", "nan", "None"]) | dash["Role"].isna())
+        )
+        dash.loc[_icqa_mask, "Role"] = "ICQA_SIMPLE_BIN_COUNT"
+        log.info(f"✓ ICQA_SIMPLE_BIN_COUNT assigned: {int(_icqa_mask.sum())} employees")
+
     _apply_station_overrides(dash, fclm_cache)
     _apply_role_rates(dash, fclm_cache)
     _apply_fallback_rates(dash, fclm_cache)
@@ -1518,6 +1529,14 @@ def run(fc: str = "BCN4") -> Path:
     dash.loc[missing_pid, "ProcessId"] = dash.loc[missing_pid, "Role"].astype(str).str.upper().map(ROLE_TO_PROCESS_ID).fillna("")
 
     dash["Rate"] = pd.to_numeric(dash["Rate"], errors="coerce").round(0).astype("Int64")
+
+    # ── Early filter: drop employees with no rate AND no station (not working this shift) ──
+    _has_rate = dash["Rate"].notna()
+    _has_station = dash["Station"].astype(str).str.strip().replace({"": None, "nan": None, "NaN": None, "None": None}).notna()
+    _active = _has_rate | _has_station
+    _dropped = len(dash) - _active.sum()
+    dash = dash[_active].reset_index(drop=True)
+    log.info(f"Active filter: kept {len(dash)} rows, dropped {_dropped} inactive (no rate, no station)")
 
     # PHASE 2 targets
     necro_targets = {str(k).upper(): float(v) for k, v in get_necro_targets(fc)["targets"].items()}

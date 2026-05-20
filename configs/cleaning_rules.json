@@ -7,7 +7,12 @@
     },
     "overrides": {
       "1003019": {
-        "allowed_unit_types": ["EACH", "CASE"],
+        "allowed_unit_types": ["CASE"],
+        "require_size_total": true,
+        "min_hours": 1
+      },
+      "1003030": {
+        "allowed_unit_types": ["BINS"],
         "require_size_total": true,
         "min_hours": 1
       },

@@ -993,6 +993,16 @@ def api_bulk_upload(req: BulkUploadRequest):
 # ═════════════════════════════════════════════════════════
 @app.get("/api/quality/dashboard")
 def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False):
+    import math
+
+    def _safe_int(v, default=0):
+        """Convert to int safely, handling NaN/None."""
+        try:
+            f = float(v) if v is not None else 0.0
+            return int(f) if not math.isnan(f) else default
+        except (ValueError, TypeError):
+            return default
+
     try:
         df = load_output(present_only=present_only)
         if df.empty:
@@ -1131,17 +1141,17 @@ def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False):
                 "process": str(row.get("Process", "")),
                 "error_type": str(row.get("Error Type", "")),
                 "error_key": str(row.get("ErrorKey", "")),
-                "total_errors_wk": int(float(row.get("Total Errors WK", 0) or 0)),
-                "opportunities": int(float(row.get("Opportunities", 0) or 0)),
-                "dpmo_target": int(float(row.get("DPMO_Target", 0) or 0)),
-                "target_errors": round(float(row.get("Target_Errors", 0) or 0), 1),
-                "pct_to_target": round(float(row.get("Pct_to_Target", 0) or 0), 1),
-                "site_avg": float(row.get("Site Avg", 0) or 0),
-                "site_std": float(row.get("Site Std", 0) or 0),
-                "sigma": float(row.get("Sigma", 0) or 0),
+                "total_errors_wk": _safe_int(row.get("Total Errors WK", 0)),
+                "opportunities": _safe_int(row.get("Opportunities", 0)),
+                "dpmo_target": _safe_int(row.get("DPMO_Target", 0)),
+                "target_errors": round(float(row.get("Target_Errors") or 0) if not pd.isna(row.get("Target_Errors")) else 0.0, 1),
+                "pct_to_target": round(float(row.get("Pct_to_Target") or 0) if not pd.isna(row.get("Pct_to_Target")) else 0.0, 1),
+                "site_avg": float(row.get("Site Avg") or 0) if not pd.isna(row.get("Site Avg")) else 0.0,
+                "site_std": float(row.get("Site Std") or 0) if not pd.isna(row.get("Site Std")) else 0.0,
+                "sigma": float(row.get("Sigma") or 0) if not pd.isna(row.get("Sigma")) else 0.0,
                 "mode": str(row.get("Mode", "")),
-                "sigma_threshold": float(row.get("Sigma Threshold", 0) or 0),
-                "threshold": float(row.get("Threshold", 0) or 0),
+                "sigma_threshold": float(row.get("Sigma Threshold") or 0) if not pd.isna(row.get("Sigma Threshold")) else 0.0,
+                "threshold": float(row.get("Threshold") or 0) if not pd.isna(row.get("Threshold")) else 0.0,
                 "present": str(row.get("Present", "")).lower() in ("true", "1", "yes"),
                 "punch_type": str(row.get("PunchType", "")),
                 "coached": is_coached,
@@ -1162,6 +1172,7 @@ def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False):
             },
         }
     except Exception as e:
+        log.error("api_quality_dashboard FAILED: %s", e, exc_info=True)
         return {"data": [], "kpis": {"total": 0, "present": 0, "coached": 0}, "error": str(e)}
 
 

@@ -1,3 +1,77 @@
+// ═══ I18N — Language System ═══
+const I18N = {
+  es: {
+    subtitle: "Tu herramienta L&D / Operacional todo-en-uno",
+    tab_performance: "Performance", tab_history: "Historial", tab_targets: "Targets", tab_quality: "Calidad",
+    lbl_process: "Proceso", lbl_sub: "Sub", lbl_all: "Todos", lbl_fc: "FC",
+    lbl_updated: "Actualizado", lbl_live: "Live", lbl_created: "Creado y Desarrollado por",
+    kpi_p3: "Prioridad 3", kpi_p3_sub: "Por debajo de 80%",
+    kpi_p2: "Prioridad 2",
+    kpi_p1: "Prioridad 1",
+    kpi_on_target: "On Target", kpi_on_target_sub: "Por encima de 100%",
+    kpi_total: "Total Activos", kpi_total_sub: "Ops + L&D",
+    kpi_coached: "Coached", kpi_coached_sub: "Este turno",
+    btn_show: "VER", btn_max: "MAX", btn_curve: "Curva",
+    lbl_showing: "Mostrando", lbl_of: "de", lbl_associates: "asociados",
+    th_associate: "Asociado", th_dept: "Dept", th_cohort: "Cohort", th_role: "Rol",
+    th_station: "Estación", th_prio: "Prio", th_rate: "Rate", th_pct_target: "% Target",
+    th_notes: "Notas", th_coached: "Coached", th_action: "Acción",
+    // Quality
+    q_title: "Quality Coaching",
+    q_subtitle: "Acumulado semanal Atlas · domingo a ahora · detección sigma por Error Type",
+    q_opportunities: "Oportunidades", q_present: "Presentes", q_coached: "Coached", q_pending: "Pendientes",
+    btn_present_only: "Solo presentes", btn_hide_coached: "Ocultar coached",
+    btn_hide_on_target: "Ocultar on-target", btn_run_pipeline: "▶ Ejecutar Pipeline",
+    btn_refresh: "↻ Refresh", btn_sync_gc: "⟳ Sync GC",
+    btn_upload_coaching: "↑ Subir Coaching", btn_summary: "📊 Resumen", btn_bulk: "↑↑ Subida masiva", btn_csv: "↓ CSV",
+    qth_associate: "Asociado", qth_error: "Tipo Error", qth_errors_wk: "Errores Sem",
+    qth_target: "Target", qth_pct_target: "% Target", qth_sigma: "σ Score",
+    qth_cohort: "Cohort", qth_tenure: "Tenure", qth_mode: "Modo",
+    qth_present: "Presente", qth_coached: "Coached", qth_action: "Acción",
+    // History
+    hist_title: "Historial de Coaching", hist_sub: "Últimos 7 días · coaching manual de productividad",
+    // Targets
+    tgt_title: "Targets", tgt_sub: "Targets por role y semana de tenure (W1–W10)",
+    // Common
+    loading: "Cargando…", close: "Cerrar", cancel: "Cancelar",
+    pipeline_done: "✓ Pipeline completado", lbl_threshold: "Umbral: asociados por encima del σ configurado aparecen aquí",
+  },
+  en: {
+    subtitle: "Your L&D / Operational One Stop Tool",
+    tab_performance: "Performance", tab_history: "History", tab_targets: "Targets", tab_quality: "Quality",
+    lbl_process: "Process", lbl_sub: "Sub", lbl_all: "All", lbl_fc: "FC",
+    lbl_updated: "Updated", lbl_live: "Live", lbl_created: "Created and Developed by",
+    kpi_p3: "Priority 3", kpi_p3_sub: "Below 80%",
+    kpi_p2: "Priority 2",
+    kpi_p1: "Priority 1",
+    kpi_on_target: "On Target", kpi_on_target_sub: "Above 100%",
+    kpi_total: "Total Active", kpi_total_sub: "Ops + L&D",
+    kpi_coached: "Coached", kpi_coached_sub: "This shift",
+    btn_show: "SHOW", btn_max: "MAX", btn_curve: "Curve",
+    lbl_showing: "Showing", lbl_of: "of", lbl_associates: "associates",
+    th_associate: "Associate", th_dept: "Dept", th_cohort: "Cohort", th_role: "Role",
+    th_station: "Station", th_prio: "Prio", th_rate: "Rate", th_pct_target: "% Target",
+    th_notes: "Notes", th_coached: "Coached", th_action: "Action",
+    q_title: "Quality Coaching",
+    q_subtitle: "Weekly cumulative Atlas · Sunday to now · sigma detection by Error Type",
+    q_opportunities: "Opportunities", q_present: "Present", q_coached: "Coached", q_pending: "Pending",
+    btn_present_only: "Present only", btn_hide_coached: "Hide Coached",
+    btn_hide_on_target: "Hide On-Target", btn_run_pipeline: "▶ Run Pipeline",
+    btn_refresh: "↻ Refresh", btn_sync_gc: "⟳ Sync GC",
+    btn_upload_coaching: "↑ Upload Coaching", btn_summary: "📊 Summary", btn_bulk: "↑↑ Bulk Upload", btn_csv: "↓ CSV",
+    qth_associate: "Associate", qth_error: "Error Type", qth_errors_wk: "Errors WK",
+    qth_target: "Target", qth_pct_target: "% Target", qth_sigma: "σ Score",
+    qth_cohort: "Cohort", qth_tenure: "Tenure", qth_mode: "Mode",
+    qth_present: "Present", qth_coached: "Coached", qth_action: "Action",
+    hist_title: "Coaching History", hist_sub: "Last 7 days · manual productivity coaching",
+    tgt_title: "Targets", tgt_sub: "Targets by role and tenure week (W1–W10)",
+    loading: "Loading…", close: "Close", cancel: "Cancel",
+    pipeline_done: "✓ Pipeline completed", lbl_threshold: "Threshold: associates above configured σ appear here",
+  }
+};
+let _lang = localStorage.getItem("argos-lang") || "es";
+function t(k){ return (I18N[_lang]||I18N.es)[k] || (I18N.es)[k] || k; }
+
 // ═══ THEME TOGGLE ═══
 (function(){
   const saved = localStorage.getItem("argos-theme") || "light";
@@ -262,9 +336,8 @@ async function loadUserInfo(){
   if(_authCache && _authCache.date === today){
     const d = _authCache.data;
     const u = d.user || {};
-    name.textContent = u.login || "—";
-    const rp = [u.job_title].filter(Boolean);
-    role.textContent = rp.length ? rp.join(" · ") : "Acceso básico";
+    name.textContent = (u.login || "—") + "@";
+    role.textContent = "";
     dot.className = "t-user-dot";
     if(d.permissions) _applyPermissions(d.permissions);
     _unblockUI();
@@ -282,10 +355,8 @@ async function loadUserInfo(){
     const level = u.job_level != null ? `L${u.job_level}` : "";
     const site  = u.building_code || "";
 
-    name.textContent = login;
-    // If phonetool failed, show simpler label
-    const roleparts = [title].filter(Boolean);
-    role.textContent = roleparts.length ? roleparts.join(" · ") : "";
+    name.textContent = login + "@";
+    role.textContent = "";
     dot.className    = "t-user-dot";
     $("userPill").title = `${login}${title ? " | "+title : ""}${level ? " "+level : ""}${site ? " | "+site : ""}`;
 
@@ -1898,5 +1969,25 @@ syncKpiActive();
 initProcessMs();
 
 _initApp().then(()=>loadDashboard());;
+
+// ─── Language Selector ──────────────────────────────────────────
+const _langSel = document.getElementById("langSelect");
+if(_langSel){
+  _langSel.value = _lang;
+  _langSel.addEventListener("change", (e) => {
+    _lang = e.target.value;
+    localStorage.setItem("argos-lang", e.target.value);
+    _applyI18n();
+  });
+}
+
+function _applyI18n(){
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const k = el.getAttribute("data-i18n");
+    const v = t(k);
+    if(v) el.textContent = v;
+  });
+}
+_applyI18n();
 
 }); // end DOMContentLoaded

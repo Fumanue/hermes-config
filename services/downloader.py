@@ -148,7 +148,8 @@ def clean_fclm(df: pd.DataFrame) -> pd.DataFrame:
 
     if col_unit:
         unit_norm = norm_str_series(out[col_unit])
-        out["_Unit_Is_Each"] = unit_norm == "EACH"
+        # Accept both EACH and CASE as valid (Decant uses CASE)
+        out["_Unit_Is_Each"] = (unit_norm == "EACH") | (unit_norm == "CASE")
     else:
         out["_Unit_Is_Each"] = True
 
@@ -779,6 +780,20 @@ def download_fclm(process_id: str, fc: str, start_dt: datetime, end_dt: datetime
         url = build_fclm_url(process_id, fc, start_dt, end_dt)
         raw_csv = winhttp_request(url, cookie)
         df = csv_to_df(raw_csv)
+
+        # DECANT (location enrichment processes): Use Unit Type = Case only
+        if str(process_id) in LOCATION_ENRICHMENT_PROCESS_IDS:
+            col_unit = find_col(df, ["Unit Type"])
+            col_size = find_col(df, ["Size"])
+            if col_unit and col_size:
+                mask = (
+                    df[col_unit].astype(str).str.strip().str.upper() == "CASE"
+                ) & (
+                    df[col_size].astype(str).str.strip().str.upper() == "TOTAL"
+                )
+                df = df[mask].reset_index(drop=True)
+                log.info(f"FCLM {process_id} (Decant): filtered to Case+Total → {len(df)} rows")
+
         df_cleaned = clean_fclm(df)
         return DownloadResult(name, True, df_to_csv(df_cleaned), count=len(df_cleaned), cleaned=True)
     except Exception as e:

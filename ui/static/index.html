@@ -84,7 +84,7 @@ html{font-size:14px}
 body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-body);color:var(--text);-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;height:100vh;overflow:hidden}
 
 /* TOPBAR */
-.topbar{background:var(--bg-topbar);height:54px;display:flex;align-items:center;padding:0 22px;flex-shrink:0;position:relative;border-bottom:1px solid var(--border)}
+.topbar{background:var(--bg-topbar);height:54px;display:flex;align-items:center;padding:0 16px;flex-shrink:0;position:relative;border-bottom:1px solid var(--border);gap:4px}
 .topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--gradient)}
 .t-logo{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;color:var(--text);padding-right:24px;white-space:nowrap}
 .t-logo .subtitle{font-size:9.5px;font-weight:400;color:var(--text-muted);letter-spacing:0.02em;margin-top:1px;display:block}
@@ -93,7 +93,7 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .t-tab{padding:7px 16px;display:flex;align-items:center;font-size:12.5px;color:var(--text-secondary);cursor:pointer;font-weight:500;border-radius:18px;transition:all .2s}
 .t-tab:hover{color:var(--text);background:var(--accent-light)}
 .t-tab.on{color:#fff;background:var(--tab-active);font-weight:600;box-shadow:0 2px 8px var(--shadow)}
-.t-filters{display:flex;align-items:center;gap:8px;padding-left:16px}
+.t-filters{display:flex;align-items:center;gap:6px;padding-left:12px;flex-shrink:1;min-width:0}
 .tf-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);font-weight:600}
 
 /* MULTI-SELECT */
@@ -111,7 +111,7 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 
 /* FC + SHIFT */
 #fcSelect{border:1px solid var(--border-strong);background:var(--bg-input);padding:6px 14px;border-radius:18px;font-size:12px;color:var(--accent-text);font-weight:600;cursor:pointer;outline:none;appearance:none}
-.t-right{display:flex;align-items:center;gap:10px;margin-left:auto;flex-shrink:0;padding-left:12px}
+.t-right{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:1;min-width:0;padding-left:8px}
 .t-user{display:flex;align-items:center;gap:5px;padding:4px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;font-size:11px;color:var(--text);white-space:nowrap}
 .t-user-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
 .t-user-dot.loading{background:var(--orange);animation:pulse 1.5s infinite}
@@ -129,6 +129,9 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .t-created{font-size:10px;color:var(--text-muted);margin-left:8px;white-space:nowrap}
 .t-created b{color:var(--accent)}
 
+/* LANG SELECTOR */
+.lang-sel{padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);font-size:11px;cursor:pointer;outline:none;transition:border-color .2s}
+.lang-sel:hover,.lang-sel:focus{border-color:var(--accent)}
 /* THEME TOGGLE */
 .theme-toggle{width:36px;height:20px;border-radius:10px;background:var(--border-strong);border:none;cursor:pointer;position:relative;margin-left:8px;transition:background .3s}
 .theme-toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
@@ -358,6 +361,20 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .quality-cohort{font-size:11.5px;color:var(--text-secondary);font-weight:600}
 [data-theme="dark"] .quality-cohort{color:#e2e8f0}
 
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:1400px){
+  .topbar{padding:0 12px}
+  .t-tab{padding:6px 12px;font-size:11.5px}
+  .t-right{gap:6px}
+}
+@media(max-width:1100px){
+  .t-user{display:none}
+  .t-filters .tf-label{display:none}
+  .t-nav{gap:2px}
+  .t-tab{padding:5px 10px;font-size:11px}
+  .ms-btn{font-size:10.5px;padding:4px 8px}
+}
+
 </style>
 </head>
 <body>
@@ -380,17 +397,17 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
         <circle cx="17" cy="30.5" r="1.6" fill="#f472b6"/>
       </svg>
     </div>
-    <div><span class="title-gradient">Project Argos</span><span class="subtitle">Your L&D / Operational One Stop Tool</span></div>
+    <div><span class="title-gradient">Project Argos</span><span class="subtitle" data-i18n="subtitle">Your L&D / Operational One Stop Tool</span></div>
   </div>
   <div class="t-nav">
-    <div class="t-tab on"  data-tab="dashboard">Performance</div>
-    <div class="t-tab" data-tab="history">History</div>
-    <div class="t-tab" data-tab="targets">Targets</div>
-    <div class="t-tab" data-tab="quality">Quality</div>
+    <div class="t-tab on"  data-tab="dashboard" data-i18n="tab_performance">Performance</div>
+    <!--<div class="t-tab" data-tab="history" data-i18n="tab_history">History</div>-->
+    <div class="t-tab" data-tab="targets" data-i18n="tab_targets">Targets</div>
+    <div class="t-tab" data-tab="quality" data-i18n="tab_quality">Quality</div>
 
   </div>
   <div class="t-filters">
-        <span class="tf-label">Process</span>
+        <span class="tf-label" data-i18n="lbl_process">Process</span>
     <div class="ms" id="procMs">
       <button class="ms-btn" id="procMsBtn" type="button" aria-haspopup="listbox" aria-expanded="false">
         <span class="ms-label" id="procMsLabel">All</span>
@@ -399,7 +416,7 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
       <div class="ms-panel" id="procMsPanel" role="listbox" aria-multiselectable="true"></div>
     </div>
 
-    <span class="tf-label">Sub</span>
+    <span class="tf-label" data-i18n="lbl_sub">Sub</span>
     <div class="ms" id="subMs">
       <button class="ms-btn" id="subMsBtn" type="button" aria-haspopup="listbox" aria-expanded="false" style="min-width:155px">
         <span class="ms-label" id="subMsLabel">All</span>
@@ -432,15 +449,12 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
       <button id="btnDefaultFc" title="Establecer como FC predeterminado"
         style="background:none;border:none;cursor:pointer;font-size:18px;padding:0 2px 0 4px;color:#f5a623;line-height:1;vertical-align:middle">☆</button>
     </div>
-    <div style="display:flex;align-items:center;gap:6px;margin-left:8px">
-      <select id="shiftSelect" class="t-fc-sel" style="min-width:140px">
+    <div style="display:flex;align-items:center;gap:4px">
+      <select id="shiftSelect" class="t-fc-sel" style="min-width:110px">
         <option value="">Auto-detect</option>
       </select>
     </div>
-    <span class="t-meta">Updated <b id="updatedAt">—</b></span>
-    <div class="t-live"><span class="ldot"></span> Live</div>
-    <div class="t-created">Created and Developed by <b>@fumanue</b></div>
-    
+    <select class="lang-sel" id="langSelect" title="Language"><option value="es">🇪🇸 ES</option><option value="en">🇬🇧 EN</option></select>
     <button class="theme-toggle" id="themeToggle" title="Toggle dark/light mode"></button><span class="theme-icon" id="themeIcon">☀️</span>
   </div>
 </div>
@@ -449,20 +463,20 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 <div class="tab-panel active" id="panel-dashboard">
   <div class="kpi-row">
     <div class="kpi-tile kp3" data-f="3">
-      <div class="kpi-lbl">Priority 3</div><div class="kpi-num" id="n3">0</div><div class="kpi-sub">Below 80%</div>
+      <div class="kpi-lbl" data-i18n="kpi_p3">Priority 3</div><div class="kpi-num" id="n3">0</div><div class="kpi-sub" data-i18n="kpi_p3_sub">Below 80%</div>
       <div class="kpi-split"><span>L&amp;D <b id="n3ld">0</b></span><span>Ops <b id="n3ops">0</b></span></div>
     </div>
     <div class="kpi-tile kp2" data-f="2">
-      <div class="kpi-lbl">Priority 2</div><div class="kpi-num" id="n2">0</div><div class="kpi-sub">80–90%</div>
+      <div class="kpi-lbl" data-i18n="kpi_p2">Priority 2</div><div class="kpi-num" id="n2">0</div>
       <div class="kpi-split"><span>L&amp;D <b id="n2ld">0</b></span><span>Ops <b id="n2ops">0</b></span></div>
     </div>
     <div class="kpi-tile kp1" data-f="1">
-      <div class="kpi-lbl">Priority 1</div><div class="kpi-num" id="n1">0</div><div class="kpi-sub">90–100%</div>
+      <div class="kpi-lbl" data-i18n="kpi_p1">Priority 1</div><div class="kpi-num" id="n1">0</div>
       <div class="kpi-split"><span>L&amp;D <b id="n1ld">0</b></span><span>Ops <b id="n1ops">0</b></span></div>
     </div>
-    <div class="kpi-tile kok" data-f="0"><div class="kpi-lbl">On Target</div><div class="kpi-num" id="n0">0</div><div class="kpi-sub">Above 100%</div></div>
-    <div class="kpi-tile" data-f="all"><div class="kpi-lbl">Total Active</div><div class="kpi-num" id="nAll">0</div><div class="kpi-sub">Ops + L&amp;D</div></div>
-    <div class="kpi-tile kco" data-f="coached"><div class="kpi-lbl">Coached</div><div class="kpi-num" id="nCo">0</div><div class="kpi-sub">Este turno</div></div>
+    <div class="kpi-tile kok" data-f="0"><div class="kpi-lbl" data-i18n="kpi_on_target">On Target</div><div class="kpi-num" id="n0">0</div><div class="kpi-sub" data-i18n="kpi_on_target_sub">Above 100%</div></div>
+    <div class="kpi-tile" data-f="all"><div class="kpi-lbl" data-i18n="kpi_total">Total Active</div><div class="kpi-num" id="nAll">0</div><div class="kpi-sub" data-i18n="kpi_total_sub">Ops + L&amp;D</div></div>
+    <div class="kpi-tile kco" data-f="coached"><div class="kpi-lbl" data-i18n="kpi_coached">Coached</div><div class="kpi-num" id="nCo">0</div><div class="kpi-sub" data-i18n="kpi_coached_sub">Este turno</div></div>
   </div>
   <div class="toolbar">
     <div class="tb-search"><span style="color:#ccc;font-size:13px">⌕</span><input id="searchInput" placeholder="Login, role, station…"></div>
@@ -487,11 +501,11 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
       <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
     </select>
     <div class="sep"></div>
-    <button class="toggle-btn" id="toggleCoached"><span id="coachToggleIcon">○</span> Hide Coached</button>
+    <button class="toggle-btn" id="toggleCoached"><span id="coachToggleIcon">○</span> <span data-i18n="btn_hide_coached">Hide Coached</span></button>
     <div class="sep"></div>
-    <button class="act-btn act-secondary" id="btnUpload">↑ Upload Coaching</button>
-    <button class="act-btn act-secondary" id="btnBulk">↑↑ Bulk Upload</button>
-    <button class="act-btn act-pipeline" id="btnPipeline">▶ Run Pipeline</button>
+    <button class="act-btn act-secondary" id="btnUpload" data-i18n="btn_upload_coaching">↑ Upload Coaching</button>
+    <button class="act-btn act-secondary" id="btnBulk" data-i18n="btn_bulk">↑↑ Bulk Upload</button>
+    <button class="act-btn act-pipeline" id="btnPipeline" data-i18n="btn_run_pipeline">▶ Run Pipeline</button>
     <button class="act-btn act-csv" id="btnDownloadCSV">↓ CSV</button>
     <button class="act-btn act-secondary" id="btnRefresh" title="Refresh">↻</button>
     <div class="tb-count">Showing <b id="rowCount">0</b> of <b id="totalCount">0</b></div>
@@ -500,17 +514,17 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
     <table class="main-table">
       <thead>
         <tr>
-          <th class="th-left" style="width:260px">Associate</th>
-          <th data-k="dept"    style="width:60px">Dept</th>
-          <th data-k="cohort"  style="width:90px">Cohort</th>
-          <th data-k="role"    style="width:150px">Role</th>
-          <th data-k="station" style="width:135px">Station</th>
-          <th data-k="sigma"   style="width:68px">Prio</th>
-          <th data-k="rate"    style="width:80px">Rate</th>
-          <th data-k="pct"     style="width:90px">% to Target</th>
-          <th class="th-left" style="width:430px">Notes</th>
-          <th style="width:78px">Coached</th>
-          <th style="width:95px">Action</th>
+          <th class="th-left" style="width:260px" data-i18n="th_associate">Associate</th>
+          <th data-k="dept"    style="width:60px" data-i18n="th_dept">Dept</th>
+          <th data-k="cohort"  style="width:90px" data-i18n="th_cohort">Cohort</th>
+          <th data-k="role"    style="width:150px" data-i18n="th_role">Role</th>
+          <th data-k="station" style="width:135px" data-i18n="th_station">Station</th>
+          <th data-k="sigma"   style="width:68px" data-i18n="th_prio">Prio</th>
+          <th data-k="rate"    style="width:80px" data-i18n="th_rate">Rate</th>
+          <th data-k="pct"     style="width:90px" data-i18n="th_pct_target">% to Target</th>
+          <th class="th-left" style="width:430px" data-i18n="th_notes">Notes</th>
+          <th style="width:78px" data-i18n="th_coached">Coached</th>
+          <th style="width:95px" data-i18n="th_action">Action</th>
         </tr>
       </thead>
       <tbody id="tbody">
@@ -519,15 +533,15 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
     </table>
   </div>
   <div class="statusbar">
-    <span class="sb-l">Showing <b id="sbCount">0</b> records · filter: <b id="sbFilter">P3+P2+P1</b></span>
-    <span class="sb-r">Project Argos · <b id="sbFc">BCN4</b></span>
+    <span class="sb-l">Showing <b id="sbCount">0</b> records · filter: <b id="sbFilter">P3+P2+P1</b> · <span data-i18n="lbl_updated">Updated</span> <b id="updatedAt">—</b></span>
+    <span class="sb-r"><span class="ldot"></span> <span data-i18n="lbl_live">Live</span> · <b id="sbFc">BCN4</b></span>
   </div>
 </div>
 
 <!-- ═══ HISTORY ═══ -->
 <div class="tab-panel" id="panel-history">
   <div class="panel-header">
-    <div><div class="panel-title">Coaching History</div><div class="panel-sub">Últimos 7 días · coaching manual de productividad</div></div>
+    <div><div class="panel-title" data-i18n="hist_title">Coaching History</div><div class="panel-sub" data-i18n="hist_sub">Últimos 7 días · coaching manual de productividad</div></div>
     <button class="act-btn act-secondary" id="btnHistoryRefresh">↻ Refresh</button>
   </div>
   <div class="history-wrap" id="historyWrap"><div class="history-empty">Click Refresh para cargar el historial…</div></div>
@@ -536,7 +550,7 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 <!-- ═══ TARGETS ═══ -->
 <div class="tab-panel" id="panel-targets">
   <div class="panel-header">
-    <div><div class="panel-title">Targets</div><div class="panel-sub">Targets por role y semana de tenure (W1–W10)</div></div>
+    <div><div class="panel-title" data-i18n="tgt_title">Targets</div><div class="panel-sub" data-i18n="tgt_sub">Targets por role y semana de tenure (W1–W10)</div></div>
     <button class="act-btn act-secondary" id="btnTargetsRefresh">↻ Refresh</button>
   </div>
   <div class="targets-wrap" id="targetsWrap"><div class="targets-loading">Click Refresh…</div></div>
@@ -553,25 +567,25 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
         <span style="color:#fff;font-size:16px;font-weight:900">Q</span>
       </div>
       <div>
-        <div class="panel-title">Quality Coaching</div>
-        <div class="panel-sub">Acumulado semanal Atlas · domingo a ahora · detección sigma por Error Type</div>
+        <div class="panel-title" data-i18n="q_title">Quality Coaching</div>
+        <div class="panel-sub" id="qSubtitle" data-i18n="q_subtitle">Acumulado semanal Atlas · domingo a ahora · detección sigma por Error Type</div>
       </div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
-      <button class="toggle-btn" id="qualityPresentOnly"><span id="qualityPresentIcon">○</span> Present only</button>
-      <button class="toggle-btn" id="qualityHideCoached"><span id="qualityHideCoachedIcon">○</span> Hide Coached</button>
-      <button class="toggle-btn active" id="qualityHideOnTarget"><span id="qualityHideOnTargetIcon">●</span> Hide On-Target</button>
-      <button class="act-btn act-pipeline" id="btnQualityRun">▶ Run Pipeline</button>
-      <button class="act-btn act-secondary" id="btnQualityRefresh">↻ Refresh</button>
-      <button class="act-btn act-secondary" id="btnQualitySyncGC" title="Force refresh Guided Coaching history">⟳ Sync GC</button>
+      <button class="toggle-btn" id="qualityPresentOnly"><span id="qualityPresentIcon">○</span> <span data-i18n="btn_present_only">Present only</span></button>
+      <button class="toggle-btn" id="qualityHideCoached"><span id="qualityHideCoachedIcon">○</span> <span data-i18n="btn_hide_coached">Hide Coached</span></button>
+      <button class="toggle-btn active" id="qualityHideOnTarget"><span id="qualityHideOnTargetIcon">●</span> <span data-i18n="btn_hide_on_target">Hide On-Target</span></button>
+      <button class="act-btn act-pipeline" id="btnQualityRun" data-i18n="btn_run_pipeline">▶ Run Pipeline</button>
+      <button class="act-btn act-secondary" id="btnQualityRefresh" data-i18n="btn_refresh">↻ Refresh</button>
+      <button class="act-btn act-secondary" id="btnQualitySyncGC" title="Force refresh Guided Coaching history" data-i18n="btn_sync_gc">⟳ Sync GC</button>
     </div>
   </div>
 
   <div class="quality-kpis" id="qualityKpis">
-    <div class="qkpi"><div class="qkpi-num" id="qkTotal">0</div><div class="qkpi-lbl">Opportunities</div></div>
-    <div class="qkpi qkpi-present"><div class="qkpi-num" id="qkPresent">0</div><div class="qkpi-lbl">Present</div></div>
-    <div class="qkpi qkpi-coached"><div class="qkpi-num" id="qkCoached">0</div><div class="qkpi-lbl">Coached</div></div>
-    <div class="qkpi qkpi-pending"><div class="qkpi-num" id="qkPending">0</div><div class="qkpi-lbl">Pending</div></div>
+    <div class="qkpi"><div class="qkpi-num" id="qkTotal">0</div><div class="qkpi-lbl" data-i18n="q_opportunities">Opportunities</div></div>
+    <div class="qkpi qkpi-present"><div class="qkpi-num" id="qkPresent">0</div><div class="qkpi-lbl" data-i18n="q_present">Present</div></div>
+    <div class="qkpi qkpi-coached"><div class="qkpi-num" id="qkCoached">0</div><div class="qkpi-lbl" data-i18n="q_coached">Coached</div></div>
+    <div class="qkpi qkpi-pending"><div class="qkpi-num" id="qkPending">0</div><div class="qkpi-lbl" data-i18n="q_pending">Pending</div></div>
   </div>
 
   <div class="toolbar">
@@ -610,18 +624,18 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
     <table class="main-table" id="qualityTable">
       <thead>
         <tr>
-          <th style="width:180px;text-align:left;padding-left:20px;cursor:pointer" data-qsort="login">Associate ⇅</th>
-          <th style="width:240px;text-align:left;cursor:pointer" data-qsort="error_key">Error Type ⇅</th>
-          <th style="width:100px;cursor:pointer" data-qsort="total_errors_wk">Errors WK ⇅</th>
-          <th style="width:80px">Target</th>
+          <th style="width:180px;text-align:left;padding-left:20px;cursor:pointer" data-qsort="login"><span data-i18n="qth_associate">Associate</span> ⇅</th>
+          <th style="width:240px;text-align:left;cursor:pointer" data-qsort="error_key"><span data-i18n="qth_error">Error Type</span> ⇅</th>
+          <th style="width:100px;cursor:pointer" data-qsort="total_errors_wk"><span data-i18n="qth_errors_wk">Errors WK</span> ⇅</th>
+          <th style="width:80px" data-i18n="qth_target">Target</th>
           <th style="width:90px;cursor:pointer" data-qsort="pct_to_target">% Target ⇅</th>
-          <th style="width:90px">Cohort</th>
-          <th style="width:90px;cursor:pointer" data-qsort="sigma">σ Score ⇅</th>
-          <th style="width:110px">Tenure</th>
-          <th style="width:110px">Mode</th>
-          <th style="width:90px">Present</th>
-          <th style="width:90px">Coached</th>
-          <th style="width:110px">Action</th>
+          <th style="width:90px" data-i18n="qth_cohort">Cohort</th>
+          <th style="width:90px;cursor:pointer" data-qsort="sigma"><span data-i18n="qth_sigma">σ Score</span> ⇅</th>
+          <th style="width:110px" data-i18n="qth_tenure">Tenure</th>
+          <th style="width:110px" data-i18n="qth_mode">Mode</th>
+          <th style="width:90px" data-i18n="qth_present">Present</th>
+          <th style="width:90px" data-i18n="qth_coached">Coached</th>
+          <th style="width:110px" data-i18n="qth_action">Action</th>
         </tr>
       </thead>
       <tbody id="qualityTbody">
@@ -717,6 +731,6 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
   </div>
 </div>
 
-<script src="/static/app.js?v=v27_brighter_20260515" defer></script>
+<script src="/static/app.js?v=v28_i18n_20260519" defer></script>
 </body>
 </html>

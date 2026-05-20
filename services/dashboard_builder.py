@@ -1080,8 +1080,6 @@ def build_comments(
             else:
                 comments.append(f"⚠️ {label}: off target")
 
-    if upt is not None and not pd.isna(upt) and upt < 11:
-        comments.append(f"📦 UPT: {upt:.1f} (target ≥11)")
     if roboscout_comments:
         comments.extend(roboscout_comments)
     if gap_pct is not None and gap_pct == gap_pct:
@@ -1233,43 +1231,12 @@ def _station_override_rules_with_decant_fallback() -> list[dict]:
     return rules
 
 
-def decant_jph_rate_lookup(fdf: pd.DataFrame, function_contains: str | None = "Decant") -> pd.DataFrame:
-    """Return DECANT rate by Employee Id using JPH from FCLM_1003019.csv.
+def decant_rate_lookup(fdf: pd.DataFrame, function_contains: str | None = "Decant") -> pd.DataFrame:
+    """Return DECANT rate by Employee Id using UPH from FCLM_1003019.csv (Unit Type = Case).
 
-    Current FCLM_1003019 output for DECANT has Unit Type = EACH only.
-    For DECANT performance, Rate must be JPH, not UPH. UPT is handled later
-    from the same EACH rows as Units / Jobs.
+    DECANT uses Unit Type = Case + Size = Total. Rate = UPH column.
     """
-    sub = fdf.copy()
-    if function_contains:
-        sub = sub[contains_ci(sub["Function Name"], function_contains)]
-    if "Unit Type" in sub.columns:
-        sub = sub[sub["Unit Type"].astype(str).str.strip().str.upper() == "EACH"]
-    sub = sub[_size_total_filter(sub)] if "Size" in sub.columns else sub
-
-    jph_col = None
-    for c in sub.columns:
-        if re.sub(r"[\s_]+", "", str(c).strip().upper()) == "JPH":
-            jph_col = c
-            break
-    if jph_col is None:
-        for c in sub.columns:
-            if "JPH" in re.sub(r"[\s_]+", "", str(c).strip().upper()):
-                jph_col = c
-                break
-    if jph_col is None:
-        log.info("⚠ JPH column not found in FCLM_1003019.csv; falling back to default rate lookup")
-        return rate_lookup(fdf, function_contains, None, "EACH")
-
-    sub[jph_col] = pd.to_numeric(sub[jph_col], errors="coerce")
-    result = (
-        sub.groupby("Employee Id", as_index=False)[jph_col]
-        .max()
-        .rename(columns={jph_col: "RATE_RAW"})
-    )
-    result["Employee Id Digits"] = result["Employee Id"].apply(extract_badge_number)
-    log.info("Using JPH column '{jph_col}' from EACH rows: {result['RATE_RAW'].notna().sum()} rate rows")
-    return result
+    return rate_lookup(fdf, function_contains, None, "CASE")
 
 
 def _apply_station_overrides(dash: pd.DataFrame, fclm_cache: Dict[str, pd.DataFrame]) -> pd.Series:
@@ -1284,9 +1251,9 @@ def _apply_station_overrides(dash: pd.DataFrame, fclm_cache: Dict[str, pd.DataFr
       - Decant_Locations_1003019.csv column B/Name is the Function Name; keep Name = Decant.
       - Station becomes the GCA Location if available.
       - Role becomes DECANT.
-      - Rate comes from FCLM_1003019.csv JPH where Function Name = Decant and Unit Type = EACH.
+      - Rate comes from FCLM_1003019.csv UPH where Function Name = Decant and Unit Type = Case.
 
-    UPT remains separate and is calculated later from Unit Type = EACH as Units / Jobs.
+    UPT removed (no longer used for Decant).
     """
     processed_mask = pd.Series(False, index=dash.index)
 
@@ -1393,7 +1360,7 @@ def _apply_station_overrides(dash: pd.DataFrame, fclm_cache: Dict[str, pd.DataFr
             continue
 
         if is_decant_location_source:
-            rates = decant_jph_rate_lookup(fclm_cache[file_name], function_contains)
+            rates = decant_rate_lookup(fclm_cache[file_name], function_contains)
         else:
             rates = rate_lookup(fclm_cache[file_name], function_contains, function_excludes, unit_type)
         rates = rates.copy()
@@ -1643,20 +1610,7 @@ def run(fc: str = "BCN4") -> Path:
     except Exception as e:
         log.info("⚠ {e}")
 
-    _upt_map: dict[str, float] = {}
-    try:
-        dec_fclm = fclm_cache.get("FCLM_1003019.csv")
-        if dec_fclm is not None and "Unit Type" in dec_fclm.columns and {"Jobs", "Units"}.issubset(dec_fclm.columns):
-            each = dec_fclm[dec_fclm["Unit Type"].astype(str).str.strip().str.upper() == "EACH"].copy()
-            each["_jobs"] = pd.to_numeric(each["Jobs"], errors="coerce")
-            each["_units"] = pd.to_numeric(each["Units"], errors="coerce")
-            each = each[(each["_jobs"] > 0) & each["_units"].notna()]
-            each["_upt"] = each["_units"] / each["_jobs"]
-            _upt_map = dict(zip(each["Employee Id"].astype(str).str.strip(), each["_upt"]))
-            log.info("Built UPT map: {len(_upt_map)} employees")
-    except Exception as e:
-        log.info("⚠ {e}")
-
+    # UPT removed — Decant now uses Unit Type = Case (no EACH rows available)
     def _row_comments_data(r):
         login = r["Login"]
         role = str(r["Role"]).upper().strip()
@@ -1665,7 +1619,7 @@ def run(fc: str = "BCN4") -> Path:
         h1 = get_fast_start_for_employee(fs_data, login, "H1")
         h2 = get_fast_start_for_employee(fs_data, login, "H2")
         rs = get_roboscout_comments(login, role, rs_data)
-        upt = _upt_map.get(eid) if role == "DECANT" else None
+        upt = None
 
         # GAP is driven by custom_targets.json / gap_thresholds.
         # Keep it only when the associate is in a GAP-applicable role and the

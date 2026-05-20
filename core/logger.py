@@ -1,6 +1,7 @@
 # src/project_hermes/core/logger.py
 """
-Centralized logging for Project Hermes.
+Centralized logging for Project Argos.
+Handles console=False .exe mode (sys.stdout=None) gracefully.
 
 Usage in any module:
     from project_hermes.core.logger import get_logger
@@ -18,6 +19,7 @@ from __future__ import annotations
 import logging
 import sys
 from logging.handlers import RotatingFileHandler
+from logging import FileHandler
 from pathlib import Path
 
 from project_hermes.config import get_paths
@@ -43,6 +45,15 @@ def _setup_root_logger() -> None:
     log_file = paths.logs / "hermes.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
 
+    # ─── Emergency desktop log (for .exe crash diagnosis) ───────────────
+    try:
+        desktop = Path.home() / "Desktop" / "argos_error.log"
+        efh = FileHandler(str(desktop), mode="w", encoding="utf-8")
+        efh.setLevel(logging.ERROR)
+        efh.setFormatter(logging.Formatter(LOG_FORMAT_FILE, datefmt=LOG_DATE_FORMAT))
+    except Exception:
+        efh = None
+
     root = logging.getLogger("hermes")
     root.setLevel(logging.DEBUG)
 
@@ -62,10 +73,16 @@ def _setup_root_logger() -> None:
     root.addHandler(fh)
 
     # ─── Console handler (INFO+) ────────────────────────────────────────
-    ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.INFO)
-    ch.setFormatter(logging.Formatter(LOG_FORMAT_CONSOLE))
-    root.addHandler(ch)
+    # In .exe with console=False, sys.stdout is None — skip to avoid crash
+    if sys.stdout is not None:
+        ch = logging.StreamHandler(sys.stdout)
+        ch.setLevel(logging.INFO)
+        ch.setFormatter(logging.Formatter(LOG_FORMAT_CONSOLE))
+        root.addHandler(ch)
+
+    # ─── Desktop error log (always, for crash visibility) ───────────────
+    if efh is not None:
+        root.addHandler(efh)
 
 
 def get_logger(name: str) -> logging.Logger:

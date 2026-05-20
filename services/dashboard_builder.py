@@ -1765,6 +1765,14 @@ def run(fc: str = "BCN4") -> Path:
             log.info(f"DECANT filter: removing {drop_mask.sum()} rows with non ws-rcv stations")
             dash = dash[~drop_mask].copy()
 
+    # ICQA filter: only keep if they have a station (active on floor)
+    if "Role" in dash.columns and "Station" in dash.columns:
+        icqa_mask = dash["Role"].str.upper().str.contains("ICQA", na=False)
+        icqa_no_station = icqa_mask & dash["Station"].astype(str).str.strip().str.lower().isin(["", "nan", "none", "na"])
+        if icqa_no_station.any():
+            log.info(f"ICQA filter: removing {icqa_no_station.sum()} rows with no station")
+            dash = dash[~icqa_no_station].copy()
+
     full_cols = [
         "Dept", "Cohort", "NH_Flag", "Login", "Station", "Role", "Rate",
         "% to OP2", "Sigma", "SigmaLevel", "ModeGroup", "Mode",

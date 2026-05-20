@@ -538,9 +538,11 @@ def api_dashboard(fc: str = DEFAULT_FC, shift: str = ""):
         coached_set = set(base.loc[mask, "Login"].astype(str).str.strip())
 
     records = []
+    _ROLE_DISPLAY = {"ICQA_SIMPLE_BIN_COUNT": "ICQA - SBC"}
+
     for _, row in base.iterrows():
         login   = str(row.get("Login",   "")).strip()
-        role    = str(row.get("Role",    "")).strip()
+        role    = _ROLE_DISPLAY.get(str(row.get("Role","")).strip(), str(row.get("Role","")).strip())
         station = str(row.get("Station", "")).strip()
         dept    = str(row.get("Dept",    "")).strip()
         cohort  = str(_row_first(row, ["Cohort"], "")).strip()

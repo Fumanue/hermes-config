@@ -130,8 +130,18 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .t-created b{color:var(--accent)}
 
 /* LANG SELECTOR */
-.lang-sel{padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);font-size:11px;cursor:pointer;outline:none;transition:border-color .2s}
-.lang-sel:hover,.lang-sel:focus{border-color:var(--accent)}
+/* SETTINGS */
+.settings-btn{background:none;border:none;font-size:18px;cursor:pointer;padding:2px 4px;line-height:1;opacity:0.7;transition:opacity .2s}
+.settings-btn:hover{opacity:1}
+.settings-popover{position:fixed;top:60px;right:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:9999;min-width:220px}
+.sp-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px}
+.sp-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sp-label{font-size:11px;color:var(--text-secondary);font-weight:600}
+.sp-toggle-group{display:flex;gap:4px}
+.sp-opt{padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-secondary);font-size:11px;cursor:pointer;transition:all .2s}
+.sp-opt.active{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+.sp-opt:hover:not(.active){border-color:var(--accent);color:var(--accent)}
+.sp-select{padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);font-size:11px;cursor:pointer}
 /* THEME TOGGLE */
 .theme-toggle{width:36px;height:20px;border-radius:10px;background:var(--border-strong);border:none;cursor:pointer;position:relative;margin-left:8px;transition:background .3s}
 .theme-toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
@@ -446,16 +456,47 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
         <option value="SVQ1">SVQ1</option>
         <option value="VLC1">VLC1</option>
       </select>
-      <button id="btnDefaultFc" title="Establecer como FC predeterminado"
-        style="background:none;border:none;cursor:pointer;font-size:18px;padding:0 2px 0 4px;color:#f5a623;line-height:1;vertical-align:middle">☆</button>
     </div>
     <div style="display:flex;align-items:center;gap:4px">
       <select id="shiftSelect" class="t-fc-sel" style="min-width:110px">
         <option value="">Auto-detect</option>
       </select>
     </div>
-    <select class="lang-sel" id="langSelect" title="Language"><option value="es">🇪🇸 ES</option><option value="en">🇬🇧 EN</option></select>
-    <button class="theme-toggle" id="themeToggle" title="Toggle dark/light mode"></button><span class="theme-icon" id="themeIcon">☀️</span>
+    <button class="settings-btn" id="btnSettings" title="Settings">⚙️</button>
+  </div>
+</div>
+
+<!-- ═══ SETTINGS POPOVER ═══ -->
+<div class="settings-popover" id="settingsPopover" style="display:none">
+  <div class="sp-title">⚙️ Settings</div>
+  <div class="sp-row">
+    <span class="sp-label" data-i18n="lbl_theme">Tema</span>
+    <div class="sp-toggle-group">
+      <button class="sp-opt" id="spThemeLight" data-val="light">☀️ Light</button>
+      <button class="sp-opt" id="spThemeDark" data-val="dark">🌙 Dark</button>
+    </div>
+  </div>
+  <div class="sp-row">
+    <span class="sp-label" data-i18n="lbl_lang">Idioma</span>
+    <div class="sp-toggle-group">
+      <button class="sp-opt" id="spLangEs" data-val="es">🇪🇸 ES</button>
+      <button class="sp-opt" id="spLangEn" data-val="en">🇬🇧 EN</button>
+    </div>
+  </div>
+  <div class="sp-row">
+    <span class="sp-label">FC Default</span>
+    <select class="sp-select" id="spDefaultFc">
+      <option value="BCN1">BCN1</option>
+      <option value="BCN4">BCN4</option>
+      <option value="MAD4">MAD4</option>
+      <option value="MAD6">MAD6</option>
+      <option value="MAD7">MAD7</option>
+      <option value="MAD9">MAD9</option>
+      <option value="OVD1">OVD1</option>
+      <option value="RMU1">RMU1</option>
+      <option value="SVQ1">SVQ1</option>
+      <option value="VLC1">VLC1</option>
+    </select>
   </div>
 </div>
 
@@ -731,6 +772,6 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
   </div>
 </div>
 
-<script src="/static/app.js?v=v28_i18n_20260519" defer></script>
+<script src="/static/app.js?v=v30_settings_20260520" defer></script>
 </body>
 </html>

@@ -1948,15 +1948,62 @@ initProcessMs();
 
 _initApp().then(()=>loadDashboard());;
 
-// ─── Language Selector ──────────────────────────────────────────
-const _langSel = document.getElementById("langSelect");
-if(_langSel){
-  _langSel.value = _lang;
-  _langSel.addEventListener("change", (e) => {
-    _lang = e.target.value;
-    localStorage.setItem("argos-lang", e.target.value);
-    _applyI18n();
+// ─── Settings Popover ──────────────────────────────────────────
+const _spPanel = $("settingsPopover");
+const _spBtn = $("btnSettings");
+if(_spBtn && _spPanel){
+  _spBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    _spPanel.style.display = _spPanel.style.display === "none" ? "block" : "none";
   });
+  document.addEventListener("click", (e) => {
+    if(_spPanel.style.display !== "none" && !_spPanel.contains(e.target) && e.target !== _spBtn)
+      _spPanel.style.display = "none";
+  });
+
+  // Theme buttons
+  const _themeLight = $("spThemeLight"), _themeDark = $("spThemeDark");
+  function _syncThemeButtons(){
+    const cur = document.documentElement.getAttribute("data-theme") || "light";
+    if(_themeLight) _themeLight.classList.toggle("active", cur === "light");
+    if(_themeDark) _themeDark.classList.toggle("active", cur === "dark");
+  }
+  _syncThemeButtons();
+  [_themeLight, _themeDark].forEach(btn => {
+    if(!btn) return;
+    btn.addEventListener("click", () => {
+      const val = btn.dataset.val;
+      document.documentElement.setAttribute("data-theme", val);
+      localStorage.setItem("argos-theme", val);
+      _syncThemeButtons();
+    });
+  });
+
+  // Language buttons
+  const _langEs = $("spLangEs"), _langEn = $("spLangEn");
+  function _syncLangButtons(){
+    if(_langEs) _langEs.classList.toggle("active", _lang === "es");
+    if(_langEn) _langEn.classList.toggle("active", _lang === "en");
+  }
+  _syncLangButtons();
+  [_langEs, _langEn].forEach(btn => {
+    if(!btn) return;
+    btn.addEventListener("click", () => {
+      _lang = btn.dataset.val;
+      localStorage.setItem("argos-lang", _lang);
+      _syncLangButtons();
+      _applyI18n();
+    });
+  });
+
+  // Default FC
+  const _spFc = $("spDefaultFc");
+  if(_spFc){
+    _spFc.value = localStorage.getItem("Argos_default_fc") || "BCN4";
+    _spFc.addEventListener("change", () => {
+      localStorage.setItem("Argos_default_fc", _spFc.value);
+    });
+  }
 }
 
 function _applyI18n(){

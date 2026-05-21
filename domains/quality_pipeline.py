@@ -353,7 +353,11 @@ def _quality_mode_for(fc: str, error_key: str) -> dict:
         sigma = float(raw.get("sigma_threshold", MODE_TO_SIGMA.get(mode, 2)))
     except Exception:
         sigma = float(MODE_TO_SIGMA.get(mode, 2))
-    return {"mode": mode, "sigma_threshold": sigma}
+    try:
+        min_errors = int(raw.get("min_errors", default.get("min_errors", 3)))
+    except Exception:
+        min_errors = 3
+    return {"mode": mode, "sigma_threshold": sigma, "min_errors": min_errors}
 
 
 def _is_error_enabled(fc: str, error_key: str) -> bool:
@@ -377,7 +381,12 @@ def _course_for_error(error_key: str) -> tuple[str, str]:
     cfg = _load_json("quality_courses.json", {})
     base = str(cfg.get("course_base", "https://dub.prod.cms.umbrella.amazon.dev/course/")).strip()
     errors = cfg.get("errors", {}) if isinstance(cfg.get("errors", {}), dict) else {}
-    uuid = str(errors.get(error_key) or cfg.get("default_course_uuid") or "").strip()
+    raw = errors.get(error_key)
+    # Handle both formats: string UUID or dict {"uuid": "...", "enabled": true}
+    if isinstance(raw, dict):
+        uuid = str(raw.get("uuid", "") or "").strip()
+    else:
+        uuid = str(raw or cfg.get("default_course_uuid") or "").strip()
     return uuid, f"{base}{uuid}" if uuid else ""
 
 
@@ -536,6 +545,7 @@ def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: dateti
     modes = out["ErrorKey"].apply(lambda k: _quality_mode_for(fc, k))
     out["Mode"] = modes.apply(lambda x: x["mode"])
     out["Sigma Threshold"] = modes.apply(lambda x: float(x["sigma_threshold"]))
+    out["Min Errors"] = modes.apply(lambda x: int(x["min_errors"]))
 
     # ─── Filter out disabled errors ────────────────────────────────────
     enabled_mask = out["ErrorKey"].apply(lambda k: _is_error_enabled(fc, k))
@@ -596,7 +606,8 @@ def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: dateti
 
     # ─── All other errors: sigma-based threshold ──────────────────────
     other_rows = out[~fps_mask & (
-        out["Total Errors WK"].astype(float) >= out["Threshold"].astype(float)
+        (out["Total Errors WK"].astype(float) >= out["Threshold"].astype(float)) &
+        (out["Total Errors WK"].astype(float) >= out["Min Errors"].astype(float))
     )].copy()
 
     out = pd.concat([other_rows, fps_rows], ignore_index=True).sort_values(
@@ -773,6 +784,8 @@ def run(fc: str = "BCN4", force_download: bool = True) -> Path:
     out_project = OUTPUT_DIR / QUALITY_OUTPUT_NAME
     quality_df.to_csv(out_doc, index=False, encoding="utf-8-sig")
     quality_df.to_csv(out_project, index=False, encoding="utf-8-sig")
+    # Also save per-site file for multi-site merging
+    quality_df.to_csv(OUTPUT_DIR / f"Quality_Coaching_{fc}.csv", index=False, encoding="utf-8-sig")
     log.info("Saved: {out_doc}")
     log.info("Saved: {out_project}")
     return out_project
@@ -787,6 +800,24 @@ def load_output(present_only: bool = False) -> pd.DataFrame:
         else:
             return pd.DataFrame()
     df = pd.read_csv(fp)
+    if present_only and "Present" in df.columns:
+        df = df[df["Present"].astype(str).str.lower().isin(["true", "1", "yes"])]
+    return df.reset_index(drop=True)
+
+
+def load_output_multi(sites: list[str], present_only: bool = False) -> pd.DataFrame:
+    """Load and merge quality output for multiple sites."""
+    frames = []
+    for fc in sites:
+        fp = OUTPUT_DIR / f"Quality_Coaching_{fc.upper()}.csv"
+        if fp.exists():
+            try:
+                frames.append(pd.read_csv(fp))
+            except Exception:
+                pass
+    if not frames:
+        return pd.DataFrame()
+    df = pd.concat(frames, ignore_index=True)
     if present_only and "Present" in df.columns:
         df = df[df["Present"].astype(str).str.lower().isin(["true", "1", "yes"])]
     return df.reset_index(drop=True)

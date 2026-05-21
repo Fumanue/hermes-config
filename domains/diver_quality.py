@@ -234,15 +234,18 @@ def build_fps_dataframe(raw_records: List[Dict[str, Any]], fc: str) -> pd.DataFr
 
     # Convert defect count to numeric and filter > 0
     df["no_of_defects"] = pd.to_numeric(df["no_of_defects"], errors="coerce").fillna(0)
+    df["transactions"] = pd.to_numeric(df.get("transactions", 0), errors="coerce").fillna(0)
     df = df[df["no_of_defects"] > 0].copy()
     log.info("Records with defects > 0: {len(df)}")
 
     if df.empty:
-        return pd.DataFrame(columns=["FC", "Login", "Error Type", "ErrorKey", "_count", "Process"])
+        return pd.DataFrame(columns=["FC", "Login", "Error Type", "ErrorKey", "_count", "_opportunities", "Process"])
 
     # Aggregate: sum defects per associate across the week
-    agg = df.groupby("associate_login", as_index=False)["no_of_defects"].sum()
-    agg.rename(columns={"no_of_defects": "_count"}, inplace=True)
+    agg = df.groupby("associate_login", as_index=False).agg(
+        _count=("no_of_defects", "sum"),
+        _opportunities=("transactions", "sum"),
+    ).reset_index(drop=True)
 
     out = pd.DataFrame()
     out["FC"] = fc.upper()
@@ -250,6 +253,7 @@ def build_fps_dataframe(raw_records: List[Dict[str, Any]], fc: str) -> pd.DataFr
     out["Error Type"] = "False Pick Short"
     out["ErrorKey"] = "FALSE_PICK_SHORT"
     out["_count"] = agg["_count"].astype(int)
+    out["_opportunities"] = agg["_opportunities"].astype(int)
     out["Process"] = "Pick"
 
     # Filter out empty logins

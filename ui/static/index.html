@@ -183,6 +183,12 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 [data-curve="NH"].on{background:rgba(217,119,6,0.08);border-color:var(--orange);color:var(--orange)}
 [data-curve="XT"].on{background:rgba(37,99,235,0.08);border-color:var(--blue);color:var(--blue)}
 [data-curve="VETERAN"].on{background:rgba(5,150,105,0.08);border-color:var(--green);color:var(--green)}
+[data-curve="NH"]{color:var(--orange);border-color:var(--orange)}
+[data-curve="XT"]{color:var(--blue);border-color:var(--blue)}
+[data-curve="VETERAN"]{color:var(--green);border-color:var(--green)}
+[data-curve="NH"].on{background:rgba(217,119,6,0.18);border-color:var(--orange);color:var(--orange);font-weight:700}
+[data-curve="XT"].on{background:rgba(37,99,235,0.18);border-color:var(--blue);color:var(--blue);font-weight:700}
+[data-curve="VETERAN"].on{background:rgba(5,150,105,0.18);border-color:var(--green);color:var(--green);font-weight:700}
 .max-wrap{display:flex;align-items:center;gap:5px}
 .max-lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);font-weight:600}
 .max-input{width:48px;padding:4px 6px;border:1px solid var(--border-strong);border-radius:10px;font-size:11px;text-align:center;color:var(--text);background:var(--bg-input)}
@@ -256,13 +262,14 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .panel-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px 10px}
 .panel-title{font-size:16px;font-weight:700;color:var(--text);padding:16px 20px 8px}
 .panel-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
-.quality-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:0 20px 14px}
-.qkpi{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;text-align:center}
-.qkpi-num{font-size:22px;font-weight:700;color:var(--text)}
+.quality-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:0 20px 12px}
+.qkpi{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center}
+.qkpi-num{font-size:20px;font-weight:700;color:var(--text)}
 .qkpi-lbl{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
 .qkpi-present .qkpi-num{color:var(--green)}
 .qkpi-coached .qkpi-num{color:var(--accent)}
 .qkpi-pending .qkpi-num{color:var(--orange)}
+.qkpi-compliance .qkpi-num{color:var(--accent)}
 .quality-table{width:100%;border-collapse:collapse;font-size:14px}
 .quality-table thead{position:sticky;top:0;z-index:2}
 .quality-table th{background:var(--bg-table-head);padding:12px 12px;text-align:center;font-weight:600;color:var(--text-muted);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border);cursor:pointer}
@@ -319,6 +326,74 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 #qualityProgress .bar{height:100%;width:0%;background:var(--gradient);border-radius:4px;animation:qProgress 8s ease-in-out forwards}
 @keyframes qProgress{0%{width:0%}80%{width:85%}100%{width:100%}}
 .qs-popover{position:absolute;top:100%;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 36px var(--shadow);z-index:100;padding:16px;min-width:500px;max-height:400px;overflow-y:auto}
+/* Quality filter pills */
+.q-pills{display:flex;gap:3px;align-items:center}
+.q-pill{display:inline-flex;align-items:center;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:800;letter-spacing:.04em;cursor:pointer;user-select:none;border:1.5px solid var(--border);color:var(--text-secondary);background:transparent;transition:.1s}
+.q-pill:hover{border-color:var(--border-strong);color:var(--text-primary)}
+.q-pill.on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* Quality error dropdown multi-select */
+.q-dropdown-btn{display:flex;align-items:center;gap:4px;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:800;cursor:pointer;border:1.5px solid var(--border);color:var(--text-secondary);background:transparent;white-space:nowrap}
+.q-dropdown-btn:hover{border-color:var(--border-strong);color:var(--text-primary)}
+.q-dropdown-btn.has-filter{background:var(--accent);border-color:var(--accent);color:#fff}
+.q-dd-arrow{font-size:8px;opacity:.6}
+.q-dropdown-panel{position:absolute;top:100%;left:0;margin-top:4px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px var(--shadow);z-index:200;min-width:200px;max-height:260px;overflow-y:auto;padding:6px 0}
+.q-dd-list label{display:flex;align-items:center;gap:8px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;color:var(--text-primary)}
+.q-dd-list label:hover{background:var(--bg-hover)}
+.q-dd-list input[type="checkbox"]{width:14px;height:14px;accent-color:var(--accent);cursor:pointer}
+.q-dd-count{font-size:9px;opacity:.7;margin-left:2px}
+.q-dd-all{border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:4px}
+
+/* Admin badge & multi-site */
+.admin-badge{display:inline-flex;align-items:center;margin-left:8px;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:900;letter-spacing:.06em;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-transform:uppercase}
+.act-multi{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border-color:#7c3aed;font-size:11px;padding:4px 12px}
+.act-multi:hover{background:linear-gradient(135deg,#6d28d9,#4338ca)}
+/* Multi-site modal */
+.multi-site-checks{display:flex;flex-wrap:wrap;gap:8px;padding:8px 0}
+.multi-site-checks label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;cursor:pointer}
+.multi-site-checks input{width:16px;height:16px;accent-color:#7c3aed}
+
+/* Admin Config panel */
+.cfg-scroll{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;padding:20px;align-items:start;overflow-y:auto;flex:1}
+@media(max-width:1200px){.cfg-scroll{grid-template-columns:1fr}}
+.cfg-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px var(--shadow)}
+.cfg-card-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;color:#fff;font-weight:800;font-size:13px}
+.cfg-card-hdr.hdr-targets{background:#2563eb}
+.cfg-card-hdr.hdr-quality{background:#dc2626}
+.cfg-card-hdr.hdr-courses{background:#7c3aed}
+.cfg-card-hdr.hdr-shifts{background:#059669}
+.cfg-card-hdr.hdr-stations{background:#d97706}
+.cfg-card-title{font-size:13px;font-weight:900;color:#fff;letter-spacing:-.01em}
+.cfg-card-body{padding:0;overflow-x:auto;max-height:350px;overflow-y:auto}
+.cfg-save{background:rgba(255,255,255,.2)!important;border-color:rgba(255,255,255,.4)!important;color:#fff!important;font-size:11px;padding:4px 12px;border-radius:6px}
+.cfg-save:hover{background:rgba(255,255,255,.35)!important}
+.cfg-add-row{display:flex;gap:8px;align-items:center;padding:10px 14px;border-top:1px dashed var(--border);background:var(--bg-hover)}
+.cfg-add-input{height:28px;padding:0 10px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg-input);color:var(--text);font-family:'JetBrains Mono',monospace}
+.cfg-add-input:focus{border-color:var(--accent);outline:none}
+.cfg-add-btn{height:28px;padding:0 14px;border:none;border-radius:14px;font-size:10px;font-weight:900;background:var(--accent);color:#fff;cursor:pointer;letter-spacing:.03em}
+.cfg-add-btn:hover{opacity:.85}
+.cfg-del-btn{width:24px;height:24px;border:none;border-radius:6px;background:transparent;color:var(--text-muted);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:.4;transition:.15s}
+.cfg-del-btn{opacity:0;transition:opacity .15s}
+tr:hover .cfg-del-btn{opacity:.5}
+tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
+.cfg-group-row td{background:var(--bg-hover) !important;padding:8px 14px !important;border:none !important}
+.cfg-fc-pill{display:inline-flex;padding:3px 10px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.06em;background:var(--accent);color:#fff;text-transform:uppercase}
+.cfg-section-divider{padding:10px 14px;font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border);border-top:2px solid var(--border);background:var(--bg-hover)}
+.cfg-uph-input{max-width:80px !important;text-align:center}
+.cfg-uuid-input{width:280px;font-size:11px !important}
+.cfg-enabled-col{width:70px;text-align:center}
+.cfg-loading{padding:30px;text-align:center;color:var(--text-muted);font-size:12px}
+.cfg-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:auto}
+.cfg-table th{padding:10px 14px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);border-bottom:2px solid var(--border);position:sticky;top:0;background:var(--bg-table-head);z-index:2}
+.cfg-table td{padding:9px 14px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.cfg-table tr:nth-child(even) td{background:var(--bg-hover)}
+.cfg-table input,.cfg-table select{background:var(--bg-input);border:1.5px solid var(--border);color:var(--text);padding:5px 9px;border-radius:6px;font-size:11px;font-family:'JetBrains Mono',monospace;transition:border-color .15s}
+.cfg-table input:focus,.cfg-table select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px rgba(99,102,241,.12)}
+.cfg-table input[type="number"]{width:70px;text-align:center}
+.cfg-table .cfg-fc{font-weight:900;font-size:10px;color:var(--accent);background:rgba(99,102,241,.08);padding:2px 7px;border-radius:4px;display:inline-block;letter-spacing:.04em}
+.cfg-save{font-size:11px;padding:6px 16px;border-radius:8px;font-weight:800}
+.cfg-sub-hdr{padding:12px 14px 6px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);border-top:1px solid var(--border)}
+
 .qs-table{width:100%;border-collapse:collapse;font-size:11.5px}
 .qs-table th{text-align:left;padding:6px 10px;color:var(--text-muted);font-weight:600;font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border)}
 .qs-table td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text)}
@@ -330,6 +405,7 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .qs-badge-s2{background:rgba(217,119,6,0.08);color:var(--orange)}
 .qs-badge-s1{background:rgba(5,150,105,0.08);color:var(--green)}
 .qs-bar{height:6px;border-radius:3px;background:var(--border);overflow:hidden}
+.qs-bar-fill{height:100%;border-radius:3px;transition:width .3s ease}
 .qs-error-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}
 .topbar-hidden .topbar{display:none!important}
 #bulkProgressBar{height:3px;background:var(--gradient);border-radius:3px;transition:width .3s}
@@ -370,6 +446,67 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 [data-theme="dark"] .present-chk{color:#86efac}
 .quality-cohort{font-size:11.5px;color:var(--text-secondary);font-weight:600}
 [data-theme="dark"] .quality-cohort{color:#e2e8f0}
+
+/* ═══ FAQ ═══ */
+.faq-scroll{flex:1;overflow-y:auto;padding:24px}
+.faq-container{max-width:800px;margin:0 auto}
+.faq-hero{display:flex;align-items:center;gap:16px;margin-bottom:28px}
+.faq-hero-icon{width:44px;height:44px;border-radius:12px;background:var(--gradient);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:900;flex-shrink:0}
+.faq-hero-title{font-size:18px;font-weight:700;color:var(--text)}
+.faq-hero-sub{font-size:12px;color:var(--text-muted);margin-top:2px}
+.faq-section{display:flex;flex-direction:column;gap:8px;margin-bottom:32px}
+.faq-item{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .2s}
+.faq-item:hover{border-color:var(--accent-border)}
+.faq-item.open{border-color:var(--accent-border)}
+.faq-q{display:flex;align-items:center;width:100%;padding:14px 18px;background:none;border:none;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;text-align:left;gap:10px;font-family:inherit}
+.faq-q::before{content:'▸';font-size:12px;color:var(--accent);transition:transform .2s;flex-shrink:0}
+.faq-item.open .faq-q::before{transform:rotate(90deg)}
+.faq-a{display:none;padding:0 18px 16px;font-size:12.5px;line-height:1.7;color:var(--text-secondary)}
+.faq-item.open .faq-a{display:block}
+.faq-a code{background:var(--bg-input);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:11.5px;font-family:'JetBrains Mono',monospace;color:var(--accent-text)}
+.faq-a table{width:100%;border-collapse:collapse;margin:8px 0;font-size:11.5px}
+.faq-a th{text-align:left;padding:6px 10px;background:var(--bg-table-head);border:1px solid var(--border);font-weight:600;color:var(--text-muted);font-size:10px;text-transform:uppercase}
+.faq-a td{padding:6px 10px;border:1px solid var(--border);color:var(--text)}
+.faq-a ul{padding-left:18px;margin:6px 0}
+.faq-a li{margin-bottom:4px}
+.faq-a .formula{background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:8px 0;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--accent-text)}
+.faq-a .badge-nh{display:inline-block;padding:2px 8px;border-radius:6px;background:rgba(217,119,6,0.1);color:var(--orange);font-weight:600;font-size:11px}
+.faq-a .badge-xt{display:inline-block;padding:2px 8px;border-radius:6px;background:rgba(37,99,235,0.1);color:var(--blue);font-weight:600;font-size:11px}
+.faq-a .badge-vet{display:inline-block;padding:2px 8px;border-radius:6px;background:rgba(5,150,105,0.1);color:var(--green);font-weight:600;font-size:11px}
+
+.faq-feedback-section{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-top:8px}
+.faq-feedback-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+.faq-feedback-sub{font-size:11.5px;color:var(--text-muted);margin-bottom:16px}
+.faq-feedback-form .form-row{gap:12px}
+
+/* ═══ TARGETS REDESIGN ═══ */
+.tgt-section{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:16px}
+.tgt-section-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.tgt-section-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.tgt-section-icon.tgt-perf{background:rgba(5,150,105,0.1);color:var(--green)}
+.tgt-section-icon.tgt-robo{background:rgba(37,99,235,0.1);color:var(--blue)}
+.tgt-section-icon.tgt-dpmo{background:rgba(124,58,237,0.1);color:var(--accent)}
+.tgt-section-title2{font-size:14px;font-weight:700;color:var(--text)}
+.tgt-section-sub{font-size:11px;color:var(--text-muted);margin-top:1px}
+.tgt-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.tgt-table thead th{padding:8px 10px;text-align:center;font-weight:600;color:var(--text-muted);font-size:10px;text-transform:uppercase;background:var(--bg-panel);border-bottom:1px solid var(--border)}
+.tgt-table thead th:first-child{text-align:left;padding-left:14px}
+.tgt-table tbody td{padding:8px 10px;text-align:center;border-bottom:1px solid var(--border);color:var(--text);font-weight:600}
+.tgt-table tbody td:first-child{text-align:left;font-weight:700;padding-left:14px}
+.tgt-table tbody tr:hover td{background:var(--row-hover)}
+.tgt-table tbody tr:last-child td{border-bottom:none}
+.tgt-legend{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px;padding:10px 14px;background:var(--bg-panel);border-radius:10px;font-size:11px;color:var(--text-muted)}
+.tgt-legend-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-weight:600;font-size:10px}
+.tgt-legend-pill .pill-dot{width:8px;height:8px;border-radius:2px}
+.tgt-dpmo-accordion{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px}
+.tgt-dpmo-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:var(--bg-panel);transition:background .15s}
+.tgt-dpmo-header:hover{background:var(--accent-light)}
+.tgt-dpmo-header .tgt-dpmo-label{font-size:12.5px;font-weight:600;color:var(--text)}
+.tgt-dpmo-header .tgt-dpmo-process{font-size:10.5px;color:var(--text-muted);margin-left:8px}
+.tgt-dpmo-header .tgt-dpmo-chevron{font-size:10px;color:var(--text-muted);transition:transform .2s}
+.tgt-dpmo-accordion.open .tgt-dpmo-chevron{transform:rotate(90deg)}
+.tgt-dpmo-body{display:none;padding:12px 14px;border-top:1px solid var(--border)}
+.tgt-dpmo-accordion.open .tgt-dpmo-body{display:block}
 
 /* ═══ RESPONSIVE ═══ */
 @media(max-width:1400px){
@@ -414,6 +551,8 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
     <!--<div class="t-tab" data-tab="history" data-i18n="tab_history">History</div>-->
     <div class="t-tab" data-tab="targets" data-i18n="tab_targets">Targets</div>
     <div class="t-tab" data-tab="quality" data-i18n="tab_quality">Quality</div>
+    <div class="t-tab" data-tab="faq" data-i18n="tab_faq">FAQ</div>
+    <div class="t-tab" data-tab="config" id="tabConfig" style="display:none">⚙️ Config</div>
 
   </div>
   <div class="t-filters">
@@ -531,9 +670,9 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
     <div class="sep"></div>
     <span class="tb-label">Curve</span>
     <button class="nf on" data-curve="ALL" id="curveAll">ALL</button>
-    <button class="nf" data-curve="NH" style="color:#92580a;border-color:#92580a">NH</button>
-    <button class="nf" data-curve="XT" style="color:#2563eb;border-color:#2563eb">XT</button>
-    <button class="nf" data-curve="VETERAN" style="color:#186429;border-color:#186429">VET</button>
+    <button class="nf" data-curve="NH">NH</button>
+    <button class="nf" data-curve="XT">XT</button>
+    <button class="nf" data-curve="VETERAN">VET</button>
     <div class="sep"></div>
     <span class="tb-label">T</span>
     <select id="tenureFilter" class="tselect" style="height:26px;min-width:60px;font-size:11px;background:#fff;border:1px solid #ccc;color:#111">
@@ -618,6 +757,7 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
       <button class="act-btn act-pipeline" id="btnQualityRun" data-i18n="btn_run_pipeline">▶ Run Pipeline</button>
       <button class="act-btn act-secondary" id="btnQualityRefresh" data-i18n="btn_refresh">↻ Refresh</button>
       <button class="act-btn act-secondary" id="btnQualitySyncGC" title="Force refresh Guided Coaching history" data-i18n="btn_sync_gc">⟳ Sync GC</button>
+      <button class="act-btn act-multi" id="btnQualityMulti" style="display:none" title="Admin: Run multiple sites at once">⚡ Multi-Site</button>
     </div>
   </div>
 
@@ -626,6 +766,7 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
     <div class="qkpi qkpi-present"><div class="qkpi-num" id="qkPresent">0</div><div class="qkpi-lbl" data-i18n="q_present">Present</div></div>
     <div class="qkpi qkpi-coached"><div class="qkpi-num" id="qkCoached">0</div><div class="qkpi-lbl" data-i18n="q_coached">Coached</div></div>
     <div class="qkpi qkpi-pending"><div class="qkpi-num" id="qkPending">0</div><div class="qkpi-lbl" data-i18n="q_pending">Pending</div></div>
+    <div class="qkpi qkpi-compliance"><div class="qkpi-num" id="qkCompliance">0%</div><div class="qkpi-lbl">Compliance</div></div>
   </div>
 
   <div class="toolbar">
@@ -635,19 +776,37 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
     </div>
     <div class="sep"></div>
     <span class="tb-label">Process</span>
-    <select id="qFilterProcess" class="tselect" style="height:26px;min-width:90px;font-size:11px;background:#fff;border:1px solid #ccc;color:#111">
-      <option value="">All</option>
-      <option value="Pick">Pick</option>
-      <option value="Pack">Pack</option>
-      <option value="Stow">Stow</option>
-      <option value="Receive">Receive</option>
-      <option value="ICQA">ICQA</option>
-    </select>
+    <div class="q-dropdown-wrap" style="position:relative">
+      <button class="q-dropdown-btn" id="qFilterProcessBtn">All <span class="q-dd-arrow">▾</span></button>
+      <div class="q-dropdown-panel" id="qFilterProcessPanel" style="display:none">
+        <div class="q-dd-list" id="qFilterProcessList">
+          <label class="q-dd-all"><input type="checkbox" value="__ALL__"> <b>All</b></label>
+          <label><input type="checkbox" value="Pick"> Pick</label>
+          <label><input type="checkbox" value="Pack"> Pack</label>
+          <label><input type="checkbox" value="Stow"> Stow</label>
+          <label><input type="checkbox" value="Receive"> Receive</label>
+          <label><input type="checkbox" value="ICQA"> ICQA</label>
+        </div>
+      </div>
+    </div>
     <div class="sep"></div>
     <span class="tb-label">Error</span>
-    <select id="qFilterError" class="tselect" style="height:26px;min-width:140px;font-size:11px;background:#fff;border:1px solid #ccc;color:#111">
-      <option value="">All Errors</option>
-    </select>
+    <div class="q-dropdown-wrap" style="position:relative">
+      <button class="q-dropdown-btn" id="qFilterErrorBtn">All <span class="q-dd-arrow">▾</span></button>
+      <div class="q-dropdown-panel" id="qFilterErrorPanel" style="display:none">
+        <div class="q-dd-list" id="qFilterErrorList"></div>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <span class="tb-label">σ ≥</span>
+    <input id="qFilterSigma" type="number" step="0.5" min="0" placeholder="0" style="width:48px;height:26px;font-size:11px;text-align:center;border:1px solid #ccc;padding:0 4px;font-family:'JetBrains Mono',monospace" value="">
+    <div class="sep"></div>
+    <span class="tb-label">Curve</span>
+    <div class="q-pills" id="qFilterCurve">
+      <span class="q-pill" data-v="NH">NH</span>
+      <span class="q-pill" data-v="XT">XT</span>
+      <span class="q-pill" data-v="VET">VET</span>
+    </div>
     <div class="sep"></div>
     <button class="act-btn act-primary" id="btnQualityBulk" style="font-size:11px;padding:4px 12px">↑↑ Bulk Upload</button>
     <button class="act-btn act-csv" id="btnQualityExport" style="font-size:11px;padding:4px 10px">↓ CSV</button>
@@ -665,6 +824,7 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
       <thead>
         <tr>
           <th style="width:180px;text-align:left;padding-left:20px;cursor:pointer" data-qsort="login"><span data-i18n="qth_associate">Associate</span> ⇅</th>
+          <th style="width:60px;cursor:pointer" data-qsort="fc">FC ⇅</th>
           <th style="width:240px;text-align:left;cursor:pointer" data-qsort="error_key"><span data-i18n="qth_error">Error Type</span> ⇅</th>
           <th style="width:100px;cursor:pointer" data-qsort="total_errors_wk"><span data-i18n="qth_errors_wk">Errors WK</span> ⇅</th>
           <th style="width:80px" data-i18n="qth_target">Target</th>
@@ -693,6 +853,141 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
   <div class="statusbar">
     <span class="sb-l">Quality Coaching · <b id="qkFcLabel">—</b> · Weekly sigma-based detection</span>
     <span class="sb-r">Threshold: associates above configured σ appear here</span>
+  </div>
+</div>
+
+<!-- ═══ FAQ ═══ -->
+<div class="tab-panel" id="panel-faq">
+  <div class="faq-scroll">
+    <div class="faq-container">
+      <div class="faq-hero">
+        <div class="faq-hero-icon">?</div>
+        <div>
+          <div class="faq-hero-title" data-i18n="faq_title">FAQ & Help</div>
+          <div class="faq-hero-sub" data-i18n="faq_subtitle">How Project Argos works — formulas, curves, and coaching logic</div>
+        </div>
+      </div>
+
+      <div class="faq-section" id="faqAccordion">
+        <div class="faq-item">
+          <button class="faq-q" data-i18n="faq_q1">How are Target Errors calculated?</button>
+          <div class="faq-a" id="faqA1" data-i18n-html="faq_a1"></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q" data-i18n="faq_q2">How do Curves work? (NH / XT / VET)</button>
+          <div class="faq-a" id="faqA2" data-i18n-html="faq_a2"></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q" data-i18n="faq_q3">How is Tenure determined?</button>
+          <div class="faq-a" id="faqA3" data-i18n-html="faq_a3"></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q" data-i18n="faq_q4">Coaching Legend — when does someone appear?</button>
+          <div class="faq-a" id="faqA4" data-i18n-html="faq_a4"></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q" data-i18n="faq_q5">Column Descriptions</button>
+          <div class="faq-a" id="faqA5" data-i18n-html="faq_a5"></div>
+        </div>
+      </div>
+
+      <div class="faq-feedback-section">
+        <div class="faq-feedback-title" data-i18n="faq_feedback_title">💬 Send Feedback</div>
+        <div class="faq-feedback-sub" data-i18n="faq_feedback_sub">Report issues, suggest features, or share ideas</div>
+        <div class="faq-feedback-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">FC</label>
+              <input class="form-input" id="fb-fc" readonly>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Login</label>
+              <input class="form-input" id="fb-login" placeholder="your login">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="faq_feedback_lbl">Feedback</label>
+            <textarea class="form-textarea" id="fb-text" rows="4" placeholder=""></textarea>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <button class="act-btn act-primary" id="fb-submit" data-i18n="faq_feedback_send">Send Feedback</button>
+            <span id="fb-result" style="font-size:12px"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADMIN CONFIG ═══ -->
+<div class="tab-panel" id="panel-config">
+  <div class="panel-header">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center">
+        <span style="color:#fff;font-size:16px">⚙</span>
+      </div>
+      <div>
+        <div class="panel-title">Admin Config</div>
+        <div class="panel-sub">Edit targets, quality mode, and shift configuration</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span class="tb-label">FC</span>
+      <select id="cfgFcFilter" class="tselect" style="height:28px;min-width:90px;font-size:11px">
+        <option value="">All</option>
+        <option value="BCN1">BCN1</option>
+        <option value="BCN4">BCN4</option>
+        <option value="MAD7">MAD7</option>
+        <option value="OVD1">OVD1</option>
+        <option value="RMU1">RMU1</option>
+        <option value="SVQ1">SVQ1</option>
+      </select>
+      <button class="act-btn act-multi" id="cfgPushBtn" style="font-size:11px;padding:4px 12px">🔄 Update Data Central</button>
+    </div>
+  </div>
+
+  <div class="cfg-scroll">
+
+    <!-- UPH Targets -->
+    <div class="cfg-card">
+      <div class="cfg-card-hdr hdr-targets"><span class="cfg-card-title">📊 Pack Line Targets</span><button class="act-btn cfg-save" id="cfgSaveTargets">💾 Save</button></div>
+      <div class="cfg-card-body" id="cfgTargetsBody"><div class="cfg-loading">Loading…</div></div>
+    </div>
+
+    <!-- Quality Mode -->
+    <div class="cfg-card">
+      <div class="cfg-card-hdr hdr-quality"><span class="cfg-card-title">🎯 Quality Mode & Sigma</span><button class="act-btn cfg-save" id="cfgSaveQuality">💾 Save</button></div>
+      <div class="cfg-card-body" id="cfgQualityBody"><div class="cfg-loading">Loading…</div></div>
+    </div>
+
+    <!-- Coaching Courses -->
+    <div class="cfg-card">
+      <div class="cfg-card-hdr hdr-courses"><span class="cfg-card-title">🎓 Coaching Courses</span><button class="act-btn cfg-save" id="cfgSaveCourses">💾 Save</button></div>
+      <div class="cfg-card-body" id="cfgCoursesBody">
+        <div class="cfg-section-divider">🎯 Quality Courses — by Error Type</div>
+        <div id="cfgQualityCoursesArea"><div class="cfg-loading">Loading…</div></div>
+        <div class="cfg-section-divider">📊 Performance Courses — by Role</div>
+        <div id="cfgPerfCoursesArea"><div class="cfg-loading">Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- Shift Config -->
+    <div class="cfg-card">
+      <div class="cfg-card-hdr hdr-shifts"><span class="cfg-card-title">🕐 Shift Config</span><button class="act-btn cfg-save" id="cfgSaveShifts">💾 Save</button></div>
+      <div class="cfg-card-body" id="cfgShiftsBody"><div class="cfg-loading">Loading…</div></div>
+    </div>
+
+    <!-- Station Map -->
+    <div class="cfg-card">
+      <div class="cfg-card-hdr hdr-stations"><span class="cfg-card-title">📍 Station Map</span><button class="act-btn cfg-save" id="cfgSaveStations">💾 Save</button></div>
+      <div class="cfg-card-body" id="cfgStationsBody"><div class="cfg-loading">Loading…</div></div>
+    </div>
+
+  </div>
+
+  <div class="statusbar">
+    <span class="sb-l">Admin Config · Changes saved to config/hermes/</span>
+    <span class="sb-r" id="cfgStatus"></span>
   </div>
 </div>
 
@@ -771,6 +1066,6 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
   </div>
 </div>
 
-<script src="/static/app.js?v=v30_settings_20260520" defer></script>
+<script src="/static/app.js?v=v52_grid_layout_20260521" defer></script>
 </body>
 </html>

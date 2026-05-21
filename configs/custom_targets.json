@@ -665,9 +665,9 @@
     ],
     "pack_line_targets": [
       {
-        "key": "SM",
-        "target_uph": 110,
-        "applies_to_role": "SM"
+        "key": "SM1",
+        "target_uph": 133,
+        "applies_to_role": "SM1"
       },
       {
         "key": "SMMIX",
@@ -676,17 +676,17 @@
       },
       {
         "key": "SM2",
-        "target_uph": 210,
+        "target_uph": 165,
         "applies_to_role": "SM2"
       },
       {
         "key": "SNS1",
-        "target_uph": 410,
+        "target_uph": 400,
         "applies_to_role": "SNS1"
       },
       {
         "key": "SNS2",
-        "target_uph": 280,
+        "target_uph": 245,
         "applies_to_role": "SNS2"
       },
       {

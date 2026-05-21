@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import contextlib
 import json
 import platform
@@ -21,7 +19,7 @@ from project_hermes.core.logger import get_logger
 from project_hermes.domains.guided_coaching_history import fetch_guided_coaching_history
 from project_hermes.domains.necro_targets import get_necro_targets
 from project_hermes.domains.quality_pipeline import (
-    load_output, _load_json,
+    load_output, load_output_multi, _load_json,
     _course_for_error, normalize_error_key,
     run as run_quality_pipeline,
 )
@@ -155,8 +153,20 @@ def compute_course_key(role: str, station: str, dept: str = "", comments: str = 
 
 
 def course_id_from_key(key: str) -> str | None:
-    uuid = ROLE_TO_COURSE_UUID.get(key)
+    raw = ROLE_TO_COURSE_UUID.get(key)
+    if isinstance(raw, dict):
+        uuid = raw.get("uuid", "")
+    else:
+        uuid = raw
     return f"{COURSE_BASE}{uuid}" if uuid else None
+
+
+def course_applies_to(key: str) -> str:
+    """Return who this course applies to: 'both', 'ld', or 'ops'."""
+    raw = ROLE_TO_COURSE_UUID.get(key)
+    if isinstance(raw, dict):
+        return str(raw.get("applies_to", "both")).lower()
+    return "both"
 
 
 def transcript_url(login: str) -> str:
@@ -194,10 +204,34 @@ SHIFT_DISPLAY: dict = {
     "NIGHT":      "Night",
     "CENTRAL":    "Central",
     "LATE_NIGHT": "Late Night",
+    "SATURDAY_E": "Saturday E",
+    "DAY":        "Day",
+    "EVENING":    "Evening",
 }
 
 def _fc_shifts(fc: str) -> dict:
-    return FC_SHIFTS.get((fc or "BCN4").upper(), FC_SHIFTS["BCN4"])
+    """Get shifts for an FC. Reads from shift_config.json dynamically, falls back to hardcoded."""
+    fc = (fc or "BCN4").upper()
+    # Try dynamic from shift_config.json
+    try:
+        shift_cfg_path = CONFIG_DIR / "shift_config.json"
+        if shift_cfg_path.exists():
+            cfg = json.loads(shift_cfg_path.read_text(encoding="utf-8"))
+            fc_cfg = cfg.get(fc, {})
+            # Use default_department or first dept
+            dept = fc_cfg.get("default_department", "Outbound")
+            shifts_data = fc_cfg.get(dept, {})
+            if shifts_data:
+                result = {}
+                for name, s in shifts_data.items():
+                    start = int(s.get("shift_start", 0))
+                    end = int(s.get("shift_end", 0))
+                    result[name.upper()] = (start // 60, start % 60, end // 60, end % 60)
+                if result:
+                    return result
+    except Exception:
+        pass
+    return FC_SHIFTS.get(fc, FC_SHIFTS["BCN4"])
 
 def auto_detect_shift(fc: str = "BCN4", now: datetime | None = None) -> str:
     now = now or datetime.now()
@@ -337,21 +371,39 @@ def get_login_notes(login: str, df: pd.DataFrame) -> str:
 
 def build_coaching_notes(login: str, df: pd.DataFrame) -> str:
     """
-    Returns ONLY:
-      - 'L&D Perfo Coaching'
-      - 'Ops Perfo Coaching'
+    Returns coaching notes with Dept + Process info:
+      - 'Ops Pack Performance'
+      - 'L&D Pick Performance'
+      - 'Ops Stow Performance'
     """
     login_s = str(login or "").strip()
 
     m = df[df["Login"].astype(str).str.strip() == login_s]
     dept = ""
+    role = ""
     if not m.empty and "Dept" in m.columns:
         dept = str(m.iloc[0].get("Dept", "") or "").strip()
+    if not m.empty and "Role" in m.columns:
+        role = str(m.iloc[0].get("Role", "") or "").strip().upper()
 
-    if dept.upper() in ("L&D", "L AND D", "LND", "LD"):
-        return "L&D Perfo Coaching"
+    # Determine dept prefix
+    dept_prefix = "L&D" if dept.upper() in ("L&D", "L AND D", "LND", "LD") else "Ops"
+
+    # Determine process from role
+    if role in ("SM", "SM1", "SMMIX", "SM2", "AFE_PACK", "P2R_PACK", "SNS1", "SNS2"):
+        process = "Pack"
+    elif role in ("PICK_AR", "P2R_PICK"):
+        process = "Pick"
+    elif role in ("STOW", "QUANTITY_STOW"):
+        process = "Stow"
+    elif role == "DECANT":
+        process = "Receive"
+    elif "ICQA" in role or "SBC" in role:
+        process = "ICQA"
     else:
-        return "Ops Perfo Coaching"
+        process = "Perfo"
+
+    return f"{dept_prefix} {process} Performance"
 # ─────────────────────────────────────────────────────────
 # Targets loader
 # ─────────────────────────────────────────────────────────
@@ -559,6 +611,16 @@ def api_dashboard(fc: str = DEFAULT_FC, shift: str = ""):
 
         ck      = compute_course_key(role, station, dept, raw_comment)
         cid     = course_id_from_key(ck)
+
+        # Check applies_to: if course is "ld" only, hide for OPS and vice versa
+        applies = course_applies_to(ck)
+        dept_upper = dept.upper()
+        is_ld = dept_upper in ("L&D", "L AND D", "LND", "LD")
+        if applies == "ld" and not is_ld:
+            cid = None  # OPS associate, but course is L&D only
+        elif applies == "ops" and is_ld:
+            cid = None  # L&D associate, but course is OPS only
+
         coached = login in coached_set
         clbl    = coached_days_label(row.get("Coached", "")) if coached else ""
 
@@ -716,6 +778,19 @@ def api_roboscout_metrics(fc: str = DEFAULT_FC):
         return {"metrics": [], "error": str(e)}
 
 
+@app.get("/api/open-file")
+def api_open_file(path: str = ""):
+    """Open a file in Explorer / default app. Used by pywebview for CSV downloads."""
+    from pathlib import Path as _P
+    import subprocess
+    fp = _P(path)
+    if not fp.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    # Open containing folder with file selected (Windows)
+    subprocess.Popen(["explorer", "/select,", str(fp)], shell=False)
+    return {"ok": True, "path": str(fp)}
+
+
 @app.get("/api/export/csv")
 def api_export_csv(fc: str = DEFAULT_FC):
     import io
@@ -811,6 +886,10 @@ class QualityRunRequest(BaseModel):
     fc: str = DEFAULT_FC
 
 
+class QualityMultiRunRequest(BaseModel):
+    sites: list[str] = []
+
+
 class QualityUploadRequest(BaseModel):
     fc: str
     login: str
@@ -830,7 +909,7 @@ def api_shifts(fc: str = DEFAULT_FC):
     current = auto_detect_shift(fc, now)
     result = []
     for key, (sh, sm, eh, em) in shifts.items():
-        label = f"{SHIFT_DISPLAY.get(key, key)} — {sh:02d}:{sm:02d} → {eh:02d}:{em:02d}"
+        label = f"{SHIFT_DISPLAY.get(key, key.replace('_',' ').title())} — {sh:02d}:{sm:02d} → {eh:02d}:{em:02d}"
         result.append({"key": key, "label": label, "is_current": key == current})
     return {"fc": fc, "shifts": result, "current": current}
 
@@ -841,6 +920,11 @@ def api_auth_me():
     Returns user info. Phonetool is optional — if it fails, user gets
     basic access without History tab. Never blocks on phonetool errors.
     """
+    _admins_path = CONFIG_DIR / "admins.json"
+    _admins_cfg = json.loads(_admins_path.read_text(encoding="utf-8")) if _admins_path.exists() else {}
+    admin_list = _admins_cfg.get("admins", [])
+    super_admins = _admins_cfg.get("super_admin", [])
+
     login = os.environ.get("USERNAME", "").strip().lower() or "unknown"
 
     # Phonetool — non-fatal, best-effort
@@ -864,7 +948,17 @@ def api_auth_me():
     if phonetool_error:
         perms["phonetool_error"] = phonetool_error
 
-    return {"ok": True, "user": user_info, "permissions": perms}
+    # Admin info
+    is_admin = login in [a.lower() for a in admin_list]
+    is_super_admin = login in [a.lower() for a in super_admins]
+    admin_info = {
+        "is_admin": is_admin,
+        "is_super_admin": is_super_admin,
+        "role": "super_admin" if is_super_admin else "admin" if is_admin else "user",
+        "multi_site": is_admin,
+    }
+
+    return {"ok": True, "user": user_info, "permissions": perms, "admin": admin_info}
 
 
 @app.post("/api/pipeline/run")
@@ -1017,7 +1111,7 @@ def api_bulk_upload(req: BulkUploadRequest):
 # QUALITY COACHING ROUTES
 # ═════════════════════════════════════════════════════════
 @app.get("/api/quality/dashboard")
-def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False):
+def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False, sites: str = ""):
     import math
 
     def _safe_int(v, default=0):
@@ -1028,8 +1122,14 @@ def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False):
         except (ValueError, TypeError):
             return default
 
+    # Multi-site support: if sites param provided, load merged data
+    site_list = [s.strip().upper() for s in sites.split(",") if s.strip()] if sites else []
+
     try:
-        df = load_output(present_only=present_only)
+        if site_list:
+            df = load_output_multi(site_list, present_only=present_only)
+        else:
+            df = load_output(present_only=present_only)
         if df.empty:
             return {"data": [], "kpis": {"total": 0, "present": 0, "coached": 0}}
 
@@ -1226,6 +1326,51 @@ def api_quality_run(req: QualityRunRequest):
         return {"ok": False, "log": buf.getvalue(), "error": str(e)}
 
 
+@app.post("/api/quality/run-multi")
+def api_quality_run_multi(req: QualityMultiRunRequest):
+    """Run quality pipeline for multiple sites (admin only). Merges results."""
+    login = os.environ.get("USERNAME", "").strip().lower()
+    _admins_path = CONFIG_DIR / "admins.json"
+    _admins_cfg = json.loads(_admins_path.read_text(encoding="utf-8")) if _admins_path.exists() else {}
+    admin_list = [a.lower() for a in _admins_cfg.get("admins", [])]
+
+    if login not in admin_list:
+        raise HTTPException(status_code=403, detail="Multi-site request requires admin privileges")
+
+    sites = [s.strip().upper() for s in req.sites if s.strip()]
+    if not sites:
+        raise HTTPException(status_code=400, detail="No sites provided")
+
+    # Filter to allowed sites
+    sites = [s for s in sites if s in ALLOWED_SITES]
+    if not sites:
+        raise HTTPException(status_code=400, detail="No valid sites in request")
+
+    results = {}
+    buf = StringIO()
+    for fc in sites:
+        try:
+            site_buf = StringIO()
+            def _inner(_fc=fc, _buf=site_buf):
+                with contextlib.redirect_stdout(_buf), contextlib.redirect_stderr(_buf):
+                    run_quality_pipeline(_fc, force_download=True)
+            with_com_init(_inner)
+            results[fc] = {"ok": True, "log": site_buf.getvalue()}
+            buf.write(f"✓ {fc}: OK\n")
+        except Exception as e:
+            results[fc] = {"ok": False, "error": str(e)}
+            buf.write(f"✗ {fc}: {e}\n")
+
+    # Pre-fetch coaching history for all sites
+    for fc in sites:
+        try:
+            with_com_init(lambda _fc=fc: fetch_guided_coaching_history(fc=_fc, force_refresh=True))
+        except Exception:
+            pass
+
+    return {"ok": True, "sites": sites, "results": results, "summary": buf.getvalue()}
+
+
 @app.post("/api/quality/refresh-coached")
 def api_quality_refresh_coached(fc: str = DEFAULT_FC):
     """Force-refresh the Guided Coaching history cache for this FC."""
@@ -1238,6 +1383,41 @@ def api_quality_refresh_coached(fc: str = DEFAULT_FC):
         return {"ok": True, "fc": fc_upper, "instances": count}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+
+# ───────────────────────────────────────────────────────────
+# Feedback
+# ───────────────────────────────────────────────────────────
+_FEEDBACK_CSV = Path(r"\\ant\dept-eu\BCN4\Public\Professor_data\feedback.csv")
+
+class FeedbackRequest(BaseModel):
+    fc: str
+    login: str
+    feedback: str
+
+@app.post("/api/feedback")
+def api_feedback(req: FeedbackRequest):
+    """Append user feedback to shared CSV (fire-and-forget via daemon thread)."""
+    import threading
+    fc = req.fc.strip().upper()
+    login = req.login.strip()
+    feedback = req.feedback.strip().replace('"', "'")
+    if not login or not feedback:
+        raise HTTPException(status_code=400, detail="login and feedback are required")
+
+    def _write():
+        try:
+            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            line = f'{ts},{fc},{login},"{feedback}"\n'
+            if not _FEEDBACK_CSV.exists():
+                _FEEDBACK_CSV.write_text("timestamp,fc,login,feedback\n" + line, encoding="utf-8")
+            else:
+                with open(_FEEDBACK_CSV, "a", encoding="utf-8") as f:
+                    f.write(line)
+        except Exception as e:
+            log.warning("Feedback write failed: %s", e)
+    threading.Thread(target=_write, daemon=True).start()
+    return {"ok": True}
 
 
 @app.post("/api/quality/upload")
@@ -1282,3 +1462,78 @@ def api_quality_upload(req: QualityUploadRequest):
         return {"ok": True, "login": req.login, "notes": notes}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ═══════════════════════════════════════════════════════════════
+# ADMIN CONFIG ENDPOINTS
+# ═══════════════════════════════════════════════════════════════
+ADMIN_ALLOWED_FILES = {
+    "custom_targets.json", "quality_mode.json", "shift_config.json",
+    "quality_courses.json", "guided_coaching.json", "admins.json",
+    "fclm_mapping.json",
+}
+
+
+def _check_admin() -> str:
+    """Return login if admin, else raise 403."""
+    login = os.environ.get("USERNAME", "").strip().lower()
+    admins_path = CONFIG_DIR / "admins.json"
+    admins_cfg = json.loads(admins_path.read_text(encoding="utf-8")) if admins_path.exists() else {}
+    admin_list = [a.lower() for a in admins_cfg.get("admins", [])]
+    if login not in admin_list:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return login
+
+
+@app.get("/api/admin/config/{filename}")
+def api_admin_config_read(filename: str):
+    _check_admin()
+    if filename not in ADMIN_ALLOWED_FILES:
+        raise HTTPException(status_code=400, detail=f"File not allowed: {filename}")
+    fp = CONFIG_DIR / filename
+    if not fp.exists():
+        return {"ok": True, "data": {}}
+    return {"ok": True, "data": json.loads(fp.read_text(encoding="utf-8"))}
+
+
+@app.post("/api/admin/config/{filename}")
+def api_admin_config_write(filename: str, payload: dict):
+    _check_admin()
+    if filename not in ADMIN_ALLOWED_FILES:
+        raise HTTPException(status_code=400, detail=f"File not allowed: {filename}")
+    data = payload.get("data")
+    if data is None:
+        raise HTTPException(status_code=400, detail="Missing 'data' field")
+    fp = CONFIG_DIR / filename
+    # Backup before overwrite
+    if fp.exists():
+        bak = fp.with_suffix(".json.bak")
+        bak.write_text(fp.read_text(encoding="utf-8"), encoding="utf-8")
+    fp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+@app.post("/api/admin/push-config")
+def api_admin_push_config():
+    """Push all config JSONs to shared network path (Data Central)."""
+    _check_admin()
+    import shutil
+    network_path = Path(r"\\ant\dept-eu\BCN4\Public\Professor_data\config_backup")
+    local_fallback = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Documents" / "Argos_Config_Backup"
+
+    # Determine target
+    if network_path.exists():
+        target = network_path
+    else:
+        target = local_fallback
+    target.mkdir(parents=True, exist_ok=True)
+
+    copied = []
+    for fp in CONFIG_DIR.glob("*.json"):
+        try:
+            shutil.copy2(fp, target / fp.name)
+            copied.append(fp.name)
+        except Exception as e:
+            print(f"[PUSH-CONFIG] Failed to copy {fp.name}: {e}", flush=True)
+
+    return {"ok": True, "target": str(target), "files": copied, "count": len(copied)}
+    return {"ok": True, "saved": str(fp)}

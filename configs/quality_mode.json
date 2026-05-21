@@ -2,530 +2,630 @@
   "BCN1": {
     "default": {
       "mode": "urgent",
-      "sigma_threshold": 1
+      "sigma_threshold": 1,
+      "min_errors": 3
     },
     "errors": {
       "FALSE_PICK_SHORT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "BIN_FILTER_VIOLATIONS": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "PICK_ERROR_INDICATOR": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "MULTIPLE_EVENT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "SHORT": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SINGLE_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SCAN_OUT_OF_SEQUENCE": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "AFE1_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "OTHER_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       }
     }
   },
   "BCN4": {
     "default": {
       "mode": "urgent",
-      "sigma_threshold": 1
+      "sigma_threshold": 1,
+      "min_errors": 3
     },
     "errors": {
       "FALSE_PICK_SHORT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "BIN_FILTER_VIOLATIONS": {
         "enabled": true,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "PICK_ERROR_INDICATOR": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "MULTIPLE_EVENT": {
         "enabled": true,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SHORT": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SINGLE_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SCAN_OUT_OF_SEQUENCE": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "AFE1_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "OTHER_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       }
     }
   },
   "MAD7": {
     "default": {
       "mode": "improvement",
-      "sigma_threshold": 2
+      "sigma_threshold": 2,
+      "min_errors": 3
     },
     "errors": {
       "FALSE_PICK_SHORT": {
         "enabled": true,
         "mode": "improvement",
-        "sigma_threshold": 2
+        "sigma_threshold": 2,
+        "min_errors": 3
       },
       "BIN_FILTER_VIOLATIONS": {
         "enabled": true,
         "mode": "improvement",
-        "sigma_threshold": 2
+        "sigma_threshold": 2,
+        "min_errors": 3
       },
       "PICK_ERROR_INDICATOR": {
         "enabled": true,
         "mode": "improvement",
-        "sigma_threshold": 2
+        "sigma_threshold": 2,
+        "min_errors": 3
       },
       "MULTIPLE_EVENT": {
         "enabled": true,
         "mode": "improvement",
-        "sigma_threshold": 2
+        "sigma_threshold": 2,
+        "min_errors": 3
       },
       "SHORT": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SINGLE_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SCAN_OUT_OF_SEQUENCE": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "AFE1_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "OTHER_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       }
     }
   },
   "OVD1": {
     "default": {
       "mode": "urgent",
-      "sigma_threshold": 1
+      "sigma_threshold": 1,
+      "min_errors": 3
     },
     "errors": {
       "FALSE_PICK_SHORT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "BIN_FILTER_VIOLATIONS": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "PICK_ERROR_INDICATOR": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "MULTIPLE_EVENT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "SHORT": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SINGLE_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SCAN_OUT_OF_SEQUENCE": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "AFE1_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "OTHER_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       }
     }
   },
   "RMU1": {
     "default": {
       "mode": "urgent",
-      "sigma_threshold": 1
+      "sigma_threshold": 1,
+      "min_errors": 3
     },
     "errors": {
       "FALSE_PICK_SHORT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "BIN_FILTER_VIOLATIONS": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "PICK_ERROR_INDICATOR": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "MULTIPLE_EVENT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "SHORT": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SINGLE_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SCAN_OUT_OF_SEQUENCE": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "AFE1_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "OTHER_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       }
     }
   },
   "SVQ1": {
     "default": {
       "mode": "urgent",
-      "sigma_threshold": 1
+      "sigma_threshold": 1,
+      "min_errors": 3
     },
     "errors": {
       "FALSE_PICK_SHORT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "BIN_FILTER_VIOLATIONS": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "PICK_ERROR_INDICATOR": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "MULTIPLE_EVENT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "SHORT": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SINGLE_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SCAN_OUT_OF_SEQUENCE": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "AFE1_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "OTHER_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       }
     }
   },
   "MAD4": {
     "default": {
       "mode": "urgent",
-      "sigma_threshold": 1
+      "sigma_threshold": 1,
+      "min_errors": 3
     },
     "errors": {
       "FALSE_PICK_SHORT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "BIN_FILTER_VIOLATIONS": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "PICK_ERROR_INDICATOR": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "MULTIPLE_EVENT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "SHORT": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SINGLE_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SCAN_OUT_OF_SEQUENCE": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "AFE1_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "OTHER_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       }
     }
   },
   "MAD6": {
     "default": {
       "mode": "urgent",
-      "sigma_threshold": 1
+      "sigma_threshold": 1,
+      "min_errors": 3
     },
     "errors": {
       "FALSE_PICK_SHORT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "BIN_FILTER_VIOLATIONS": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "PICK_ERROR_INDICATOR": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "MULTIPLE_EVENT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "SHORT": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SINGLE_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SCAN_OUT_OF_SEQUENCE": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "AFE1_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "OTHER_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       }
     }
   },
   "MAD9": {
     "default": {
       "mode": "urgent",
-      "sigma_threshold": 1
+      "sigma_threshold": 1,
+      "min_errors": 3
     },
     "errors": {
       "FALSE_PICK_SHORT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "BIN_FILTER_VIOLATIONS": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "PICK_ERROR_INDICATOR": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "MULTIPLE_EVENT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "SHORT": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SINGLE_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SCAN_OUT_OF_SEQUENCE": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "AFE1_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "OTHER_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       }
     }
   },
   "VLC1": {
     "default": {
       "mode": "urgent",
-      "sigma_threshold": 1
+      "sigma_threshold": 1,
+      "min_errors": 3
     },
     "errors": {
       "FALSE_PICK_SHORT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "BIN_FILTER_VIOLATIONS": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "PICK_ERROR_INDICATOR": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "MULTIPLE_EVENT": {
         "enabled": true,
         "mode": "urgent",
-        "sigma_threshold": 1
+        "sigma_threshold": 1,
+        "min_errors": 3
       },
       "SHORT": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SINGLE_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "SCAN_OUT_OF_SEQUENCE": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "AFE1_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       },
       "OTHER_ITEM_MISSING": {
         "enabled": false,
         "mode": "maintenance",
-        "sigma_threshold": 3
+        "sigma_threshold": 3,
+        "min_errors": 3
       }
     }
   }

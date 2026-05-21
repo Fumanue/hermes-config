@@ -1,4 +1,4 @@
 {
   "ib_roles": ["STOW", "QUANTITY_STOW", "DECANT"],
-  "ob_roles": ["SM", "SMMIX", "SM2", "AFE_PACK", "P2R_PACK", "PICK_AR", "P2R_PICK", "SNS1", "SNS2"]
+  "ob_roles": ["SM", "SM1", "SMMIX", "SM2", "AFE_PACK", "P2R_PACK", "PICK_AR", "P2R_PICK", "SNS1", "SNS2"]
 }

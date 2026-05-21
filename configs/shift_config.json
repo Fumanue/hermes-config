@@ -324,55 +324,71 @@
   },
   "SVQ1": {
     "Outbound": {
-      "Day": {
-        "shift_start": 360,
-        "shift_end": 840,
-        "H1_start": 360,
-        "H1_end": 600,
-        "H2_start": 600,
-        "H2_end": 840
+      "Early": {
+        "shift_start": 390,
+        "shift_end": 880,
+        "H1_start": 390,
+        "H1_end": 635,
+        "H2_start": 635,
+        "H2_end": 880
       },
-      "Evening": {
-        "shift_start": 840,
-        "shift_end": 1320,
-        "H1_start": 840,
-        "H1_end": 1140,
-        "H2_start": 1140,
-        "H2_end": 1320
+      "Late": {
+        "shift_start": 875,
+        "shift_end": 1365,
+        "H1_start": 875,
+        "H1_end": 1120,
+        "H2_start": 1120,
+        "H2_end": 1365
       },
       "Night": {
-        "shift_start": 1320,
-        "shift_end": 360,
-        "H1_start": 1320,
-        "H1_end": 180,
-        "H2_start": 180,
-        "H2_end": 360
+        "shift_start": 1360,
+        "shift_end": 395,
+        "H1_start": 1360,
+        "H1_end": 158,
+        "H2_start": 158,
+        "H2_end": 395
+      },
+      "Saturday_E": {
+        "shift_start": 510,
+        "shift_end": 870,
+        "H1_start": 510,
+        "H1_end": 690,
+        "H2_start": 690,
+        "H2_end": 870
       }
     },
     "Inbound": {
-      "Day": {
-        "shift_start": 360,
-        "shift_end": 840,
-        "H1_start": 360,
-        "H1_end": 630,
-        "H2_start": 630,
-        "H2_end": 840
+      "Early": {
+        "shift_start": 390,
+        "shift_end": 880,
+        "H1_start": 390,
+        "H1_end": 635,
+        "H2_start": 635,
+        "H2_end": 880
       },
-      "Evening": {
-        "shift_start": 840,
-        "shift_end": 1320,
-        "H1_start": 840,
-        "H1_end": 1110,
-        "H2_start": 1110,
-        "H2_end": 1320
+      "Late": {
+        "shift_start": 875,
+        "shift_end": 1365,
+        "H1_start": 875,
+        "H1_end": 1120,
+        "H2_start": 1120,
+        "H2_end": 1365
       },
       "Night": {
-        "shift_start": 1320,
-        "shift_end": 360,
-        "H1_start": 1320,
-        "H1_end": 150,
-        "H2_start": 150,
-        "H2_end": 360
+        "shift_start": 1360,
+        "shift_end": 395,
+        "H1_start": 1360,
+        "H1_end": 158,
+        "H2_start": 158,
+        "H2_end": 395
+      },
+      "Saturday_E": {
+        "shift_start": 510,
+        "shift_end": 870,
+        "H1_start": 510,
+        "H1_end": 690,
+        "H2_start": 690,
+        "H2_end": 870
       }
     },
     "default_department": "Outbound"

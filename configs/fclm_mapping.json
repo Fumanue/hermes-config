@@ -493,6 +493,10 @@
         "file": "FCLM_1003019.csv",
         "function_contains": "Decant",
         "unit_type": "CASE"
+      },
+      "SM1": {
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Medium"
       }
     },
     "role_fallback": {
@@ -504,38 +508,31 @@
     },
     "station_overrides": [
       {
-        "station_contains": "WS11",
-        "file": "FCLM_1002993.csv",
-        "function_contains": "Slam at Pack",
-        "role_override": "SNS1",
-        "process_id": "100054"
-      },
-      {
-        "station_contains": "WS12",
-        "file": "FCLM_1002993.csv",
-        "function_contains": "SLAP VDF",
-        "role_override": "SNS2",
-        "process_id": "100054"
-      },
-      {
         "station_contains": "SINGLES_01",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Medium",
+        "role_override": "SM1",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_02",
         "file": "FCLM_1002993.csv",
         "function_contains": "Scan Verify Large",
         "role_override": "SM2",
         "process_id": "100054"
       },
       {
-        "station_contains": "SINGLES_02",
+        "station_contains": "ws133",
         "file": "FCLM_1002993.csv",
-        "function_contains": "Scan Verify Small",
-        "role_override": "SMMIX",
+        "function_contains": "Slam At Pack",
+        "role_override": "SNS1",
         "process_id": "100054"
       },
       {
-        "station_contains": "SINGLES_03",
+        "station_contains": "ws130",
         "file": "FCLM_1002993.csv",
-        "function_contains": "Scan Verify Medium",
-        "role_override": "SM",
+        "function_contains": "SLAP VDF",
+        "role_override": "SNS2",
         "process_id": "100054"
       },
       {

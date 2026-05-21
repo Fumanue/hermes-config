@@ -242,27 +242,30 @@
       },
       {
         "station_contains": "SINGLES_01_02",
-        "station_parity_mode": true,
-        "station_parity": "odd",
         "file": "FCLM_1002993.csv",
-        "function_contains": "Scan Verify Medium",
-        "role_override": "SM",
+        "function_contains": "Scan Verify Large",
+        "role_override": "SM2",
         "process_id": "100054"
       },
       {
-        "station_contains": "SINGLES_01_02",
-        "station_parity_mode": true,
-        "station_parity": "even",
+        "station_contains": "SINGLES_01_03",
         "file": "FCLM_1002993.csv",
-        "function_contains": "Scan Verify Medium",
-        "role_override": "SM",
+        "function_contains": "Scan Verify Small",
+        "role_override": "SMMIX",
         "process_id": "100054"
       },
       {
-        "station_contains": "SINGLES_03",
+        "station_contains": "SINGLES_02_02",
         "file": "FCLM_1002993.csv",
-        "function_contains": "Scan Verify Medium",
-        "role_override": "SM",
+        "function_contains": "Scan Verify Large",
+        "role_override": "SM2",
+        "process_id": "100054"
+      },
+      {
+        "station_contains": "SINGLES_02_03",
+        "file": "FCLM_1002993.csv",
+        "function_contains": "Scan Verify Small",
+        "role_override": "SMMIX",
         "process_id": "100054"
       },
       {

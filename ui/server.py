@@ -1514,13 +1514,15 @@ def api_admin_config_write(filename: str, payload: dict):
 
 @app.post("/api/admin/push-config")
 def api_admin_push_config():
-    """Push all config JSONs to shared network path (Data Central)."""
+    """Push all config JSONs to shared network path + git push to Data Central."""
     _check_admin()
     import shutil
+    import subprocess
+
     network_path = Path(r"\\ant\dept-eu\BCN4\Public\Professor_data\config_backup")
     local_fallback = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Documents" / "Argos_Config_Backup"
 
-    # Determine target
+    # 1) Copy to network/local backup
     if network_path.exists():
         target = network_path
     else:
@@ -1535,5 +1537,37 @@ def api_admin_push_config():
         except Exception as e:
             print(f"[PUSH-CONFIG] Failed to copy {fp.name}: {e}", flush=True)
 
-    return {"ok": True, "target": str(target), "files": copied, "count": len(copied)}
-    return {"ok": True, "saved": str(fp)}
+    # 2) Git push to Data Central (hermes-config repo)
+    git_exe = r"C:\Users\fumanue\AppData\Local\Programs\Git\cmd\git.exe"
+    repo_dir = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Documents" / "hermes-config"
+    git_result = {"pushed": False, "message": ""}
+
+    try:
+        if Path(git_exe).exists() and repo_dir.exists():
+            # Copy configs to repo's configs/ folder
+            repo_configs = repo_dir / "configs"
+            repo_configs.mkdir(parents=True, exist_ok=True)
+            for fp in CONFIG_DIR.glob("*.json"):
+                shutil.copy2(fp, repo_configs / fp.name)
+
+            # Git add, commit, push
+            env = os.environ.copy()
+            env["PATH"] = str(Path(git_exe).parent) + ";" + env.get("PATH", "")
+            subprocess.run([git_exe, "add", "."], cwd=str(repo_dir), env=env, check=True, timeout=15)
+            commit_result = subprocess.run(
+                [git_exe, "commit", "-m", f"Config update from Argos Admin ({len(copied)} files)"],
+                cwd=str(repo_dir), env=env, capture_output=True, text=True, timeout=15
+            )
+            push_result = subprocess.run(
+                [git_exe, "push"],
+                cwd=str(repo_dir), env=env, capture_output=True, text=True, timeout=30
+            )
+            git_result = {"pushed": push_result.returncode == 0, "message": push_result.stdout or push_result.stderr}
+            print(f"[PUSH-CONFIG] Git push: {'OK' if push_result.returncode == 0 else 'FAILED'} — {push_result.stderr or push_result.stdout}", flush=True)
+        else:
+            git_result = {"pushed": False, "message": "Git or repo not found"}
+    except Exception as e:
+        git_result = {"pushed": False, "message": str(e)}
+        print(f"[PUSH-CONFIG] Git error: {e}", flush=True)
+
+    return {"ok": True, "target": str(target), "files": copied, "count": len(copied), "git": git_result}

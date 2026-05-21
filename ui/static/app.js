@@ -2788,7 +2788,8 @@ $("cfgPushBtn") && $("cfgPushBtn").addEventListener("click", async ()=>{
   btn.disabled = true; btn.textContent = "Pushing…";
   try{
     const res = await jpost(`${API}/api/admin/push-config`);
-    _cfgToast(`✓ Pushed ${res.count} files to ${res.target}`);
+    const gitMsg = res.git?.pushed ? "✓ Git pushed" : "⚠ Git: " + (res.git?.message || "skipped");
+    _cfgToast(`✓ Pushed ${res.count} files\n${gitMsg}`);
   }catch(e){ _cfgToast("✗ " + e.message, true); }
   btn.disabled = false; btn.textContent = "🔄 Update Data Central";
 });

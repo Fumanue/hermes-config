@@ -1,0 +1,9 @@
+{
+  "super_admin": ["fumanue"],
+  "admins": ["mferruz", "poangelr", "fumanue", "larezaha"],
+  "permissions": {
+    "multi_site_request": true,
+    "view_all_sites": true,
+    "manage_config": true
+  }
+}

@@ -20,23 +20,23 @@
     },
     "SHORT": {
       "uuid": "",
-      "enabled": true
+      "enabled": false
     },
     "SINGLE_ITEM_MISSING": {
       "uuid": "",
-      "enabled": true
+      "enabled": false
     },
     "SCAN_OUT_OF_SEQUENCE": {
       "uuid": "",
-      "enabled": true
+      "enabled": false
     },
     "AFE1_ITEM_MISSING": {
       "uuid": "",
-      "enabled": true
+      "enabled": false
     },
     "OTHER_ITEM_MISSING": {
       "uuid": "",
-      "enabled": true
+      "enabled": false
     }
   }
 }

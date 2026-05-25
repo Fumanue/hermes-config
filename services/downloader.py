@@ -38,7 +38,7 @@ OUTPUT_DIR: Path = paths.output
 # ---------------- Hermes Config (JSON) ----------------
 _cfg_sources_default = {
     "default_fc": "BCN4",
-    "max_workers": 4,
+    "max_workers": 8,
     "min_hours_threshold": 1.0,
     "fclm_process_ids": [],
     "roboscout_configs": {},
@@ -378,22 +378,21 @@ def winhttp_get_json(url: str, cookie: str, max_tries: int = 5) -> dict:
 
     raise RuntimeError(f"Failed after {max_tries} attempts")
 
-# ============================================================================
-# DECANT LOCATION LOOKUP  (process 1003019 → GetLastSeenLocationOfEmployee)
-# ============================================================================
+# Process IDs where Decant CASE unit type filter applies at download time,
+# and whose employees need GCA last-seen location enrichment.
+DECANT_CASE_PROCESS_IDS: List[str] = [
+    str(p) for p in cfg_sources.get("location_enrichment_process_ids", ["1003019"])
+]
+
 LOCATION_API_URL = (
     "https://guided-coaching-dub.corp.amazon.com/api/"
     "employee-location-svc/GetLastSeenLocationOfEmployee"
 )
-
-# Process IDs that need location enrichment (configurable via downloader_sources.json)
-LOCATION_ENRICHMENT_PROCESS_IDS: List[str] = [
-    str(p) for p in cfg_sources.get("location_enrichment_process_ids", ["1003019"])
-]
+# Max parallel GCA location requests per Decant process (configurable)
+DECANT_LOCATION_WORKERS: int = int(cfg_sources.get("decant_location_workers", 10))
 
 
 def _fetch_one_location(employee_id: str, cookie: str) -> str:
-    """Fetch last-seen locationId for a single employee. Returns locationId or ''."""
     try:
         url = f"{LOCATION_API_URL}?employeeId={employee_id}"
         data = winhttp_get_json(url, cookie)
@@ -402,12 +401,8 @@ def _fetch_one_location(employee_id: str, cookie: str) -> str:
         return f"Error:{str(e)[:40]}"
 
 
-def fetch_decant_locations(fclm_csv_path: Path, cookie: str, max_workers: int = 20) -> pd.DataFrame:
-    """
-    Read FCLM_1003019.csv, fetch last-seen location for each employee in parallel.
-    Returns DataFrame with columns: EmployeeId, Login, Location
-    which is saved as Decant_Locations.csv in OUTPUT_DIR.
-    """
+def fetch_decant_locations(fclm_csv_path: Path, cookie: str, max_workers: int = 10) -> pd.DataFrame:
+    """Fetch GCA last-seen location for each Decant employee in parallel."""
     if not fclm_csv_path.exists():
         log.info("⚠ {fclm_csv_path.name} not found — skipping location fetch")
         return pd.DataFrame()
@@ -415,69 +410,55 @@ def fetch_decant_locations(fclm_csv_path: Path, cookie: str, max_workers: int = 
     df = pd.read_csv(fclm_csv_path, dtype=str)
     df.columns = [re.sub(r"\s+", " ", c.strip()) for c in df.columns]
 
-    # Detect Employee Id column
     emp_col = next((c for c in df.columns if "employee id" in c.lower()), None)
     if not emp_col:
-        log.info("⚠ No 'Employee Id' column found in FCLM_1003019.csv")
+        log.info("⚠ No 'Employee Id' column in {fclm_csv_path.name}")
         return pd.DataFrame()
 
-    # Also grab login/name if available
     login_col = next((c for c in df.columns if "name" in c.lower()), None)
-
-    # Unique employee IDs only (drop blanks/errors)
     emp_ids = (
         df[emp_col].astype(str).str.strip()
         .replace("", pd.NA).dropna().unique().tolist()
     )
     emp_ids = [e for e in emp_ids if e and e.lower() not in ("nan", "none", "employee id")]
 
-    # Build login map if available
     login_map: dict = {}
     if login_col:
-        login_map = dict(zip(
-            df[emp_col].astype(str).str.strip(),
-            df[login_col].astype(str).str.strip()
-        ))
+        login_map = dict(zip(df[emp_col].astype(str).str.strip(), df[login_col].astype(str).str.strip()))
 
-    log.info("Fetching locations for {len(emp_ids)} employees (max_workers={max_workers})...")
+    log.info("Decant locations: {len(emp_ids)} employees (max_workers={max_workers})")
+
+    def _task(eid: str) -> dict:
+        return {"EmployeeId": eid, "Login": login_map.get(eid, eid), "Location": _fetch_one_location(eid, cookie)}
 
     results: List[dict] = []
-    lock = threading.Lock()
-
-    def _task(eid: str, idx: int, total: int):
-        loc = _fetch_one_location(eid, cookie)
-        login = login_map.get(eid, eid)
-        with lock:
-            log.info("  [{idx}/{total}] {login} ({eid}) → {loc}")
-        return {"EmployeeId": eid, "Login": login, "Location": loc}
-
     with ThreadPoolExecutor(max_workers=max_workers, initializer=_thread_worker_init) as ex:
-        futs = {
-            ex.submit(_task, eid, i + 1, len(emp_ids)): eid
-            for i, eid in enumerate(emp_ids)
-        }
-        for fut in as_completed(futs):
+        for result in as_completed({ex.submit(_task, eid): eid for eid in emp_ids}):
             try:
-                results.append(fut.result())
+                results.append(result.result())
             except Exception as e:
-                results.append({"EmployeeId": futs[fut], "Login": futs[fut], "Location": f"Error:{e}"})
+                pass
 
     if not results:
-        log.info("✓ 0 locations found  |  ⚠ 0 errors")
         return pd.DataFrame(columns=["EmployeeId", "Login", "Location"])
 
     loc_df = pd.DataFrame(results)
-
-    # Filter out error rows for clean output (keep for logging)
-    ok = loc_df[~loc_df["Location"].astype(str).str.startswith("Error")]
-    errors = loc_df[loc_df["Location"].astype(str).str.startswith("Error")]
-
-    log.info("✓ {len(ok)} locations found  |  ⚠ {len(errors)} errors")
-    if not errors.empty:
-        for _, row in errors.iterrows():
-            log.info("   ✗ {row['Login']} ({row['EmployeeId']}): {row['Location']}")
-
+    ok = (~loc_df["Location"].astype(str).str.startswith("Error")).sum()
+    log.info("✓ {ok}/{len(loc_df)} locations fetched")
     return loc_df
+
+
+def _decant_locations_task(fclm_csv_path: Path, pid: str, cookie: str) -> DownloadResult:
+    name = f"Decant_Locations_{pid}.csv"
+    try:
+        loc_df = fetch_decant_locations(fclm_csv_path, cookie, max_workers=DECANT_LOCATION_WORKERS)
+        if loc_df.empty:
+            return DownloadResult(name, True, "", count=0)
+        out = StringIO()
+        loc_df.to_csv(out, index=False, encoding="utf-8-sig")
+        return DownloadResult(name, True, out.getvalue(), count=len(loc_df))
+    except Exception as e:
+        return DownloadResult(name, False, error=str(e))
 
 
 
@@ -781,8 +762,8 @@ def download_fclm(process_id: str, fc: str, start_dt: datetime, end_dt: datetime
         raw_csv = winhttp_request(url, cookie)
         df = csv_to_df(raw_csv)
 
-        # DECANT (location enrichment processes): Use Unit Type = Case only
-        if str(process_id) in LOCATION_ENRICHMENT_PROCESS_IDS:
+        # DECANT: Use Unit Type = Case only (no location enrichment needed)
+        if str(process_id) in DECANT_CASE_PROCESS_IDS:
             col_unit = find_col(df, ["Unit Type"])
             col_size = find_col(df, ["Size"])
             if col_unit and col_size:
@@ -916,7 +897,8 @@ def download_roster(fc: str) -> DownloadResult:
 def save_result(result: DownloadResult) -> None:
     if result.success and result.data:
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        (OUTPUT_DIR / result.name).write_text(result.data, encoding="utf-8")
+        # Write bytes directly for better performance
+        (OUTPUT_DIR / result.name).write_bytes(result.data.encode("utf-8"))
 
 def clear_outputs() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -1055,30 +1037,26 @@ def run(fc: str, start_dt: datetime, end_dt: datetime) -> None:
             else:
                 fast_starts_result = res
 
-    log.info("Decant Location enrichment...")
-    decant_loc_results: List[str] = []
-    for pid in LOCATION_ENRICHMENT_PROCESS_IDS:
-        fclm_path = OUTPUT_DIR / f"FCLM_{pid}.csv"
-        if not fclm_path.exists():
-            log.info("  ⚠ FCLM_{pid}.csv not found — skipping decant enrichment")
-            continue
-        try:
-            _fc_check = pd.read_csv(fclm_path, nrows=2)
-            if _fc_check.empty:
-                log.info("  ⚠ FCLM_{pid}.csv has no data — skipping decant enrichment")
+        # Phase 2: Decant location enrichment — runs inside the same executor so it
+        # benefits from the already-initialised COM/WinHTTP thread pool, but only
+        # starts after FCLM files are saved (each _decant_locations_task reads the CSV).
+        decant_futures = {}
+        for pid in DECANT_CASE_PROCESS_IDS:
+            fclm_path = OUTPUT_DIR / f"FCLM_{pid}.csv"
+            if not fclm_path.exists():
+                log.info("  ⚠ FCLM_{pid}.csv not found — skipping Decant location fetch")
                 continue
-        except Exception:
-            log.info("  ⚠ Could not read FCLM_{pid}.csv — skipping decant enrichment")
-            continue
-        loc_df = fetch_decant_locations(fclm_path, cookie, max_workers=1)
-        if not loc_df.empty:
-            out_name = f"Decant_Locations_{pid}.csv"
-            out_path = OUTPUT_DIR / out_name
-            loc_df.to_csv(out_path, index=False, encoding="utf-8-sig")
-            log.info("  ✓ {out_name} ({len(loc_df)} rows) → {out_path}")
-            decant_loc_results.append(out_name)
-        else:
-            log.info("  ⚠ No locations fetched for process {pid}")
+            fut = executor.submit(_decant_locations_task, fclm_path, pid, cookie)
+            decant_futures[fut] = pid
+
+        for fut in as_completed(decant_futures):
+            pid = decant_futures[fut]
+            res = fut.result()
+            if res.success and res.data:
+                save_result(res)
+                log.info("  ✓ Decant_Locations_{pid}.csv ({res.count} rows)")
+            elif not res.success:
+                log.info("  ⚠ Decant location {pid} failed (non-fatal): {res.error}")
 
     # ── Atlas Quality enrichment ──
     # New modular layer. Non-fatal: if Atlas fails, the performance dashboard still builds.

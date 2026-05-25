@@ -92,25 +92,11 @@ const I18N = {
 let _lang = localStorage.getItem("argos-lang") || "es";
 function t(k){ return (I18N[_lang]||I18N.es)[k] || (I18N.es)[k] || k; }
 
-// ═══ THEME TOGGLE ═══
+// ═══ THEME ═══
+// Apply saved theme immediately to avoid flash on load
 (function(){
   const saved = localStorage.getItem("argos-theme") || "light";
   document.documentElement.setAttribute("data-theme", saved);
-  document.addEventListener("DOMContentLoaded", () => {
-    const btn = document.getElementById("themeToggle");
-    const icon = document.getElementById("themeIcon");
-    if(!btn) return;
-    function apply(t){
-      document.documentElement.setAttribute("data-theme", t);
-      localStorage.setItem("argos-theme", t);
-      if(icon) icon.textContent = t === "dark" ? "🌙" : "☀️";
-    }
-    apply(saved);
-    btn.addEventListener("click", () => {
-      const curr = document.documentElement.getAttribute("data-theme");
-      apply(curr === "dark" ? "light" : "dark");
-    });
-  });
 })();
 
 /* ============================================================
@@ -177,6 +163,26 @@ function transcriptUrl(login){ return `https://guided-coaching-dub.corp.amazon.c
 function badgePhotoUrl(login){ return `https://badgephotos.amazon.com/?Region=Master&FullsizeImage=Yes&uid=${encodeURIComponent(String(login||"").trim())}`; }
 function ts(){ return new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"}); }
 const $=id=>document.getElementById(id);
+
+// Debounce utility — delays fn execution until wait ms after last call
+function _debounce(fn, wait){
+  let timer;
+  return function(){
+    const ctx=this, args=arguments;
+    clearTimeout(timer);
+    timer=setTimeout(function(){ fn.apply(ctx, args); }, wait);
+  };
+}
+
+// Station parse cache — avoids re-running regex on every render
+const _stationParseCache = new Map();
+function parsePerfStationCached(raw){
+  if(!raw) return null;
+  if(_stationParseCache.has(raw)) return _stationParseCache.get(raw);
+  const result = parsePerfStation(raw);
+  _stationParseCache.set(raw, result);
+  return result;
+}
 
 async function jget(url){
   const r = await fetch(url+(url.includes("?")?"&":"?")+"_t="+Date.now(),{cache:"no-store"});
@@ -356,7 +362,14 @@ function _applyPermissions(perms){
 }
 
 // Auth cache — only call /api/auth/me once per calendar day
-let _authCache = null;
+// Persisted in localStorage so a post-pipeline reload skips the auth fetch.
+let _authCache = (()=>{
+  try{
+    const raw = localStorage.getItem("argos_auth_cache");
+    if(raw){ const p = JSON.parse(raw); if(p && p.date) return p; }
+  }catch(ex){}
+  return null;
+})();
 
 async function loadUserInfo(){
   const dot  = $("userDot");
@@ -374,6 +387,7 @@ async function loadUserInfo(){
     name.textContent = (u.login || "—") + "@";
     role.textContent = "";
     dot.className = "t-user-dot";
+    window._userLogin = u.login || "";
     if(d.permissions) _applyPermissions(d.permissions);
     _unblockUI();
     return;
@@ -384,6 +398,7 @@ async function loadUserInfo(){
   try{
     const d = await jget(`${API}/api/auth/me`);
     _authCache = { date: today, data: d };
+    try{ localStorage.setItem("argos_auth_cache", JSON.stringify(_authCache)); }catch(ex){}
     const u = d.user || {};
     const login = u.login         || "—";
     const title = u.job_title     || "";
@@ -393,6 +408,7 @@ async function loadUserInfo(){
     name.textContent = login + "@";
     role.textContent = "";
     dot.className    = "t-user-dot";
+    window._userLogin = login;
     $("userPill").title = `${login}${title ? " | "+title : ""}${level ? " "+level : ""}${site ? " | "+site : ""}`;
 
     // Warn in console if phonetool was unavailable (non-blocking)
@@ -464,6 +480,7 @@ function switchTab(name){
   if(name==="targets") loadTargets();
   if(name==="quality") loadQuality();
   if(name==="faq") _initFaq();
+  if(name==="gca" && window._loadGcaDashboard) window._loadGcaDashboard();
 }
 document.querySelectorAll(".t-tab[data-tab]").forEach(tab=>
   tab.addEventListener("click",()=>switchTab(tab.dataset.tab))
@@ -477,11 +494,13 @@ $("fcSelect").addEventListener("change",()=>{
   $("ul-fc").value=currentFC;
   $("bulk-fc").value=currentFC;
   _updateDefaultFcBtn();
+  if(window._reloadMapLayout) window._reloadMapLayout(currentFC);
   loadShifts().then(()=>loadDashboard());
 });
 
 $("shiftSelect") && $("shiftSelect").addEventListener("change",()=>{
   currentShift=$("shiftSelect").value;
+  _refreshInfoBarDates();
   loadDashboard();
 });
 
@@ -513,7 +532,24 @@ async function loadShifts(){
       sel.appendChild(opt);
     });
     if(!currentShift && d.current){ currentShift=""; }
+    // Update info bar with FCLM dates
+    _updateInfoBar(d.start_full, d.end_full);
   }catch(e){ console.warn("loadShifts error",e); }
+}
+
+function _updateInfoBar(startFull, endFull){
+  const el=$("infoFclmDates");
+  if(el && startFull && endFull){
+    el.textContent = `${startFull} → ${endFull}`;
+  }
+}
+
+async function _refreshInfoBarDates(){
+  try{
+    const shift = currentShift || "";
+    const d = await jget(`${API}/api/shift?fc=${encodeURIComponent(currentFC)}&shift=${encodeURIComponent(shift)}`);
+    _updateInfoBar(d.start_full, d.end_full);
+  }catch(e){ console.warn("_refreshInfoBarDates error",e); }
 }
 
 // ── Process / Subprocess (checkbox multi-select) ────────────
@@ -899,8 +935,9 @@ function renderTable(){
             <div class="no-photo" style="${r.photo_url?"display:none":""}">?</div>
           </div>
           <div class="ident">
-            <a class="login-link" href="${esc(r.transcript_url)}" target="_blank" rel="noopener">${esc(r.login||"—")}</a>
+            <span class="login-name">${esc(r.login||"—")}</span>
             <a class="fclm-link" href="https://fclm-portal.amazon.com/employee/timeDetails?warehouseId=${encodeURIComponent(currentFC)}&employeeId=${encodeURIComponent(r.employee_id||"")}" target="_blank" rel="noopener">📋 FCLM</a>
+            <a class="fclm-link" href="${esc(r.transcript_url)}" target="_blank" rel="noopener">📝 GCA</a>
           </div>
         </div>
       </td>
@@ -933,36 +970,60 @@ function renderTable(){
 // ── KPI counts ─────────────────────────────────────────────
 function updateKpis(){
   const rows = state.all || [];
-  const set = (id, v) => { const el = $(id); if (el) el.textContent = String(v); };
+  const total = rows.length;
 
-  const normDept = (v) => String(v || "").trim().toUpperCase();
-  const isLD = (r) => {
-    const d = normDept(r.dept);
-    return d === "L&D" || d === "L AND D" || d === "LND" || d === "LD";
+  // Single pass over state.all — replaces 10+ separate filter calls
+  let c3=0,c2=0,c1=0,c0=0,co=0;
+  let c3ld=0,c3ops=0,c2ld=0,c2ops=0,c1ld=0,c1ops=0;
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i];
+    const p=Number(r.prio);
+    const d=String(r.dept||"").trim().toUpperCase();
+    const ld=d==="L&D"||d==="L AND D"||d==="LND"||d==="LD";
+    const ops=d==="OPS";
+    if(p>=3){c3++;if(ld)c3ld++;if(ops)c3ops++;}
+    else if(p===2){c2++;if(ld)c2ld++;if(ops)c2ops++;}
+    else if(p===1){c1++;if(ld)c1ld++;if(ops)c1ops++;}
+    else c0++;
+    if(r.coached) co++;
+  }
+
+  const _set = (id, v) => { const el=$(id); if(el) el.textContent=String(v); };
+
+  // Count-up animation — reflow triggered via rAF to avoid forced layout in loop
+  const _setKpi = (numId, barId, value) => {
+    const el=$(numId); if(!el) return;
+    const prev=parseInt(el.textContent)||0;
+    if(prev!==value){
+      const diff=value-prev, steps=Math.min(Math.abs(diff),12);
+      let step=0;
+      const iv=setInterval(()=>{
+        step++;
+        el.textContent=String(Math.round(prev+(diff*step/steps)));
+        if(step>=steps){
+          el.textContent=String(value);
+          clearInterval(iv);
+          // rAF ensures reflow happens outside the interval tick
+          requestAnimationFrame(()=>{
+            el.classList.remove("updated");
+            requestAnimationFrame(()=>{ el.classList.add("updated"); setTimeout(()=>el.classList.remove("updated"),400); });
+          });
+        }
+      },20);
+    }
+    const bar=$(barId);
+    if(bar&&total>0) bar.style.width=Math.round((value/total)*100)+"%";
   };
-  const isOps = (r) => {
-    const d = normDept(r.dept);
-    return d === "OPS";
-  };
 
-  const p3 = rows.filter(r => Number(r.prio) >= 3);
-  const p2 = rows.filter(r => Number(r.prio) === 2);
-  const p1 = rows.filter(r => Number(r.prio) === 1);
-  const p0 = rows.filter(r => Number(r.prio) === 0);
-
-  set("n3", p3.length);
-  set("n2", p2.length);
-  set("n1", p1.length);
-  set("n0", p0.length);
-  set("nAll", rows.length);
-  set("nCo", rows.filter(r => r.coached).length);
-
-  set("n3ld",  p3.filter(isLD).length);
-  set("n3ops", p3.filter(isOps).length);
-  set("n2ld",  p2.filter(isLD).length);
-  set("n2ops", p2.filter(isOps).length);
-  set("n1ld",  p1.filter(isLD).length);
-  set("n1ops", p1.filter(isOps).length);
+  _setKpi("n3","bar3",c3);
+  _setKpi("n2","bar2",c2);
+  _setKpi("n1","bar1",c1);
+  _setKpi("n0","bar0",c0);
+  _setKpi("nCo","barCo",co);
+  _set("nAll",total);
+  _set("n3ld",c3ld); _set("n3ops",c3ops);
+  _set("n2ld",c2ld); _set("n2ops",c2ops);
+  _set("n1ld",c1ld); _set("n1ops",c1ops);
 }
 
 function renderAll(){
@@ -977,6 +1038,7 @@ function renderAll(){
   updateKpis();
   buildSubprocessOptions();
   renderTable();
+  if(window._renderPerfMap) window._renderPerfMap();
 }
 
 // ── Download CSV ───────────────────────────────────────────
@@ -1364,7 +1426,7 @@ $("btnQualityMulti") && $("btnQualityMulti").addEventListener("click",()=>{
 });
 $("qualityPresentOnly") && $("qualityPresentOnly").addEventListener("click",()=>{qualityPresentOnly=!qualityPresentOnly; $("qualityPresentOnly").classList.toggle("active",qualityPresentOnly); if($("qualityPresentIcon")) $("qualityPresentIcon").textContent=qualityPresentOnly?"●":"○"; renderQuality();});
 $("qualityHideCoached") && $("qualityHideCoached").addEventListener("click",()=>{qualityHideCoached=!qualityHideCoached; $("qualityHideCoached").classList.toggle("active",qualityHideCoached); if($("qualityHideCoachedIcon")) $("qualityHideCoachedIcon").textContent=qualityHideCoached?"●":"○"; renderQuality();});
-$("qualitySearchInput") && $("qualitySearchInput").addEventListener("input",renderQuality);
+$("qualitySearchInput") && $("qualitySearchInput").addEventListener("input", _debounce(renderQuality, 200));
 // Pill toggle helper for multi-select filters
 function _pillToggle(container, stateSet, callback){
   if(!container) return;
@@ -1623,14 +1685,22 @@ function renderQuality(){
   _renderQualitySummary(rows);
 
   if(!rows.length){
-    body.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:40px;color:#999">No quality opportunities found.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:40px;color:#999">No quality opportunities found.</td></tr>`;
     return;
   }
 
-  body.innerHTML = rows.map(r=>{
+  // Pagination: show max 80 rows at a time for DOM performance
+  const Q_PAGE_SIZE = 80;
+  const totalPages = Math.ceil(rows.length / Q_PAGE_SIZE);
+  if(!window._qPage || window._qPage > totalPages) window._qPage = 1;
+  const pageStart = (window._qPage - 1) * Q_PAGE_SIZE;
+  const pageRows = rows.slice(pageStart, pageStart + Q_PAGE_SIZE);
+
+  body.innerHTML = pageRows.map(r=>{
     const login = String(qualityValue(r,["login","Login"],"")).trim();
     const fc = String(qualityValue(r,["fc","FC"],"")).trim();
     const errorType = qualityErrorLabel(r);
+    const volume = Number(qualityValue(r,["opportunities","Opportunities"],0));
     const total = qualityValue(r,["total_errors_wk","Total Errors WK","total_errors","Total WK","defectCount"],0);
     const targetErrors = Number(qualityValue(r,["target_errors","Target_Errors"],0));
     const pctTarget = Number(qualityValue(r,["pct_to_target","Pct_to_Target"],0));
@@ -1653,6 +1723,7 @@ function renderQuality(){
       </td>
       <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--text-muted)">${esc(fc)}</span></td>
       <td style="text-align:left"><span style="font-weight:800;font-size:12px">${esc(errorType)}</span></td>
+      <td><span class="td-rate" style="font-size:11px;color:var(--text-muted)" title="Opportunities processed">${volume>0?volume.toLocaleString():'—'}</span></td>
       <td><span class="td-rate">${esc(total)}</span></td>
       <td><span class="td-rate" style="font-size:11px">${targetErrors>0?targetErrors.toFixed(1):'—'}</span></td>
       <td><span class="pr ${pctTarget>=100?'pct-good':pctTarget>0?'pct-bad':'pct-none'}">${pctTarget>0&&pctTarget<999?pctTarget.toFixed(0)+'%':'—'}</span></td>
@@ -1673,6 +1744,17 @@ function renderQuality(){
       <td><button class="row-btn quality-upload" data-login="${esc(login)}" data-fc="${esc(fc)}" data-course="${esc(courseId)}" data-error="${esc(errorType)}" data-total="${total}" data-sigma="${sigma}" ${coached ? 'disabled style="opacity:.35;cursor:not-allowed"' : !courseId ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>${coached?'✓ Done':!courseId?'No Course':'↑ Upload'}</button></td>
     </tr>`;
   }).join("");
+
+  // Pagination controls
+  if(totalPages > 1){
+    const paginationEl = document.createElement("tr");
+    paginationEl.innerHTML = `<td colspan="14" style="text-align:center;padding:8px 0">
+      <button class="q-page-btn" ${window._qPage<=1?'disabled':''} onclick="window._qPage--;renderQuality()">← Prev</button>
+      <span style="margin:0 12px;font-size:11px;color:var(--text-secondary)">Page ${window._qPage} of ${totalPages} (${rows.length} rows)</span>
+      <button class="q-page-btn" ${window._qPage>=totalPages?'disabled':''} onclick="window._qPage++;renderQuality()">Next →</button>
+    </td>`;
+    body.appendChild(paginationEl);
+  }
 }
 
 // ── Quality Summary Table ─────────────────────────────────────────────
@@ -1789,20 +1871,22 @@ async function bulkQualityUpload(){
   }
 
   let ok=0, fail=0;
-  for(const r of pending){
-    const login = String(qualityValue(r,["login","Login"],"")).trim();
-    const courseId = qualityValue(r,["course_uuid","Course UUID","CourseUUID"],"") || qualityValue(r,["course_id","Course ID"],"");
-    const errorType = qualityErrorLabel(r);
-    const totalErrors = Number(qualityValue(r,["total_errors_wk","Total Errors WK"],0));
-    const sigma = Number(qualityValue(r,["sigma","Sigma"],0));
-    try{
-      await jpost(`${API}/api/quality/upload`, {
+  const BATCH_SIZE = 5;
+  for(let i=0; i<pending.length; i+=BATCH_SIZE){
+    const batch = pending.slice(i, i+BATCH_SIZE);
+    const results = await Promise.allSettled(batch.map(r => {
+      const login = String(qualityValue(r,["login","Login"],"")).trim();
+      const courseId = qualityValue(r,["course_uuid","Course UUID","CourseUUID"],"") || qualityValue(r,["course_id","Course ID"],"");
+      const errorType = qualityErrorLabel(r);
+      const totalErrors = Number(qualityValue(r,["total_errors_wk","Total Errors WK"],0));
+      const sigma = Number(qualityValue(r,["sigma","Sigma"],0));
+      return jpost(`${API}/api/quality/upload`, {
         fc: currentFC, login, course_id: courseId,
         error_type: errorType, total_errors_wk: totalErrors, sigma,
         notes: `Quality Coaching | ${errorType} | WK Errors: ${totalErrors} | Sigma: ${sigma.toFixed(2)}`
       });
-      ok++;
-    }catch(e){ fail++; }
+    }));
+    results.forEach(r => { if(r.status==="fulfilled") ok++; else fail++; });
     const done = ok+fail;
     if(btn) btn.textContent = `${done}/${pending.length}`;
     const pBar = $("bulkProgressBar");
@@ -1824,13 +1908,13 @@ async function bulkQualityUpload(){
 
 async function loadQuality(){
   const body = $("qualityTbody");
-  if(body) body.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:40px;color:#999">Loading quality data…</td></tr>`;
+  if(body) body.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:40px;color:#999">Loading quality data…</td></tr>`;
   try{
     const d = await jget(`${API}/api/quality/dashboard?fc=${encodeURIComponent(currentFC)}`);
     qualityRows = d.data || [];
     renderQuality();
   }catch(e){
-    if(body) body.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:40px;color:#c0392b">Error loading quality: ${esc(e.message)}</td></tr>`;
+    if(body) body.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:40px;color:#c0392b">Error loading quality: ${esc(e.message)}</td></tr>`;
   }
 }
 
@@ -1908,7 +1992,13 @@ function _updateQualityStatusbar(){
     sb.textContent = `Pipeline ran ${label}`;
   }
 }
-setInterval(_updateQualityStatusbar, 30000);
+// Only tick when Quality tab is active
+document.addEventListener("visibilitychange", function(){
+  if(!document.hidden && document.querySelector("#panel-quality.active")) _updateQualityStatusbar();
+});
+setInterval(function(){
+  if(document.querySelector("#panel-quality.active")) _updateQualityStatusbar();
+}, 30000);
 
 // ── Quality: Export filtered view to CSV ──────────────────────────────
 async function exportQualityCSV(){
@@ -2127,41 +2217,76 @@ $("btnPipeline").addEventListener("click", ()=>{
     </span>
     <span id="perfPipeMsg" style="font-size:10px;color:var(--accent);font-weight:600;white-space:nowrap">Iniciando…</span>
   </span>`;
-  const evtSrc = new EventSource(`${API}/api/pipeline/stream?fc=${encodeURIComponent(currentFC)}&shift=${encodeURIComponent(currentShift)}`);
-  evtSrc.onmessage = async (e) => {
-    try {
-      const d = JSON.parse(e.data);
-      const p = Math.min(d.pct || 0, 100);
-      const bar = $("perfPipeBar");
-      const msg = $("perfPipeMsg");
-      if(bar) bar.style.width = p + "%";
-      if(msg && d.msg) msg.textContent = d.msg;
-      if(p >= 100){
-        evtSrc.close();
-        btn.disabled = false;
-        btn.textContent = t("btn_run_pipeline");
-        if(d.ok !== false){
-          if(sb) sb.innerHTML = `<span style="color:var(--green);font-weight:700">✓ Pipeline completado</span>`;
-          setTimeout(()=>{ if(sb) sb.innerHTML = origSb; }, 3000);
-          // Reset performance filters after pipeline
-          state.curve = "ALL";
-          state.tenureFilter = "";
-          if($("searchBox")) $("searchBox").value = "";
-          document.querySelectorAll("[data-curve]").forEach(b => b.classList.toggle("on", b.dataset.curve==="ALL"));
-          await loadDashboard();
-        } else {
-          if(sb) sb.innerHTML = `<span style="color:#e53e3e;font-weight:700">❌ Error: ${esc(String(d.error||"pipeline failed"))}</span>`;
-          setTimeout(()=>{ if(sb) sb.innerHTML = origSb; }, 8000);
+
+  // Start pipeline via POST → get job_id, then poll status with XHR.
+  // Avoids EventSource which corrupts fetch() in pywebview EdgeChromium.
+  var startXhr = new XMLHttpRequest();
+  startXhr.open("POST", API+"/api/pipeline/start?fc="+encodeURIComponent(currentFC)+"&shift="+encodeURIComponent(currentShift), true);
+  startXhr.onload = function(){
+    if(startXhr.status !== 200){
+      btn.disabled = false;
+      btn.textContent = t("btn_run_pipeline");
+      if(sb){ sb.innerHTML = `<span style="color:#e53e3e">❌ Failed to start pipeline</span>`; setTimeout(()=>{ sb.innerHTML = origSb; }, 5000); }
+      return;
+    }
+    var jobId;
+    try{ jobId = JSON.parse(startXhr.responseText).job_id; } catch(ex){ jobId = null; }
+    if(!jobId){
+      btn.disabled = false;
+      btn.textContent = t("btn_run_pipeline");
+      if(sb){ sb.innerHTML = `<span style="color:#e53e3e">❌ No job ID returned</span>`; setTimeout(()=>{ sb.innerHTML = origSb; }, 5000); }
+      return;
+    }
+
+    var pollTimer = setInterval(function(){
+      var pollXhr = new XMLHttpRequest();
+      pollXhr.open("GET", API+"/api/pipeline/status/"+jobId, true);
+      pollXhr.onload = function(){
+        if(pollXhr.status !== 200) return;
+        var d;
+        try{ d = JSON.parse(pollXhr.responseText); } catch(ex){ return; }
+        var p = Math.min(d.pct || 0, 100);
+        var bar = $("perfPipeBar");
+        var msg = $("perfPipeMsg");
+        if(bar) bar.style.width = p + "%";
+        if(msg && d.msg) msg.textContent = d.msg;
+        if(d.status === "done" || d.status === "error"){
+          clearInterval(pollTimer);
+          btn.disabled = false;
+          btn.textContent = t("btn_run_pipeline");
+          if(d.ok !== false){
+            if(sb) sb.innerHTML = `<span style="color:var(--green);font-weight:700">✓ Pipeline completado</span>`;
+            setTimeout(()=>{ if(sb) sb.innerHTML = origSb; }, 3000);
+            // Persist active filters so they survive the reload
+            try{
+              localStorage.setItem("argos_filter_restore", JSON.stringify({
+                prio: Array.from(state.prio),
+                curve: state.curve,
+                tenureFilter: state.tenureFilter,
+                q: state.q,
+                hideCoached: state.hideCoached,
+                maxRows: state.maxRows
+              }));
+            }catch(ex){}
+            // window.location.reload() is the only reliable way to repaint in pywebview
+            // after a pipeline. Auth cache is persisted in localStorage so the reload
+            // is instant — loadUserInfo() reads the cache and skips the fetch entirely.
+            window.location.reload();
+          } else {
+            if(sb) sb.innerHTML = `<span style="color:#e53e3e;font-weight:700">❌ Error: ${esc(String(d.error||"pipeline failed"))}</span>`;
+            setTimeout(()=>{ if(sb) sb.innerHTML = origSb; }, 8000);
+          }
         }
-      }
-    } catch(err){ console.error("SSE parse error", err); }
+      };
+      pollXhr.send();
+    }, 1000);
   };
-  evtSrc.onerror = () => {
-    evtSrc.close();
+  startXhr.onerror = function(){
     btn.disabled = false;
     btn.textContent = t("btn_run_pipeline");
     if(sb){ sb.innerHTML = `<span style="color:#e53e3e">❌ Connection error</span>`; setTimeout(()=>{ sb.innerHTML = origSb; }, 5000); }
   };
+  startXhr.send();
 });
 
 // ── Toolbar ────────────────────────────────────────────────
@@ -2176,7 +2301,14 @@ $("tenureFilter") && $("tenureFilter").addEventListener("change",e=>{
   renderAll();
 });
 $("btnRefresh") && $("btnRefresh").addEventListener("click",loadDashboard);
-$("searchInput").addEventListener("input",e=>{ state.q=e.target.value.trim(); renderAll(); });
+(()=>{
+  let _searchTimer=null;
+  $("searchInput").addEventListener("input",e=>{
+    state.q=e.target.value.trim();
+    clearTimeout(_searchTimer);
+    _searchTimer=setTimeout(renderAll,200);
+  });
+})();
 $("maxInput").addEventListener("input",e=>{
   const v=parseInt(e.target.value,10);
   state.maxRows=Number.isFinite(v)&&v>0?v:50;
@@ -2204,6 +2336,32 @@ syncKpiActive();
 // Default: Process multi-select shows ALL selected (treated as ALL internally)
 initProcessMs();
 
+// Restore filters saved before post-pipeline reload
+(function(){
+  try{
+    var raw = localStorage.getItem("argos_filter_restore");
+    if(!raw) return;
+    localStorage.removeItem("argos_filter_restore");
+    var f = JSON.parse(raw);
+    if(f.prio) state.prio = new Set(f.prio);
+    if(f.curve) state.curve = f.curve;
+    if(f.tenureFilter != null) state.tenureFilter = f.tenureFilter;
+    if(f.q) state.q = f.q;
+    if(f.hideCoached != null) state.hideCoached = f.hideCoached;
+    if(f.maxRows) state.maxRows = f.maxRows;
+    // Sync UI controls to restored state
+    if($("searchInput") && f.q) $("searchInput").value = f.q;
+    if($("maxInput") && f.maxRows) $("maxInput").value = f.maxRows;
+    if($("toggleCoached") && f.hideCoached){
+      $("toggleCoached").classList.add("active");
+      if($("coachToggleIcon")) $("coachToggleIcon").textContent = "●";
+    }
+    if(f.curve) document.querySelectorAll("[data-curve]").forEach(function(b){
+      b.classList.toggle("on", b.dataset.curve === f.curve);
+    });
+  }catch(ex){}
+})();
+
 _initApp().then(()=>loadDashboard());;
 
 // ─── Settings Popover ──────────────────────────────────────────
@@ -2220,15 +2378,13 @@ if(_spBtn && _spPanel){
   });
 
   // Theme buttons
-  const _themeLight = $("spThemeLight"), _themeDark = $("spThemeDark");
+  const _themeButtons = ["spThemeLight","spThemeDark","spThemeZelda","spThemeMidnight","spThemeCherry"].map($).filter(Boolean);
   function _syncThemeButtons(){
     const cur = document.documentElement.getAttribute("data-theme") || "light";
-    if(_themeLight) _themeLight.classList.toggle("active", cur === "light");
-    if(_themeDark) _themeDark.classList.toggle("active", cur === "dark");
+    _themeButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.val === cur));
   }
   _syncThemeButtons();
-  [_themeLight, _themeDark].forEach(btn => {
-    if(!btn) return;
+  _themeButtons.forEach(btn => {
     btn.addEventListener("click", () => {
       const val = btn.dataset.val;
       document.documentElement.setAttribute("data-theme", val);
@@ -2524,14 +2680,18 @@ function _cfgRenderTargets(){
 async function _cfgSaveTargets(){
   // Read values from inputs back into data
   const inputs = $("cfgTargetsBody").querySelectorAll(".cfg-uph-input");
+  let hasInvalid = false;
   for(const inp of inputs){
     const fc = inp.dataset.fc;
     const idx = parseInt(inp.dataset.idx);
     const val = parseFloat(inp.value) || 0;
+    if(val <= 0){ inp.style.borderColor="#e53e3e"; hasInvalid=true; }
+    else { inp.style.borderColor=""; }
     if(_cfgTargetsData[fc]?.pack_line_targets?.[idx]){
       _cfgTargetsData[fc].pack_line_targets[idx].target_uph = val;
     }
   }
+  if(hasInvalid){ _cfgToast("⚠ Some targets have UPH ≤ 0", true); return; }
   try{
     await jpost(`${API}/api/admin/config/custom_targets.json`, {data: _cfgTargetsData});
     _cfgToast("✓ Targets saved successfully");
@@ -2765,6 +2925,7 @@ document.addEventListener("click",(e)=>{
 document.addEventListener("click",(e)=>{
   const btn = e.target.closest(".cfg-del-btn");
   if(!btn) return;
+  if(!confirm("Delete this entry?")) return;
   const section = btn.dataset.section;
   if(section === "targets"){
     const fc = btn.dataset.fc, idx = parseInt(btn.dataset.idx);
@@ -2779,6 +2940,18 @@ document.addEventListener("click",(e)=>{
       _cfgRenderQuality();
     }
   }
+});
+
+// Admin sidebar tab switching
+document.querySelectorAll(".cfg-sidebar-tab").forEach(function(tab){
+  tab.addEventListener("click", function(){
+    document.querySelectorAll(".cfg-sidebar-tab").forEach(function(t){ t.classList.remove("active"); });
+    tab.classList.add("active");
+    var section = tab.dataset.cfgTab;
+    document.querySelectorAll(".cfg-section").forEach(function(s){ s.classList.remove("active"); });
+    var el = document.getElementById("cfg-section-"+section);
+    if(el) el.classList.add("active");
+  });
 });
 
 // Push config button
@@ -2921,5 +3094,1547 @@ document.addEventListener("click",(e)=>{
     _cfgRenderPerfCourses();
   }
 });
+
+
+// ═══════════════════════════════════════════════════════════════
+// PERFORMANCE FLOOR MAP
+// ═══════════════════════════════════════════════════════════════
+(function(){
+  let perfMapVisible = false;
+  let perfActiveFloor = "p2";
+  let perfMapHighlight = "";  // "gap" | "idle" | "gca" | ""
+
+  // Toggle map
+  const btnMap = $("btnPerfMap");
+  if(btnMap) btnMap.addEventListener("click",()=>{
+    perfMapVisible = !perfMapVisible;
+    const wrap = $("perfMapWrap");
+    if(wrap) wrap.style.display = perfMapVisible ? "" : "none";
+    btnMap.textContent = perfMapVisible ? "🗺️ Hide" : "🗺️ Map";
+    if(perfMapVisible) renderPerfMap();
+  });
+
+  // Show All toggle
+  window._perfShowAll = false;
+  var perfShowAllCb = document.getElementById("perfShowAll");
+  if(perfShowAllCb) perfShowAllCb.addEventListener("change", function(){
+    window._perfShowAll = this.checked;
+    if(perfMapVisible) renderPerfMap();
+  });
+
+  // Highlight filter buttons
+  document.querySelectorAll(".map-hl-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var hl = btn.dataset.hl;
+      perfMapHighlight = (perfMapHighlight === hl) ? "" : hl;
+      document.querySelectorAll(".map-hl-btn").forEach(function(b){
+        var active = b.dataset.hl === perfMapHighlight;
+        b.style.opacity = active ? "1" : "0.45";
+        b.style.fontWeight = active ? "900" : "700";
+      });
+      if(perfMapVisible) renderPerfMap();
+    });
+  });
+
+  // Process filter buttons
+  var perfMapProc = "ALL";
+  document.querySelectorAll(".map-proc-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      perfMapProc = btn.dataset.proc;
+      document.querySelectorAll(".map-proc-btn").forEach(function(b){
+        var on = b.dataset.proc === perfMapProc;
+        b.classList.toggle("on", on);
+        b.style.background = on ? "var(--accent-light)" : "transparent";
+        b.style.color = on ? "var(--accent-text)" : "var(--text-secondary)";
+        b.style.fontWeight = on ? "700" : "400";
+        b.style.borderColor = on ? "var(--accent-border)" : "var(--border-strong)";
+      });
+      window._perfMapProc = perfMapProc;
+      if(perfMapVisible) renderPerfMap();
+    });
+  });
+  window._perfMapProc = "ALL";
+
+  // Refresh GCA pending badges without running full pipeline
+  var mapRefreshGcaBtn = $("mapRefreshGca");
+  if(mapRefreshGcaBtn) mapRefreshGcaBtn.addEventListener("click", function(){
+    mapRefreshGcaBtn.textContent = "⟳ …";
+    mapRefreshGcaBtn.disabled = true;
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", API+"/api/gca/dashboard?fc="+encodeURIComponent(currentFC)+"&_t="+Date.now(), true);
+    xhr.onload = function(){
+      mapRefreshGcaBtn.textContent = "⟳ GCA";
+      mapRefreshGcaBtn.disabled = false;
+      if(xhr.status !== 200) return;
+      try{
+        var d = JSON.parse(xhr.responseText);
+        var pSet = new Set();
+        var pMap = {};
+        (d.items||[]).forEach(function(it){
+          if(it.status==="PENDING"){
+            var lg = (it.login||"").toLowerCase();
+            pSet.add(lg);
+            if(!pMap[lg]) pMap[lg] = {id:it.id||"", insight:it.insight||"", comment:it.comment||""};
+          }
+        });
+        window._gcaPendingLogins = pSet;
+        window._gcaPendingMap = pMap;
+        if(perfMapVisible) renderPerfMap();
+        // Update counter badge
+        var cc = $("mapCntGca"); if(cc) cc.innerHTML = "GCA: <b>"+pSet.size+"</b>";
+      }catch(ex){}
+    };
+    xhr.onerror = function(){ mapRefreshGcaBtn.textContent = "⟳ GCA"; mapRefreshGcaBtn.disabled = false; };
+    xhr.send();
+  });
+  
+
+  // Floor tab switching is handled dynamically by _buildFloorTabs()
+
+  // ── Data-driven layout ─────────────────────────────────────────────────
+  // Layout loaded from /api/map-layout?fc=XX (config/hermes/map_layouts.json)
+  // Falls back to BCN4 hardcoded arrays when layout not available.
+  var _mapLayout = null;  // {floors:[{id,label,type,top,left,bottom,right,...}]}
+
+  var _BCN4_P2_TOP=[2197,2196,2194,2193,2190,2189,2187,2186,2184,2183,2180,2178,2177,2176,2174,2171,2170,2168,2167,2165,2162,2160,2159,2157,2155,2154,2151,2150,2149,2146,2145,2143,2142,2140,2137,2136,2134,2133,2131,2130,2127,2125,2124,2122,2121,2118,2116,2115,2114,2108,2107,2105,2104];
+  var _BCN4_P2_LEFT=[2211,2214,2217,2220,2224,2229,2233,2236,2239,2243,2246,2249,2252,2258,2262,2265,2269,2272,2275,2279,2282,2285,2291,2295];
+  var _BCN4_P2_BOTTOM=[2306,2308,2309,2311,2313,2316,2318,2319,2322,2325,2327,2329,2331,2334,2335,2337,2340,2341,2343,2346,2347,2350,2352,2353,2356,2358,2359,2361,2364,2365,2368,2370,2372,2373,2375,2376,2378,2380,2381,2384,2385,2387,2389,2391,2392,2394,2395];
+  var _BCN4_P2_RIGHT=[2494,2490,2486,2481,2478,2473,2469,2464,2461,2456,2453,2451,2448,2443,2438,2435,2430,2425,2422];
+
+  function _loadMapLayout(fc, cb){
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", API+"/api/map-layout?fc="+encodeURIComponent(fc)+"&_t="+Date.now(), true);
+    xhr.onload = function(){
+      if(xhr.status === 200){
+        try{ _mapLayout = JSON.parse(xhr.responseText); }catch(e){ _mapLayout = null; }
+      }
+      _buildFloorTabs();
+      cb && cb();
+    };
+    xhr.onerror = function(){ _buildFloorTabs(); cb && cb(); };
+    xhr.send();
+  }
+
+  // Build floor tabs dynamically from layout
+  function _buildFloorTabs(){
+    var tabBar = document.querySelector(".perf-floor-tabs");
+    var floorWrap = document.getElementById("perfFloorWrap");
+    if(!tabBar || !floorWrap) return;
+
+    var floors = _getFloors();
+    tabBar.innerHTML = "";
+    floorWrap.innerHTML = "";
+
+    floors.forEach(function(fl, i){
+      var btn = document.createElement("button");
+      btn.className = "gca-floor-tab perf-floor-tab" + (i===0?" active":"");
+      btn.dataset.floor = fl.id;
+      btn.textContent = fl.label;
+      tabBar.appendChild(btn);
+
+      var div = document.createElement("div");
+      div.id = "perfFloor_"+fl.id;
+      div.className = "perf-floor-container";
+      div.style.cssText = "padding:16px;position:relative;min-height:300px;overflow:auto;"+(i>0?"display:none":"");
+      floorWrap.appendChild(div);
+    });
+
+    // Re-bind tab clicks
+    tabBar.querySelectorAll(".perf-floor-tab").forEach(function(tab){
+      tab.addEventListener("click", function(){
+        tabBar.querySelectorAll(".perf-floor-tab").forEach(function(t){ t.classList.remove("active"); });
+        tab.classList.add("active");
+        perfActiveFloor = tab.dataset.floor;
+        floorWrap.querySelectorAll(".perf-floor-container").forEach(function(c){ c.style.display="none"; });
+        var el = document.getElementById("perfFloor_"+perfActiveFloor);
+        if(el) el.style.display = "";
+        renderPerfMap();
+      });
+    });
+
+    if(floors.length > 0) perfActiveFloor = floors[0].id;
+  }
+
+  // Get resolved floors for current FC
+  function _getFloors(){
+    if(!_mapLayout || !_mapLayout.floors || !_mapLayout.floors.length){
+      // Hardcoded BCN4 fallback
+      return [
+        {id:"p2", label:"P2 (AR)", type:"ar_ring", top:_BCN4_P2_TOP, left:_BCN4_P2_LEFT, bottom:_BCN4_P2_BOTTOM, right:_BCN4_P2_RIGHT, p2r_muros:[220,218,216,214,213,212,210,209,208,206,204,202], p2r_floor:2},
+        {id:"p3", label:"P3 (AR)", type:"ar_ring", top:_BCN4_P2_TOP.map(function(n){return n+1000;}), left:_BCN4_P2_LEFT.map(function(n){return n+1000;}), bottom:_BCN4_P2_BOTTOM.map(function(n){return n+1000;}), right:_BCN4_P2_RIGHT.map(function(n){return n+1000;}), p2r_muros:[220,218,216,214,213,212,210,209,208,206,204,202], p2r_floor:3},
+        {id:"p1", label:"P1 (Pack)", type:"pack"}
+      ];
+    }
+
+    // Resolve floors — handle derive_from and auto modes
+    var raw = _mapLayout.floors;
+    var baseFloor = null;
+    return raw.map(function(fl){
+      if(fl.type === "ar_ring"){
+        if(fl.derive_from && baseFloor){
+          var off = fl.offset || 0;
+          return Object.assign({}, fl, {
+            top:    baseFloor.top.map(function(n){return n+off;}),
+            left:   baseFloor.left.map(function(n){return n+off;}),
+            bottom: baseFloor.bottom.map(function(n){return n+off;}),
+            right:  baseFloor.right.map(function(n){return n+off;}),
+            p2r_muros: baseFloor.p2r_muros
+          });
+        }
+        if(fl.auto){
+          // Auto-detect station arrays from stationData at render time
+          // Store marker so renderer knows to use auto mode
+          return Object.assign({}, fl, {auto:true});
+        }
+        // Explicit arrays defined in JSON
+        if(!baseFloor && fl.top) baseFloor = fl;
+        return fl;
+      }
+      return fl;
+    });
+  }
+
+  function getStationTypePerf(stNum, floor){
+    if(!floor) return "pick";
+    if((floor.top||[]).indexOf(stNum)>-1||(floor.left||[]).indexOf(stNum)>-1) return "pick";
+    if((floor.bottom||[]).indexOf(stNum)>-1) return "stow";
+    if((floor.right||[]).indexOf(stNum)>-1) return "count";
+    return "pick";
+  }
+
+  // Parse station from performance data (stationRaw field)
+  function parsePerfStation(raw){
+    if(!raw) return null;
+    const s = String(raw).trim();
+    // AR: dz-P-A2311 or dz-P-A3429
+    let m = s.match(/dz-P-A(\d{4})/);
+    if(m) return {floor: parseInt(m[1])>=3000?"p3":"p2", num:parseInt(m[1])};
+    // AR: ws-k-A-02-2133 or k-A-02-2133
+    m = s.match(/k-A-0([23])-(\d{4})/);
+    if(m) return {floor: m[1]==="3"?"p3":"p2", num:parseInt(m[2])};
+    // P1: AFE — "wsAFE1_101_03" or "AFE1-101-03"
+    m = s.match(/AFE(\d+)[_-](\d+)[_-](\d+)/);
+    if(m) return {floor:"p1", type:"afe", id:parseInt(m[1]), wall:parseInt(m[2]), pos:parseInt(m[3])};
+    // P1: AFE Rebin — "rsAfeRebin103B" → muro 103, slot B (4 slots A-D per muro)
+    m = s.match(/AfeRebin(\d+)([A-D])/i);
+    if(m) return {floor:"p1", type:"rebin", id:0, wall:parseInt(m[1]), pos:"ABCD".indexOf(m[2].toUpperCase())+1};
+    // P1: SINGLES — "wsSINGLES_03_08" or "SINGLES-03-
+    m = s.match(/SINGLES[_-](\d+)[_-](\d+)/i);
+    if(m) return {floor:"p1", type:"singles", id:parseInt(m[1]), pos:parseInt(m[2])};
+    // P2R — "P2R2-216-01" → P2 top row (PTR area). num = 2100 + (muro-202)*2 + pos
+    m = s.match(/(?:P2R|PickToRebin)(\d+)[_-](\d+)[_-](\d+)/);
+    if(m){ var fl=parseInt(m[1]); var muro=parseInt(m[2]); var pos2=parseInt(m[3]); return {floor:fl>=3?"p3":"p2", num: fl*1000+50+(muro-202)*2+pos2}; }
+    // P1: Sobres — "ws1102" or "1102" (11xx=line1, 12xx=line2)
+    m = s.match(/^(?:ws)?(1[12]\d{2})$/);
+    if(m){ const n=parseInt(m[1]); const line=Math.floor(n/100)-10; return {floor:"p1", type:"sobres", id:line, pos:n%100}; }
+    // P1: Decant — "ws-rcv-03-19"
+    m = s.match(/rcv[_-](\d+)[_-](\d+)/);
+    if(m) return {floor:"p1", type:"decant", id:parseInt(m[1]), pos:parseInt(m[2])};
+    // AR: any 4-digit number 2000-3999 (fallback)
+    m = s.match(/(\d{4})/);
+    if(m){ const n=parseInt(m[1]); if(n>=2000 && n<=3999) return {floor: n>=3000?"p3":"p2", num:n}; }
+    return null;
+  }
+
+  function renderPerfMap(){
+    if(!state || !state.all || !state.all.length) return;
+
+    // Use filtered rows so map respects active dashboard filters
+    var rows = getFiltered().rows;
+    // But always include all rows for stations — use state.all so unfiltered associates
+    // still appear on the map (greyed out), while filtered ones drive the state color.
+    // Actually: use only filtered rows so the map is a true reflection of current view.
+    if(!rows || !rows.length) rows = state.all;
+
+    var gcaPending = window._gcaPendingLogins || new Set();
+
+    // Group rows by station
+    var stationData = {};
+    rows.forEach(function(r){
+      var parsed = parsePerfStationCached(r.stationRaw || r.station);
+      if(!parsed) return;
+      var wallPart = parsed.wall ? "_"+parsed.wall : "";
+      var key = parsed.num ? parsed.floor+"_"+parsed.num : parsed.floor+"_"+parsed.type+"_"+parsed.id+wallPart+"_"+parsed.pos;
+      if(!stationData[key]) stationData[key] = {rows:[], state:"normal"};
+      stationData[key].rows.push(r);
+      var curState = stationData[key].state;
+      if(r.pct >= 100){/* at/above target */}
+      else if(r.pct < 80 && curState !== "gap") stationData[key].state = "gap";
+      else if(String(r.notes||"").indexOf("IDLE") !== -1 && curState !== "gap") stationData[key].state = "idle";
+      else if(r.nhFlag && curState !== "gap" && curState !== "idle") stationData[key].state = "faststart";
+    });
+
+    // Post-process: all at/above target → ontarget
+    Object.keys(stationData).forEach(function(k){
+      var sd = stationData[k];
+      if(sd.state === "normal" && sd.rows.length > 0 && sd.rows.every(function(r){ return r.pct >= 100; }))
+        sd.state = "ontarget";
+    });
+
+    // Live counters
+    var cntGap=0, cntIdle=0, cntGca=0, cntOk=0;
+    Object.values(stationData).forEach(function(sd){
+      if(sd.state === "gap") cntGap++;
+      else if(sd.state === "idle") cntIdle++;
+      else if(sd.state === "ontarget" || sd.state === "normal") cntOk++;
+      if(sd.rows.some(function(r){ return gcaPending.has((r.login||"").toLowerCase()); })) cntGca++;
+    });
+    var cg=$("mapCntGap"); if(cg) cg.innerHTML='Gap: <b>'+cntGap+'</b>';
+    var ci=$("mapCntIdle"); if(ci) ci.innerHTML='Idle: <b>'+cntIdle+'</b>';
+    var cc=$("mapCntGca"); if(cc) cc.innerHTML='GCA: <b>'+cntGca+'</b>';
+    var co=$("mapCntOk"); if(co) co.innerHTML='OK: <b>'+cntOk+'</b>';
+
+    // Expose highlight + proc filter + gcaPending to renderers
+    window._perfMapHighlight = perfMapHighlight;
+    window._perfMapProc = perfMapProc;
+
+    var floors = _getFloors();
+    var activeFloorDef = floors.find(function(f){ return f.id === perfActiveFloor; }) || floors[0];
+    if(!activeFloorDef) return;
+    var containerId = "perfFloor_" + activeFloorDef.id;
+
+    if(_mapView === "list"){
+      renderPerfListView(containerId, stationData);
+    } else if(activeFloorDef.type === "ar_ring"){
+      renderPerfARFloor(containerId, activeFloorDef, stationData);
+    } else {
+      renderPerfP1Floor(containerId, stationData);
+    }
+  }
+
+  // Expose for re-render after pipeline and for GCA tab to share layout
+  window._renderPerfMap = function(){ if(perfMapVisible) renderPerfMap(); };
+  window._getFloors = _getFloors;
+
+  // Load layout for initial FC, and reload when FC changes
+  _loadMapLayout(currentFC);
+  window._reloadMapLayout = function(fc){ _mapLayout = null; _loadMapLayout(fc, function(){ if(perfMapVisible) renderPerfMap(); }); };
+
+  function renderPerfARFloor(containerId, floorDef, stationData){
+    var floorId = floorDef.id;
+    var topRow = floorDef.top || [];
+    var leftCol = floorDef.left || [];
+    var bottomRow = floorDef.bottom || [];
+    var rightCol = floorDef.right || [];
+    // Auto-mode: build arrays from stationData keys that match this floor prefix
+    if(floorDef.auto && (!topRow.length)){
+      var floorNum = parseInt((floorDef.id||"p2").replace(/[^0-9]/g,"")) || 2;
+      var base = floorNum * 1000;
+      Object.keys(stationData).forEach(function(k){
+        if(k.indexOf(floorId+"_") !== 0) return;
+        var sn = parseInt(k.split("_")[1]); if(isNaN(sn)) return;
+        var rel = sn - base;
+        if(rel >= 100 && rel < 200) topRow.push(sn);
+        else if(rel >= 200 && rel < 300) leftCol.push(sn);
+        else if(rel >= 300 && rel < 400) bottomRow.push(sn);
+        else if(rel >= 400 && rel < 500) rightCol.push(sn);
+      });
+      topRow.sort(function(a,b){return b-a;});
+      leftCol.sort(function(a,b){return a-b;});
+      bottomRow.sort(function(a,b){return a-b;});
+      rightCol.sort(function(a,b){return b-a;});
+    }
+    var p2rMuros = floorDef.p2r_muros || [220,218,216,214,213,212,210,209,208,206,204,202];
+    var p2rFloorNum = floorDef.p2r_floor || parseInt((floorId||"p2").replace(/[^0-9]/g,"")) || 2;
+    var el = document.getElementById(containerId);
+    if(!el) return;
+    el.innerHTML = '';
+    el.style.position = 'relative';
+    el.style.padding = '16px';
+
+    var _floorBase = p2rFloorNum * 1000;
+    function getTypeLabel(stNum){
+      var rel = stNum - _floorBase;
+      if(rel >= 50  && rel < 200) return 'P2R'; // P2R/PTR/NU zone
+      if(rel >= 200 && rel < 300) return 'NU';
+      if(rel >= 300 && rel < 400) return 'NA';
+      if(rel >= 400 && rel < 500) return 'NS';
+      return 'NU';
+    }
+
+    function stateClass(data){
+      if(!data) return 'sm-empty';
+      var s = data.state || 'normal';
+      if(s === 'gap') return 'sm-danger';
+      if(s === 'idle') return 'sm-idle';
+      if(s === 'faststart') return 'sm-faststart';
+      if(s === 'ontarget') return 'sm-ontarget';
+      return 'sm-active';
+    }
+
+    function modeBadge(data){
+      if(!data) return '';
+      var s = data.state || 'normal';
+      if(s === 'gap') return '<span class="sm-badge bg-red">G</span>';
+      if(s === 'idle') return '<span class="sm-badge bg-yellow">I</span>';
+      if(s === 'faststart') return '<span class="sm-badge bg-purple">FS</span>';
+      return '';
+    }
+
+    function buildStation(stNum){
+      var key = floorId + '_' + stNum;
+      var data = stationData[key];
+      var cls = stateClass(data);
+      var type = getTypeLabel(stNum);
+      // Show subprocess for occupied stations
+      if(data && data.rows && data.rows.length > 0){
+        var role = String(data.rows[0].role||'').toUpperCase();
+        if(role.indexOf('PICK')===0) type='PICK';
+        else if(role==='STOW') type='STOW';
+        else if(role==='QUANTITY_STOW') type='QS';
+        else if(role.indexOf('ICQA')>=0) type='SBC';
+        else if(role.indexOf('P2R')>=0) type='P2R';
+        else if(role==='DECANT') type='DEC';
+      }
+      var numStr;
+      var relNum = stNum - _floorBase;
+      if(relNum >= 50 && relNum < 104){ var offset=relNum-50; numStr=String(Math.floor(offset/2)+202)+'-'+((offset%2)+1); }
+      else { numStr = String(stNum); }
+      var badge = modeBadge(data);
+      var gcaHtml = '';
+      var gcaPending = window._gcaPendingLogins || new Set();
+      if(data && data.rows){
+        var gcaCount = data.rows.filter(function(r){ return gcaPending.has((r.login||'').toLowerCase()); }).length;
+        if(gcaCount > 0) gcaHtml = '<span class="fm-gca-flag">' + gcaCount + '</span>';
+      }
+      var div = document.createElement('div');
+      div.className = 'sm-station ' + cls;
+      div.innerHTML = badge + '<span class="sm-type">' + type + '</span><span class="sm-num">' + numStr + '</span>' + gcaHtml;
+
+      if(data){
+        // Process filter dim
+        var proc = window._perfMapProc || "ALL";
+        if(proc !== "ALL"){
+          var procMap = {PICK:["PICK_AR","P2R_PICK"], STOW:["STOW","QUANTITY_STOW"], QS:["QUANTITY_STOW"], PACK:["SM","SM1","SMMIX","SM2","AFE_PACK","P2R_PACK","SNS1","SNS2","SINGLES","WS_SLAM","WS_VDF"], DEC:["DECANT"]};
+          var allowed = procMap[proc] || [];
+          var hasProc = data.rows.some(function(r){ return allowed.indexOf(String(r.role||"").toUpperCase()) > -1; });
+          if(!hasProc) div.style.opacity = "0.12";
+        }
+        // Highlight mode dim (applied on top of proc filter)
+        if(window._perfMapHighlight){
+          var hl = window._perfMapHighlight;
+          var gcaPend = window._gcaPendingLogins || new Set();
+          var matches = (hl==="gap" && data.state==="gap")
+                     || (hl==="idle" && data.state==="idle")
+                     || (hl==="gca" && data.rows.some(function(r){ return gcaPend.has((r.login||"").toLowerCase()); }));
+          if(!matches) div.style.opacity = "0.12";
+        }
+      }
+
+      if(data){
+        _perfStationDataMap[key] = data;
+        var displayLabel = type + ' ' + numStr;
+        div.style.cursor = "pointer";
+        div.onmouseenter = function(ev){ showPerfTooltip(ev, displayLabel, data); };
+        div.onmouseleave = function(){ window._ttHideTimer = setTimeout(function(){ var tt=document.getElementById("gcaMapTooltip"); if(tt && !tt.matches(":hover")) tt.style.display="none"; },800); };
+        // Click: open upload modal prefilled with first uncoached associate
+        div.onclick = function(){
+          var target = data.rows.find(function(r){ return !r.coached; }) || data.rows[0];
+          if(target) openUploadPrefill(target.login);
+        };
+      }
+      return div;
+    }
+
+    // Smart slot
+    var allGridSet = {};
+    topRow.concat(leftCol).concat(bottomRow).concat(rightCol).forEach(function(n){ allGridSet[String(n)] = true; });
+    var nonGridStations = [];
+    Object.keys(stationData).forEach(function(key){
+      if(key.indexOf(floorId + '_') !== 0) return;
+      var sn = parseInt(key.split('_')[1]);
+      var snBase = sn >= 3000 ? sn - 1000 : sn; if(snBase >= 2050 && snBase < 2104) return;
+      if(allGridSet[String(sn)]) return;
+      nonGridStations.push(sn);
+    });
+    var emptyGridBySection = {top:[], left:[], bottom:[], right:[]};
+    topRow.forEach(function(n){ if(!stationData[floorId+'_'+n]) emptyGridBySection.top.push(n); });
+    leftCol.forEach(function(n){ if(!stationData[floorId+'_'+n]) emptyGridBySection.left.push(n); });
+    bottomRow.forEach(function(n){ if(!stationData[floorId+'_'+n]) emptyGridBySection.bottom.push(n); });
+    rightCol.forEach(function(n){ if(!stationData[floorId+'_'+n]) emptyGridBySection.right.push(n); });
+    var assignedSlots = {};
+    nonGridStations.sort(function(a,b){return a-b;});
+    nonGridStations.forEach(function(sn){
+      var rel = sn - _floorBase;
+      var section = rel >= 50 && rel <= 197 ? 'top' : rel >= 200 && rel <= 295 ? 'left' : rel >= 306 && rel <= 395 ? 'bottom' : 'right';
+      var empties = emptyGridBySection[section];
+      var best = -1; var bestDist = Infinity;
+      for(var i=0;i<empties.length;i++){
+        var d = Math.abs(empties[i] - sn);
+        if(d < bestDist){ bestDist = d; best = i; }
+      }
+      if(best > -1){
+        assignedSlots[String(empties[best])] = sn;
+        empties.splice(best, 1);
+      }
+    });
+
+    function renderRow(arr, container){
+      arr.forEach(function(gridNum){
+        var sn = assignedSlots[String(gridNum)] || gridNum;
+        var hasData = !!stationData[floorId+'_'+sn];
+        // In compact mode, skip empty stations
+        if(!window._perfShowAll && !hasData) return;
+        if(assignedSlots[String(gridNum)]){
+          container.appendChild(buildStation(assignedSlots[String(gridNum)]));
+        } else {
+          container.appendChild(buildStation(gridNum));
+        }
+      });
+    }
+
+    // Layout
+    var grid = document.createElement('div');
+    grid.className = 'sm-grid';
+
+    var topDiv = document.createElement('div');
+    topDiv.className = 'sm-row sm-top';
+    renderRow(topRow, topDiv);
+
+    // P2R Pack row
+    var p2rDiv = document.createElement('div');
+    p2rDiv.className = 'sm-row sm-p2r';
+    p2rDiv.style.cssText = 'margin-top:6px;';
+    p2rMuros.forEach(function(muro){
+      for(let pos=1; pos<=2; pos++){
+        let p2rNum = p2rFloorNum*1000 + 50 + (muro-202)*2 + pos;
+        let p2rKey = floorId + '_' + p2rNum;
+        let p2rData = stationData[p2rKey];
+        if(!window._perfShowAll && !p2rData) continue;
+        var p2rCls = p2rData ? stateClass(p2rData) : 'sm-empty';
+        var p2rSt = document.createElement('div');
+        p2rSt.className = 'sm-station sm-p2r-station ' + p2rCls;
+        var p2rBadge = p2rData ? modeBadge(p2rData) : '';
+        p2rSt.innerHTML = p2rBadge + '<span class="sm-type">P2R</span><span class="sm-num">' + muro + '-' + pos + '</span>';
+        if(p2rData){
+          var lbl = 'P2R ' + muro + '-' + pos;
+          var proc2=window._perfMapProc||"ALL";
+          if(proc2!=="ALL"){
+            var pm2={PICK:["PICK_AR","P2R_PICK"],STOW:["STOW","QUANTITY_STOW"],QS:["QUANTITY_STOW"],PACK:["SM","SM1","SMMIX","SM2","AFE_PACK","P2R_PACK","SNS1","SNS2","SINGLES","WS_SLAM","WS_VDF"],DEC:["DECANT"]};
+            var al2=pm2[proc2]||[];
+            if(!p2rData.rows.some(function(r){return al2.indexOf(String(r.role||"").toUpperCase())>-1;})) p2rSt.style.opacity="0.12";
+          }
+          if(window._perfMapHighlight){
+            var hl2=window._perfMapHighlight; var gcaP2=window._gcaPendingLogins||new Set();
+            var m2=(hl2==="gap"&&p2rData.state==="gap")||(hl2==="idle"&&p2rData.state==="idle")||(hl2==="gca"&&p2rData.rows.some(function(r){return gcaP2.has((r.login||"").toLowerCase());}));
+            if(!m2) p2rSt.style.opacity="0.12";
+          }
+          p2rSt.style.cursor="pointer";
+          p2rSt.onmouseenter = function(ev){ showPerfTooltip(ev, lbl, p2rData); };
+          p2rSt.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=document.getElementById("gcaMapTooltip"); if(tt&&!tt.matches(":hover"))tt.style.display="none"; },800); };
+          p2rSt.onclick = function(){ var t=p2rData.rows.find(function(r){return !r.coached;})||p2rData.rows[0]; if(t) openUploadPrefill(t.login); };
+        }
+        p2rDiv.appendChild(p2rSt);
+      }
+    });
+
+    var midDiv = document.createElement('div');
+    midDiv.className = 'sm-middle';
+
+    var leftDiv = document.createElement('div');
+    leftDiv.className = 'sm-col sm-left';
+    renderRow(leftCol, leftDiv);
+
+    var centerDiv = document.createElement('div');
+    centerDiv.className = 'sm-center';
+    var totalStations = topRow.length + leftCol.length + bottomRow.length + rightCol.length;
+    var activeCount = 0; var dangerCount = 0;
+    [topRow,leftCol,bottomRow,rightCol].forEach(function(arr){
+      arr.forEach(function(n){
+        var sn = assignedSlots[String(n)] || n;
+        if(stationData[floorId+'_'+sn]) activeCount++;
+        if(stationData[floorId+'_'+sn] && stationData[floorId+'_'+sn].state==='gap') dangerCount++;
+      });
+    });
+    centerDiv.innerHTML = '<div style="text-align:center;padding:12px">' +
+      '<div style="font-size:16px;font-weight:800;margin-bottom:8px">'+floorId.toUpperCase()+'</div>' +
+      '<div style="font-size:28px;font-weight:700;color:#22c55e">'+activeCount+'</div>' +
+      '<div style="font-size:10px;color:#6b7280">of '+totalStations+' stations</div>' +
+      '<div style="margin-top:8px;font-size:10px;color:#6b7280">'+dangerCount+' Gap</div>' +
+    '</div>';
+
+    var rightDiv = document.createElement('div');
+    rightDiv.className = 'sm-col sm-right';
+    renderRow(rightCol, rightDiv);
+
+    midDiv.appendChild(leftDiv);
+    midDiv.appendChild(centerDiv);
+    midDiv.appendChild(rightDiv);
+
+    var bottomDiv = document.createElement('div');
+    bottomDiv.className = 'sm-row sm-bottom';
+    renderRow(bottomRow, bottomDiv);
+
+    grid.appendChild(topDiv);
+    grid.appendChild(p2rDiv);
+    grid.appendChild(midDiv);
+    grid.appendChild(bottomDiv);
+    el.appendChild(grid);
+  }
+
+  // Store station data globally for event delegation
+  let _perfStationDataMap = {};
+
+  
+
+  function renderPerfP1Floor(containerId, stationData){
+    var el = document.getElementById(containerId);
+    if(!el) return;
+    el.innerHTML = "";
+    el.style.padding = "12px";
+
+    // Discover sections from stationData
+    var afeWalls = {};
+    var rebinWalls = {};
+    var singlesLines = {};
+    var sobresLines = {};
+    var decantLines = {};
+    var p2rWalls = {};
+    Object.keys(stationData).forEach(function(k){
+      if(k.indexOf("p1_")===-1) return;
+      var parts = k.split("_");
+      if(parts[1]==="afe"){ var id=parseInt(parts[2]); var w=parseInt(parts[3]); if(!afeWalls[id]) afeWalls[id]=new Set(); afeWalls[id].add(w); }
+      else if(parts[1]==="rebin"){ rebinWalls[parseInt(parts[2]||parts[3])]=true; }
+      else if(parts[1]==="singles"){ singlesLines[parseInt(parts[2])]=true; }
+      else if(parts[1]==="sobres"){ sobresLines[parseInt(parts[2])]=true; }
+      else if(parts[1]==="decant"){ decantLines[parseInt(parts[2])]=true; }
+      else if(parts[1]==="p2r"){ var id=parseInt(parts[2]); var w=parseInt(parts[3]); if(!p2rWalls[id]) p2rWalls[id]=new Set(); p2rWalls[id].add(w); }
+    });
+
+    // Build sections
+    var sections = [];
+    // AFE
+    var afeIds = Object.keys(afeWalls).map(Number).sort();
+    if(afeIds.length===0) afeIds=[1];
+    afeIds.forEach(function(afeId){
+      var muros = afeWalls[afeId] ? Array.from(afeWalls[afeId]).sort() : [101,103,105,107];
+      sections.push({title:"AFE "+afeId, lines:muros.map(function(w){ return {label:"M"+String(w).slice(-2), prefix:"afe", id:afeId, wall:w, count:8, start:1}; })});
+    });
+    // AFE Rebin
+    var rIds = Object.keys(rebinWalls).map(Number).sort();
+    if(rIds.length>0) sections.push({title:"AFE Rebin", lines:rIds.map(function(w){ return {label:"M"+String(w).slice(-2), prefix:"rebin", id:0, wall:w, count:4, start:1}; })});
+    // P2R
+    var p2rIds = Object.keys(p2rWalls).map(Number).sort();
+    if(p2rIds.length===0) p2rIds=[2];
+    p2rIds.forEach(function(pid){
+      var muros = p2rWalls[pid] ? Array.from(p2rWalls[pid]).sort() : [];
+      if(muros.length>0) sections.push({title:"P2R"+pid, lines:muros.map(function(w){ return {label:"M"+String(w).slice(-1)+""+String(w).slice(-2), prefix:"p2r", id:pid, wall:w, count:2, start:1}; })});
+    });
+    // Singles
+    var sIds = [1,2,3,4]; // Always show all 4 singles lines
+    sections.push({title:"Singles", lines:sIds.map(function(id){ return {label:"L"+String(id).padStart(2,"0"), prefix:"singles", id:id, count:20, start:1}; })});
+    // Sobres
+    var soIds = Object.keys(sobresLines).map(Number).sort();
+    if(soIds.length===0) soIds=[1,2];
+    sections.push({title:"Sobres", lines:soIds.map(function(id){ return {label:"L"+id, prefix:"sobres", id:id, count:10, start:1}; })});
+    // Decant
+    var dIds = Object.keys(decantLines).map(Number).sort();
+    if(dIds.length>0) sections.push({title:"Decant", lines:dIds.map(function(id){ return {label:"L"+String(id).padStart(2,"0"), prefix:"decant", id:id, count:20, start:1}; })});
+
+    // Render using sm-station style
+    sections.forEach(function(section){
+      var secDiv = document.createElement("div");
+      secDiv.style.cssText = "margin-bottom:12px;";
+      secDiv.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:4px">'+section.title+'</div>';
+      section.lines.forEach(function(ln){
+        var row = document.createElement("div");
+        row.style.cssText = "display:flex;align-items:center;gap:3px;margin-bottom:3px;flex-wrap:wrap;";
+        row.innerHTML = '<span style="width:36px;font-size:9px;color:var(--text-muted);text-align:right;flex-shrink:0">'+ln.label+'</span>';
+        for(let pos=ln.start;pos<ln.start+ln.count;pos++){
+          let key = ln.wall ? "p1_"+ln.prefix+"_"+ln.id+"_"+ln.wall+"_"+pos : "p1_"+ln.prefix+"_"+ln.id+"_"+pos;
+          let data = stationData[key];
+          var state = data ? (data.state||"normal") : "";
+          var cls = "sm-station";
+          if(!data) cls += " sm-empty";
+          else if(state==="gap") cls += " sm-danger";
+          else if(state==="idle") cls += " sm-idle";
+          else if(state==="faststart") cls += " sm-faststart";
+          else cls += " sm-active";
+          var st = document.createElement("div");
+          st.className = cls;
+          st.innerHTML = '<span class="sm-type">'+ln.prefix.toUpperCase().slice(0,3)+'</span><span class="sm-num">'+pos+'</span>';
+          if(data && state==="gap") st.insertAdjacentHTML("afterbegin",'<span class="sm-badge bg-red">G</span>');
+          else if(data && state==="idle") st.insertAdjacentHTML("afterbegin",'<span class="sm-badge bg-yellow">I</span>');
+          else if(data && state==="faststart") st.insertAdjacentHTML("afterbegin",'<span class="sm-badge bg-purple">FS</span>');
+          if(data){
+            var gcaPending = window._gcaPendingLogins || new Set();
+            var gcaCount = data.rows.filter(function(r){ return gcaPending.has((r.login||"").toLowerCase()); }).length;
+            if(gcaCount>0) st.insertAdjacentHTML("beforeend",'<span class="fm-gca-flag">'+gcaCount+'</span>');
+            var procP1=window._perfMapProc||"ALL";
+            if(procP1!=="ALL"){
+              var pmP1={PICK:["PICK_AR","P2R_PICK"],STOW:["STOW","QUANTITY_STOW"],QS:["QUANTITY_STOW"],PACK:["SM","SM1","SMMIX","SM2","AFE_PACK","P2R_PACK","SNS1","SNS2","SINGLES","WS_SLAM","WS_VDF"],DEC:["DECANT"]};
+              var alP1=pmP1[procP1]||[];
+              if(!data.rows.some(function(r){return alP1.indexOf(String(r.role||"").toUpperCase())>-1;})) st.style.opacity="0.12";
+            }
+            if(window._perfMapHighlight){
+              var hlP1=window._perfMapHighlight;
+              var mP1=(hlP1==="gap"&&data.state==="gap")||(hlP1==="idle"&&data.state==="idle")||(hlP1==="gca"&&gcaCount>0);
+              if(!mP1) st.style.opacity="0.12";
+            }
+            st.style.cursor="pointer";
+            st.onmouseenter = function(ev){ showPerfTooltip(ev, ln.label+" #"+pos, data); };
+            st.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=document.getElementById("gcaMapTooltip"); if(tt&&!tt.matches(":hover"))tt.style.display="none"; },800); };
+            st.onclick = function(){ var t=data.rows.find(function(r){return !r.coached;})||data.rows[0]; if(t) openUploadPrefill(t.login); };
+          }
+          row.appendChild(st);
+        }
+        secDiv.appendChild(row);
+      });
+      el.appendChild(secDiv);
+    });
+  }
+
+
+  // ── Map view toggle ────────────────────────────────────────
+  var _mapView = "grid"; // "grid" | "list"
+  var _mapViewGridBtn = document.getElementById("mapViewGrid");
+  var _mapViewListBtn = document.getElementById("mapViewList");
+  if(_mapViewGridBtn) _mapViewGridBtn.addEventListener("click", function(){
+    _mapView = "grid";
+    _mapViewGridBtn.classList.add("active");
+    _mapViewListBtn && _mapViewListBtn.classList.remove("active");
+    if(perfMapVisible) renderPerfMap();
+  });
+  if(_mapViewListBtn) _mapViewListBtn.addEventListener("click", function(){
+    _mapView = "list";
+    _mapViewListBtn.classList.add("active");
+    _mapViewGridBtn && _mapViewGridBtn.classList.remove("active");
+    if(perfMapVisible) renderPerfMap();
+  });
+
+  // ── List view renderer ─────────────────────────────────────
+  function renderPerfListView(containerId, stationData){
+    var el = document.getElementById(containerId);
+    if(!el) return;
+    el.innerHTML = "";
+
+    var gcaPending = window._gcaPendingLogins || new Set();
+    var proc = window._perfMapProc || "ALL";
+    var hl   = window._perfMapHighlight || "";
+    var procMap = {PICK:["PICK_AR","P2R_PICK"],STOW:["STOW","QUANTITY_STOW"],QS:["QUANTITY_STOW"],
+                   PACK:["SM","SM1","SMMIX","SM2","AFE_PACK","P2R_PACK","SNS1","SNS2","SINGLES","WS_SLAM","WS_VDF"],DEC:["DECANT"]};
+
+    // Group stationData by zone label
+    var zones = {}; // "PICK" → {rows:[], gap:0, idle:0, fs:0, gca:0, ok:0}
+    Object.keys(stationData).forEach(function(k){
+      var sd = stationData[k];
+      sd.rows.forEach(function(r){
+        var role = String(r.role||"").toUpperCase();
+        var zone;
+        if(role.indexOf("PICK")===0||role.indexOf("P2R_PICK")===0) zone="PICK";
+        else if(role==="STOW")          zone="STOW";
+        else if(role==="QUANTITY_STOW") zone="QS";
+        else if(role==="DECANT")        zone="DECANT";
+        else if(role.indexOf("ICQA")>=0) zone="ICQA";
+        else if(role.indexOf("P2R")>=0||role.indexOf("AFE_PACK")>=0||role.indexOf("SM")===0||
+                role.indexOf("SINGLE")>=0||role.indexOf("SNS")===0) zone="PACK";
+        else zone="OTHER";
+
+        // Apply proc filter — skip if not matching
+        if(proc !== "ALL"){
+          var allowed = procMap[proc]||[];
+          if(allowed.indexOf(role)===-1) return;
+        }
+
+        if(!zones[zone]) zones[zone]={rows:[],gap:0,idle:0,fs:0,gca:0,ok:0};
+        zones[zone].rows.push({r:r, stKey:k});
+        var st = sd.state;
+        if(st==="gap")       zones[zone].gap++;
+        else if(st==="idle") zones[zone].idle++;
+        else if(st==="faststart") zones[zone].fs++;
+        else                 zones[zone].ok++;
+        if(gcaPending.has((r.login||"").toLowerCase())) zones[zone].gca++;
+      });
+    });
+
+    var zoneOrder = ["PICK","STOW","QS","PACK","DECANT","ICQA","OTHER"];
+    zoneOrder.forEach(function(zoneName){
+      var z = zones[zoneName];
+      if(!z || !z.rows.length) return;
+
+      // Apply highlight filter at zone level — dim if no match
+      var hlMatch = !hl || (hl==="gap"&&z.gap>0)||(hl==="idle"&&z.idle>0)||(hl==="gca"&&z.gca>0);
+
+      var zoneDiv = document.createElement("div");
+      zoneDiv.className = "map-list-zone";
+      if(z.gap>0) zoneDiv.classList.add("open"); // auto-open zones with issues
+
+      var pills = "";
+      if(z.gap)  pills += '<span class="map-list-pill gap">'+z.gap+' Gap</span>';
+      if(z.idle) pills += '<span class="map-list-pill idle">'+z.idle+' Idle</span>';
+      if(z.fs)   pills += '<span class="map-list-pill fs">'+z.fs+' FS</span>';
+      if(z.gca)  pills += '<span class="map-list-pill gca">'+z.gca+' GCA</span>';
+      pills += '<span class="map-list-pill ok">'+z.ok+' OK</span>';
+
+      zoneDiv.innerHTML =
+        '<div class="map-list-zone-header">'
+        +'<span class="map-list-caret">▶</span>'
+        +'<span class="map-list-zone-label">'+zoneName+'</span>'
+        +'<span style="font-size:10px;color:var(--text-muted);margin-right:8px">('+z.rows.length+')</span>'
+        +'<div class="map-list-zone-pills">'+pills+'</div>'
+        +'</div>'
+        +'<div class="map-list-rows"></div>';
+
+      if(!hlMatch) zoneDiv.style.opacity = "0.25";
+
+      // Click header → toggle open
+      var hdr = zoneDiv.querySelector(".map-list-zone-header");
+      hdr.addEventListener("click", function(){
+        zoneDiv.classList.toggle("open");
+      });
+
+      // Sort: gap first, then idle, then ok
+      var sorted = z.rows.slice().sort(function(a,b){
+        var stateOrder = {gap:0, idle:1, faststart:2, normal:3, ontarget:4};
+        var sa = stationData[a.stKey] ? (stateOrder[stationData[a.stKey].state]||3) : 3;
+        var sb = stationData[b.stKey] ? (stateOrder[stationData[b.stKey].state]||3) : 3;
+        if(sa!==sb) return sa-sb;
+        return (a.r.pct||0) - (b.r.pct||0); // worst pct first within same state
+      });
+
+      var rowsEl = zoneDiv.querySelector(".map-list-rows");
+      sorted.forEach(function(item){
+        var r = item.r;
+        var sd = stationData[item.stKey];
+        var st = sd ? (sd.state||"normal") : "normal";
+        var pc = Math.round(r.pct||0);
+        var pctColor = pc>=100?"var(--green)":pc>=80?"var(--orange)":"var(--red)";
+        var rowCls = "map-list-row row-"+(st==="ontarget"?"ok":st==="normal"?"ok":st);
+        var gcaBadge = gcaPending.has((r.login||"").toLowerCase())
+          ? '<span class="map-list-pill gca" style="font-size:9px">GCA</span>' : "";
+        var notesText = Array.isArray(r.notes) ? r.notes.join(" · ") : String(r.notes||"");
+
+        var rowDiv = document.createElement("div");
+        rowDiv.className = rowCls;
+        rowDiv.style.cursor = "pointer";
+        rowDiv.innerHTML =
+          (r.photo_url ? '<img src="'+esc(r.photo_url)+'" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.style.display=\'none\'">' : '')
+          +'<span class="ml-login">'+esc(r.login||"—")+'</span>'
+          +'<span class="ml-station">'+esc(r.station||"—")+'</span>'
+          +'<span class="ml-rate">'+(Number.isFinite(r.rate)?Math.round(r.rate)+' uph':'—')+'</span>'
+          +'<span class="ml-pct" style="color:'+pctColor+'">'+pc+'%</span>'
+          +gcaBadge
+          +(notesText ? '<span class="ml-notes" title="'+esc(notesText)+'">'+esc(notesText)+'</span>' : '')
+          +'<button class="row-btn" style="margin-left:auto;flex-shrink:0" data-upload-login="'+esc(r.login)+'">↑</button>';
+
+        rowDiv.querySelector("[data-upload-login]").addEventListener("click", function(e){
+          e.stopPropagation();
+          openUploadPrefill(r.login);
+        });
+        rowsEl.appendChild(rowDiv);
+      });
+
+      el.appendChild(zoneDiv);
+    });
+
+    if(!el.children.length){
+      el.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px">No active associates on this floor</div>';
+    }
+  }
+
+  function showPerfTooltip(e, stNum, data){
+    clearTimeout(window._ttHideTimer);
+    var tt=document.getElementById('gcaMapTooltip');
+    if(!tt)return;
+    if(tt.parentElement!==document.body)document.body.appendChild(tt);
+    var rows=data.rows||[];
+    var h='<div style="font-weight:700;margin-bottom:8px;font-size:15px">Station '+stNum+'</div>';
+    h+='<div style="font-size:14px;color:#b0bec5;margin-bottom:4px">'+rows.length+' associate'+(rows.length>1?'s':'')+'</div>';
+    for(var i=0;i<Math.min(rows.length,5);i++){
+      var r=rows[i];
+      var pc=Math.round(r.pct||0);
+      var clr=pc>=100?'#059669':pc>=80?'#d97706':'#dc2626';
+      h+='<div style="display:flex;align-items:center;gap:5px;padding:3px 0;border-bottom:1px solid #2a3a4a">';
+      if(r.photo_url)h+='<img src="'+r.photo_url+'" style="width:30px;height:30px;border-radius:50%;object-fit:cover">';
+      h+='<b style="min-width:55px">'+(r.login||'--')+'</b>';
+      h+='<span style="font-size:13px;color:#e2e8f0">'+Math.round(r.rate||0)+' uph</span>';
+      h+='<span style="font-size:13px;font-weight:700;color:'+clr+'">'+pc+'%</span>';
+      if(r.coached)h+=' <span style="color:#f59e0b">&#9679;</span>';
+      if(r.nhFlag)h+=' <span style="color:#8b5cf6;font-size:12px">[FS]</span>';
+      h+='</div>';
+    }
+    for(var j=0;j<Math.min(rows.length,2);j++){
+      if(rows[j].notes){
+        var parts=String(rows[j].notes).split(/[,;]/);
+        h+='<div style="margin-top:4px;font-size:13px;font-weight:600;color:#e2e8f0">'+rows[j].login+':</div>';
+        for(var k=0;k<parts.length;k++){if(parts[k].trim())h+='<div style="font-size:13px;color:#cbd5e1;padding-left:8px">- '+parts[k].trim()+'</div>';}
+      }
+    }
+    
+    // GCA Pending info
+    var gcaMap = window._gcaPendingMap || {};
+    for(var g=0;g<rows.length;g++){
+      var gcaInfo = gcaMap[(rows[g].login||'').toLowerCase()];
+      if(gcaInfo){
+        var gcaUrl = 'https://guided-coaching-dub.corp.amazon.com/#/view-coaching-instance/'+gcaInfo.id;
+        h+='<div style="margin-top:8px;padding:8px;border-radius:6px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3)">';
+        h+='<div style="font-size:12px;font-weight:600;color:#f59e0b">GCA Pending</div>';
+        if(gcaInfo.insight) h+='<div style="font-size:12px;color:#e2e8f0;margin-top:2px">'+gcaInfo.insight+'</div>';
+        if(gcaInfo.comment) h+='<div style="font-size:11px;color:#b0bec5;margin-top:2px;font-style:italic">'+gcaInfo.comment+'</div>';
+        h+='<a href="'+gcaUrl+'" target="_blank" style="display:inline-block;margin-top:4px;font-size:11px;color:#3b82f6;text-decoration:none">Open GCA →</a>';
+        h+='</div>';
+      }
+    }
+    tt.innerHTML=h;
+    tt.style.display='block';
+    var lft=e.clientX+8;if(lft+500>window.innerWidth)lft=e.clientX-500;
+    var ttH=tt.offsetHeight||300;
+    var tp=e.clientY+10;if(tp+ttH>window.innerHeight)tp=Math.max(8,e.clientY-ttH-10);
+    tt.style.left=lft+'px';
+    tt.style.top=tp+'px';
+  }
+
+  function showPerfTooltipEmpty(e, stNum, type){
+    const tt = document.getElementById("gcaMapTooltip");
+    if(!tt) return;
+    tt.innerHTML = `<div style="font-weight:600;color:var(--text)">📍 Station ${stNum}</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px">${type} · No associate</div>`;
+    tt.style.display = "block";
+    tt.style.left = Math.min(e.clientX + 12, window.innerWidth - 200) + "px";
+    tt.style.top = (e.clientY - 40) + "px";
+    tt.onmouseleave = function(){ setTimeout(function(){ tt.style.display = 'none'; }, 200); };
+  }
+
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// GCA COMPLIANCE TAB
+// ═══════════════════════════════════════════════════════════════
+(function(){
+  const GCA_OWNERS = ["L&D","Team Lead IB","Team Lead OB","ICQA","Area Manager IB","Area Manager OB"];
+  let gcaData = null;
+  let gcaOwnerFilter = "";
+
+  const $g = id => document.getElementById(id);
+
+  // ── Load cached data on tab switch ──
+  async function loadGcaDashboard(){
+    try{
+      const d = await jget(`${API}/api/gca/dashboard?fc=${encodeURIComponent(currentFC)}`);
+      if(d.ok === false){ return; }
+      gcaData = d;
+      // Expose pending logins for Performance map cross-reference
+      var pSet = new Set();
+      (d.items||[]).forEach(function(it){ if(it.status==="PENDING") pSet.add((it.login||"").toLowerCase()); });
+      window._gcaPendingLogins = pSet;
+      // Also expose a map: login → {id, insight} for GCA links in performance tooltip
+      var pMap = {};
+      (d.items||[]).forEach(function(it){ if(it.status==="PENDING"){ var lg=(it.login||"").toLowerCase(); if(!pMap[lg]) pMap[lg]={id:it.id||"",insight:it.insight||"",comment:it.comment||""}; }});
+      window._gcaPendingMap = pMap;
+      renderGca();
+    }catch(e){ console.warn("loadGcaDashboard",e); }
+  }
+  window._loadGcaDashboard = loadGcaDashboard;
+
+  // ── Render everything ──
+
+  // ═══ FLOOR MAP ═══
+  let floorMapVisible = false;  // collapsed by default
+  let activeFloor = "p2";
+
+  // Map toggle bar click
+  var _gcaMapToggleBar = document.getElementById("gcaMapToggleBar");
+  var _gcaMapBody = document.getElementById("gcaMapBody");
+  var _gcaMapArrow = document.getElementById("gcaMapArrow");
+  if(_gcaMapToggleBar) _gcaMapToggleBar.addEventListener("click", function(){
+    floorMapVisible = !floorMapVisible;
+    if(_gcaMapBody) _gcaMapBody.style.display = floorMapVisible ? "" : "none";
+    if(_gcaMapArrow) _gcaMapArrow.style.transform = floorMapVisible ? "rotate(90deg)" : "";
+    if(floorMapVisible) renderFloorMap();
+  });
+
+  // Compliance details toggle
+  const btnComp = $g("btnToggleCompliance");
+  if(btnComp) btnComp.addEventListener("click",()=>{
+    const wrap = $g("gcaComplianceWrap");
+    const arrow = $g("complianceArrow");
+    if(!wrap) return;
+    const show = wrap.style.display === "none";
+    wrap.style.display = show ? "" : "none";
+    if(arrow) arrow.style.transform = show ? "rotate(90deg)" : "";
+  });
+
+  // Build GCA floor tabs dynamically from shared layout
+  function _buildGcaFloorTabs(){
+    var tabBar = document.querySelector(".gca-floor-tabs");
+    var floorWrap = document.getElementById("gcaFloorWrap");
+    if(!tabBar || !floorWrap) return;
+    var floors = window._getFloors ? window._getFloors() : [{id:"p2",label:"P2 (AR)",type:"ar_ring"},{id:"p1",label:"P1 (Pack)",type:"pack"}];
+    tabBar.innerHTML = "";
+    floorWrap.innerHTML = "";
+    floors.forEach(function(fl, i){
+      var btn = document.createElement("button");
+      btn.className = "gca-floor-tab" + (i===0?" active":"");
+      btn.dataset.floor = fl.id;
+      btn.textContent = fl.label;
+      tabBar.appendChild(btn);
+      var div = document.createElement("div");
+      div.id = "gcaFloor_" + fl.id;
+      div.className = "gca-floor-container";
+      div.style.cssText = "padding:12px;position:relative;min-height:400px;" + (i>0?"display:none":"");
+      floorWrap.appendChild(div);
+    });
+    tabBar.querySelectorAll(".gca-floor-tab").forEach(function(tab){
+      tab.addEventListener("click", function(){
+        tabBar.querySelectorAll(".gca-floor-tab").forEach(function(t){ t.classList.remove("active"); });
+        tab.classList.add("active");
+        activeFloor = tab.dataset.floor;
+        floorWrap.querySelectorAll(".gca-floor-container").forEach(function(c){ c.style.display="none"; });
+        var el = document.getElementById("gcaFloor_"+activeFloor);
+        if(el) el.style.display = "";
+        renderFloorMap();
+      });
+    });
+    if(floors.length > 0) activeFloor = floors[0].id;
+  }
+  // Build after layout is loaded (layout loads async — retry once data arrives)
+  function _tryBuildGcaFloorTabs(){ if(window._getFloors) _buildGcaFloorTabs(); else setTimeout(_buildGcaFloorTabs, 600); }
+  _tryBuildGcaFloorTabs();
+
+  // Station grids — shared from performance map's _mapLayout / _getFloors()
+  // GCA uses the same layout so there's no duplication.
+  function _gcaGetFloorDef(floorId){
+    if(window._getFloors){
+      return window._getFloors().find(function(f){ return f.id === floorId; }) || null;
+    }
+    return null;
+  }
+
+  function getStationType(stNum, floorId){
+    var fl = _gcaGetFloorDef(floorId);
+    if(!fl) return "pick";
+    if((fl.top||[]).indexOf(stNum)>-1||(fl.left||[]).indexOf(stNum)>-1) return "pick";
+    if((fl.bottom||[]).indexOf(stNum)>-1) return "stow";
+    if((fl.right||[]).indexOf(stNum)>-1) return "count";
+    return "pick";
+  }
+
+  // Parse station string → {floor, stationNum}
+  function parseStation(st){
+    if(!st) return null;
+    // dz-P-A2311 or dz-P-A3429
+    let m = st.match(/dz-P-A(\d{4})/);
+    if(m){ const n=parseInt(m[1]); return {floor: n>=3000?"p3":"p2", num:n}; }
+    // ws-k-A-02-2133 or ws-k-A-03-3327
+    m = st.match(/ws-k-A-0([23])-(\d{4})/);
+    if(m){ const n=parseInt(m[2]); return {floor: m[1]==="3"?"p3":"p2", num:n}; }
+    // wsAFE1_101_05
+    m = st.match(/wsAFE(\d+)_(\d+)_(\d+)/);
+    if(m) return {floor:"p1", type:"afe", wall:parseInt(m[1]), pos:parseInt(m[3])};
+    // wsSINGLES_01_03
+    m = st.match(/wsSINGLES_(\d+)_(\d+)/);
+    if(m) return {floor:"p1", type:"singles", line:parseInt(m[1]), pos:parseInt(m[2])};
+    // ws11xx or ws12xx (WS lines)
+    m = st.match(/ws(1[12]\d{2})/);
+    if(m){ const n=parseInt(m[1]); return {floor:"p1", type:"ws", side: String(n).startsWith("12")?"left":"right", pos:n}; }
+    return null;
+  }
+
+  function renderFloorMap(){
+    if(!gcaData) return;
+    // Build pending map from items
+    const items = (gcaData.items||[]).filter(i=>i.status==="PENDING");
+    // Update badge count always (even when map is collapsed)
+    var badge = document.getElementById("gcaMapPendingBadge");
+    if(badge) badge.textContent = items.length > 0 ? items.length+" pending" : "";
+    // Don't render DOM if map is collapsed
+    if(!floorMapVisible) return;
+    const presenceOn = $g("gcaPresenceToggle") && $g("gcaPresenceToggle").checked;
+    const filtered = presenceOn ? items.filter(i=>i.presence==="ACTIVE") : items;
+
+    // Group by parsed station
+    const pendingByStation = {};
+    filtered.forEach(it=>{
+      const parsed = parseStation(it.station);
+      if(!parsed) return;
+      const key = parsed.num ? `${parsed.floor}_${parsed.num}` : `${parsed.floor}_${parsed.type}_${parsed.wall||parsed.line||parsed.side}_${parsed.pos}`;
+      if(!pendingByStation[key]) pendingByStation[key] = {count:0, items:[], parsed};
+      pendingByStation[key].count++;
+      pendingByStation[key].items.push(it);
+    });
+
+    var gcaFloorDef = _gcaGetFloorDef(activeFloor);
+    var gcaContainerId = "gcaFloor_" + activeFloor;
+    if(gcaFloorDef && gcaFloorDef.type === "ar_ring"){
+      renderARFloor(gcaContainerId, gcaFloorDef.top||[], gcaFloorDef.left||[], gcaFloorDef.bottom||[], gcaFloorDef.right||[], activeFloor, pendingByStation);
+    } else {
+      renderP1Floor(gcaContainerId || "gcaFloorP1", pendingByStation);
+    }
+  }
+
+  function renderARFloor(containerId, topRow, leftCol, bottomRow, rightCol, floorId, pendingMap){
+    const el = $g(containerId);
+    if(!el) return;
+    el.innerHTML = '';
+    el.style.position = 'relative';
+    el.style.padding = '12px';
+
+    function getTypeLabel(stNum){
+      var base = stNum >= 3000 ? stNum - 1000 : stNum;
+      if(base >= 2050 && base <= 2197){
+        var ptrs = [2197,2196,2187,2186,2177,2176,2168,2167,2160,2159,2151,2150,2143,2142,2134,2133,2125,2124,2116,2115];
+        return ptrs.indexOf(base) > -1 ? 'PTR' : 'NU';
+      }
+      if(base >= 2200 && base <= 2295) return 'NU';
+      if(base >= 2306 && base <= 2395) return 'NA';
+      if(base >= 2422 && base <= 2494) return 'NS';
+      return 'NU';
+    }
+
+    function buildGcaStation(stNum){
+      var key = floorId + '_' + stNum;
+      var pending = pendingMap[key];
+      if(!pending) return null; // only show stations with pending items
+      var type = getTypeLabel(stNum);
+      var div = document.createElement('div');
+      div.className = 'sm-station ' + (pending ? 'sm-danger' : 'sm-empty');
+      var badge = pending ? '<span class="sm-badge bg-red">'+pending.count+'</span>' : '';
+      div.innerHTML = badge + '<span class="sm-type">'+type+'</span><span class="sm-num">'+String(stNum)+'</span>';
+      if(pending){
+        div.onmouseenter = function(e){ showMapTooltip(e, stNum, pending, type); };
+        div.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=$g("gcaMapTooltip"); if(tt&&!tt.matches(":hover"))tt.style.display="none";},800);};
+      }
+      return div;
+    }
+
+    // Layout
+    var grid = document.createElement('div');
+    grid.className = 'sm-grid';
+
+    var topDiv = document.createElement('div');
+    topDiv.className = 'sm-row sm-top';
+    topRow.forEach(function(n){ var s=buildGcaStation(n); if(s) topDiv.appendChild(s); });
+
+    var midDiv = document.createElement('div');
+    midDiv.className = 'sm-middle';
+
+    var leftDiv = document.createElement('div');
+    leftDiv.className = 'sm-col sm-left';
+    leftCol.forEach(function(n){ var s=buildGcaStation(n); if(s) leftDiv.appendChild(s); });
+
+    var centerDiv = document.createElement('div');
+    centerDiv.className = 'sm-center';
+    var totalSt = topRow.length + leftCol.length + bottomRow.length + rightCol.length;
+    var pendingCount = 0;
+    [topRow,leftCol,bottomRow,rightCol].forEach(function(arr){ arr.forEach(function(n){ if(pendingMap[floorId+'_'+n]) pendingCount++; }); });
+    centerDiv.innerHTML = '<div class="sm-summary">' +
+      '<div class="sm-summary-title">'+floorId.toUpperCase()+'</div>' +
+      '<div class="sm-counts">' +
+        '<div class="sm-count"><span class="sm-count-val sm-c-danger">'+pendingCount+'</span><span class="sm-count-lbl">Pending</span></div>' +
+        '<div class="sm-count"><span class="sm-count-val">'+totalSt+'</span><span class="sm-count-lbl">Total</span></div>' +
+        '<div class="sm-count"><span class="sm-count-val sm-c-empty">'+(totalSt-pendingCount)+'</span><span class="sm-count-lbl">Clear</span></div>' +
+      '</div>' +
+    '</div>';
+
+    var rightDiv = document.createElement('div');
+    rightDiv.className = 'sm-col sm-right';
+    rightCol.forEach(function(n){ var s=buildGcaStation(n); if(s) rightDiv.appendChild(s); });
+
+    midDiv.appendChild(leftDiv);
+    midDiv.appendChild(centerDiv);
+    midDiv.appendChild(rightDiv);
+
+    var bottomDiv = document.createElement('div');
+    bottomDiv.className = 'sm-row sm-bottom';
+    bottomRow.forEach(function(n){ var s=buildGcaStation(n); if(s) bottomDiv.appendChild(s); });
+
+    grid.appendChild(topDiv);
+    grid.appendChild(midDiv);
+    grid.appendChild(bottomDiv);
+    el.appendChild(grid);
+  }
+
+
+  
+
+  function renderP1Floor(containerId, pendingMap){
+    const el = $g(containerId);
+    if(!el) return;
+    el.innerHTML = '';
+    el.style.padding = '12px';
+
+    const sections = [
+      {title:'AFE', lines:[
+        {label:'AFE 1', prefix:'afe', wall:1, count:20},
+        {label:'AFE 2', prefix:'afe', wall:2, count:20},
+        {label:'AFE 3', prefix:'afe', wall:3, count:20},
+        {label:'AFE 4', prefix:'afe', wall:4, count:20}
+      ]},
+      {title:'Singles', lines:[
+        {label:'L01', prefix:'singles', line:1, count:20},
+        {label:'L02', prefix:'singles', line:2, count:20},
+        {label:'L03', prefix:'singles', line:3, count:20},
+        {label:'L04', prefix:'singles', line:4, count:20}
+      ]},
+      {title:'Sobres', lines:[
+        {label:'L1', prefix:'ws', line:1, count:10},
+        {label:'L2', prefix:'ws', line:2, count:10}
+      ]}
+    ];
+
+    sections.forEach(function(section){
+      var secDiv = document.createElement('div');
+      secDiv.style.cssText = 'margin-bottom:10px;';
+      secDiv.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:4px">'+section.title+'</div>';
+      section.lines.forEach(function(ln){
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:2px;margin-bottom:2px;flex-wrap:wrap;';
+        row.innerHTML = '<span style="width:36px;font-size:9px;color:var(--text-muted);text-align:right;flex-shrink:0">'+ln.label+'</span>';
+        for(let pos=1; pos<=ln.count; pos++){
+          let key;
+          if(ln.prefix==='afe') key = 'p1_afe_'+ln.wall+'_'+pos;
+          else if(ln.prefix==='singles') key = 'p1_singles_'+ln.line+'_'+pos;
+          else key = 'p1_ws_'+((ln.line||1)+10)+'_'+pos;
+          let pending = pendingMap[key];
+          let div = document.createElement('div');
+          div.className = 'sm-station ' + (pending ? 'sm-danger' : 'sm-empty');
+          let badge = pending ? '<span class="sm-badge bg-red">'+pending.count+'</span>' : '';
+          div.innerHTML = badge + '<span class="sm-type">'+ln.prefix.slice(0,3).toUpperCase()+'</span><span class="sm-num">'+pos+'</span>';
+          if(pending){
+            div.onmouseenter = function(e){ showMapTooltip(e, ln.label+' #'+pos, pending, ln.prefix); };
+            div.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=$g("gcaMapTooltip"); if(tt&&!tt.matches(":hover"))tt.style.display="none";},800);};
+          }
+          row.appendChild(div);
+        }
+        secDiv.appendChild(row);
+      });
+      el.appendChild(secDiv);
+    });
+  }
+
+  function showMapTooltip(e, stLabel, data, type){
+    const tt = $g("gcaMapTooltip");
+    if(!tt) return;
+    if(tt.parentElement !== document.body) document.body.appendChild(tt);
+    const items = data.items || [];
+    const insights = [...new Set(items.map(i=>i.insight||i.course_title||"").filter(Boolean))].slice(0,3);
+    const owners = [...new Set(items.map(i=>i.owner||"").filter(Boolean))];
+    const notes = items.map(i=>i.comment||"").filter(Boolean).slice(0,2);
+    const gcaLinks = items.slice(0,3).map(i=>{
+      const login = i.login||i.employee_id||"";
+      return `<a href="https://guided-coaching-dub.corp.amazon.com/#/view-coaching-instance/${i.id}" target="_blank" rel="noopener" style="color:var(--accent);font-size:10px">${login?login+" → ":""}Open GCA</a>`;
+    });
+    // Associate rows with photos
+    const assocRows = items.slice(0,4).map(i=>{
+      const login = i.login||i.employee_id||"—";
+      const photo = i.photo_url ? `<img src="${i.photo_url}" style="width:24px;height:24px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">` : `<div style="width:24px;height:24px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px">👤</div>`;
+      return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0">${photo}<span style="font-weight:600;font-size:11px">${login}</span></div>`;
+    }).join("");
+
+    tt.innerHTML = `
+      <div style="font-weight:700;margin-bottom:6px;color:var(--text)">📍 Station ${stLabel}</div>
+      <div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px"><b>${data.count}</b> pending coaching${data.count>1?"s":""}</div>
+      ${assocRows}
+      ${insights.length?`<div style="font-size:11px;margin-bottom:4px"><b>Insight:</b> ${insights.join("; ")}</div>`:""}
+      ${owners.length?`<div style="font-size:11px;margin-bottom:4px"><b>Owner:</b> ${owners.join(", ")}</div>`:""}
+      ${notes.length?`<div style="font-size:11px;margin-bottom:4px;padding:4px 6px;background:var(--accent-light);border-radius:4px"><b>Notes:</b> ${notes.join(" | ")}</div>`:""}
+      <div style="margin-top:6px;display:flex;flex-direction:column;gap:3px">${gcaLinks.join("")}</div>
+    `;
+    tt.style.display = "block";
+    tt.style.left = Math.min(e.clientX + 10, window.innerWidth - 300) + "px";
+    tt.style.top = Math.min(e.clientY - 10, window.innerHeight - 200) + "px";
+    // Close when mouse leaves tooltip
+    tt.onmouseleave = function(){ setTimeout(function(){ tt.style.display = 'none'; }, 200); };
+  }
+  // ═══ END FLOOR MAP ═══
+
+  function renderGca(){
+    if(!gcaData) return;
+    const k = gcaData.kpis || {};
+    $g("gcaKpiTotal").textContent = k.total || 0;
+    $g("gcaKpiCompleted").textContent = k.completed || 0;
+    $g("gcaKpiPending").textContent = k.pending || 0;
+    $g("gcaKpiPct").textContent = (k.compliance_pct || 0) + "%";
+    $g("gcaSubtitle").textContent = `Last 7 days · ${gcaData.fc || currentFC}`;
+
+    // Bars
+    const os = gcaData.owner_stats || {};
+    const barsEl = $g("gcaBars");
+    barsEl.innerHTML = GCA_OWNERS.map(owner=>{
+      const s = os[owner] || {completed:0,pending:0,total:0,pct:0};
+      const cls = s.pct >= 95 ? "high" : s.pct >= 70 ? "mid" : "low";
+      const w = Math.max(s.pct, 2);
+      return `<div class="gca-bar-row">
+        <span class="gca-bar-label">${esc(owner)}</span>
+        <div class="gca-bar-track"><div class="gca-bar-fill ${cls}" style="width:${w}%"><span>${s.pct}%</span></div></div>
+        <span class="gca-bar-nums">${s.completed} / ${s.total}</span>
+      </div>`;
+    }).join("");
+
+    // Owner filter pills
+    const filtersEl = $g("gcaOwnerFilters");
+    const presenceOn = $g("gcaPresenceToggle") && $g("gcaPresenceToggle").checked;
+    let pending = (gcaData.items||[]).filter(i=>i.status==="PENDING");
+    if(presenceOn) pending = pending.filter(i=>i.presence==="ACTIVE");
+    const countAll = pending.length;
+    let pills = `<span class="gca-pill ${!gcaOwnerFilter?"active":""}" data-owner="">All (${countAll})</span>`;
+    GCA_OWNERS.forEach(owner=>{
+      const cnt = pending.filter(i=>i.owner===owner).length;
+      if(cnt > 0) pills += `<span class="gca-pill ${gcaOwnerFilter===owner?"active":""}" data-owner="${esc(owner)}">${esc(owner)} (${cnt})</span>`;
+    });
+    filtersEl.innerHTML = pills;
+    filtersEl.querySelectorAll(".gca-pill").forEach(p=>{
+      p.addEventListener("click",()=>{
+        gcaOwnerFilter = p.dataset.owner || "";
+        renderGca();
+      });
+    });
+
+    // Table
+    let items = (gcaData.items||[]).filter(i=>i.status==="PENDING");
+    if(presenceOn) items = items.filter(i=>i.presence==="ACTIVE");
+    if(gcaOwnerFilter) items = items.filter(i=>i.owner===gcaOwnerFilter);
+
+    const tbody = $g("gcaTbody");
+    if(!items.length){
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);font-size:12px">No pending coachings${gcaOwnerFilter?" for "+gcaOwnerFilter:""}</td></tr>`;
+    } else {
+      tbody.innerHTML = items.slice(0, 100).map(it=>{
+        const gcaUrl = `https://guided-coaching-dub.corp.amazon.com/#/view-coaching-instance/${it.id}`;
+        const loginDisplay = it.login || it.employee_id || "—";
+        const notes = it.comment ? `<span style="font-size:11px" title="${esc(it.comment)}">${esc(it.comment.length>40?it.comment.slice(0,40)+"…":it.comment)}</span>` : `<span style="color:var(--text-muted)">—</span>`;
+        const isActive = it.presence === "ACTIVE";
+        const stationInfo = it.station ? (it.process_path ? `${it.station} · ${it.process_path}` : it.station) : "";
+        const presenceDot = isActive
+          ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green)"></span> <span style="font-size:10px">Active</span>${stationInfo ? `<div style="font-size:9.5px;color:var(--text-muted);margin-top:1px">${esc(stationInfo)}</div>` : ""}`
+          : `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#cbd5e1"></span> <span style="font-size:10px;color:var(--text-muted)">${esc(it.presence||"Unknown")}</span>${stationInfo ? `<div style="font-size:9.5px;color:var(--text-muted);margin-top:1px">${esc(stationInfo)}</div>` : ""}`;
+        const photoHtml = it.photo_url
+          ? `<img src="${esc(it.photo_url)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-right:6px;vertical-align:middle" onerror="this.style.display='none'">`
+          : "";
+        return `<tr>
+          <td><div style="display:flex;align-items:center">${photoHtml}<span style="font-weight:600">${esc(loginDisplay)}</span></div></td>
+          <td>${esc(it.insight||it.course_title||"—")}</td>
+          <td><span style="font-size:11px">${esc(it.owner)}</span></td>
+          <td>${notes}</td>
+          <td><div style="display:flex;align-items:center;gap:4px">${presenceDot}</div></td>
+          <td><a href="${esc(gcaUrl)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:600;font-size:11px">Open GCA →</a></td>
+        </tr>`;
+      }).join("");
+    }
+    const totalPending = (gcaData.items||[]).filter(i=>i.status==="PENDING").length;
+    const totalCompleted = (gcaData.items||[]).filter(i=>i.status==="COMPLETED").length;
+    $g("gcaShowing").textContent = `Showing ${Math.min(items.length,100)} of ${items.length} pending · ${totalCompleted} completed this week`;
+    // Re-render floor map if visible
+    if(floorMapVisible) renderFloorMap();
+  }
+
+  // ── Pipeline button ──
+  $g("btnGcaPipeline") && $g("btnGcaPipeline").addEventListener("click",()=>{
+    const btn = $g("btnGcaPipeline");
+    btn.disabled = true;
+    btn.textContent = "⏳ Running…";
+    $g("gcaProgress").style.display = "";
+
+    const evtSrc = new EventSource(`${API}/api/gca/pipeline?fc=${encodeURIComponent(currentFC)}`);
+
+    evtSrc.onmessage = async(e)=>{
+      try{
+        const d = JSON.parse(e.data);
+        const p = Math.min(d.pct||0, 100);
+        const bar = $g("gcaProgBar");
+        const msg = $g("gcaProgMsg");
+        if(bar) bar.style.width = p+"%";
+        if(msg && d.msg) msg.textContent = d.msg;
+        if(p >= 100){
+          evtSrc.close();
+          btn.disabled = false;
+          btn.textContent = "▶ Run GCA Pipeline";
+          setTimeout(()=>{ $g("gcaProgress").style.display = "none"; }, 2000);
+          if(d.ok !== false){
+            await loadGcaDashboard();
+          }
+        }
+      }catch(err){ console.error("GCA SSE parse",err); }
+    };
+
+    evtSrc.onerror = ()=>{
+      evtSrc.close();
+      btn.disabled = false;
+      btn.textContent = "▶ Run GCA Pipeline";
+      $g("gcaProgress").style.display = "none";
+    };
+  });
+
+  // Presence toggle → re-render (no re-fetch)
+  $g("gcaPresenceToggle") && $g("gcaPresenceToggle").addEventListener("change", ()=>{
+    renderGca();
+  });
+
+  // Auto-refresh GCA pipeline every 90 minutes
+  let _gcaAutoInterval = null;
+  const gcaAutoEl = $g("gcaAutoRefresh");
+  if(gcaAutoEl) gcaAutoEl.addEventListener("change", ()=>{
+    if(gcaAutoEl.checked){
+      // Run immediately + set interval
+      const runPipeline = ()=>{
+        const btn = $g("btnGcaPipeline");
+        if(btn && !btn.disabled) btn.click();
+      };
+      runPipeline();
+      _gcaAutoInterval = setInterval(runPipeline, 90 * 60 * 1000); // 90 min
+      gcaAutoEl.parentElement.style.color = "var(--green)";
+    } else {
+      if(_gcaAutoInterval){ clearInterval(_gcaAutoInterval); _gcaAutoInterval = null; }
+      gcaAutoEl.parentElement.style.color = "var(--text-secondary)";
+    }
+  });
+
+
+  // ═══ COACHING PATH OPTIMIZER ═══
+
+  // PATH_ARRAYS built from layout at runtime
+  function _getPathArrays(){
+    var out = {};
+    if(window._getFloors){
+      window._getFloors().forEach(function(fl){
+        if(fl.type==="ar_ring") out[fl.id] = {top:fl.top||[], left:fl.left||[], bottom:fl.bottom||[], right:fl.right||[]};
+      });
+    }
+    return out;
+  }
+
+  function perimeterIndex(stNum, floor){
+    var arrays = _getPathArrays()[floor];
+    if(!arrays) return 999;
+    var top=arrays.top, right=arrays.right, bottom=arrays.bottom, left=arrays.left;
+    var idx;
+    idx = top.indexOf(stNum);
+    if(idx > -1) return idx;
+    idx = right.indexOf(stNum);
+    if(idx > -1) return top.length + idx;
+    idx = bottom.indexOf(stNum);
+    if(idx > -1) return top.length + right.length + (bottom.length - 1 - idx);
+    idx = left.indexOf(stNum);
+    if(idx > -1) return top.length + right.length + bottom.length + (left.length - 1 - idx);
+    var base = stNum >= 3000 ? stNum - 1000 : stNum;
+    if(base >= 2104 && base <= 2197) return Math.round((2197-base)/(2197-2104)*(top.length-1));
+    if(base >= 2422 && base <= 2494) return top.length + Math.round((base-2422)/(2494-2422)*(right.length-1));
+    if(base >= 2306 && base <= 2395) return top.length + right.length + Math.round((2395-base)/(2395-2306)*(bottom.length-1));
+    if(base >= 2200 && base <= 2295) return top.length + right.length + bottom.length + Math.round((2295-base)/(2295-2200)*(left.length-1));
+    return 999;
+  }
+
+  function pathSectionLabel(stNum){
+    var base = stNum >= 3000 ? stNum - 1000 : stNum;
+    if(base >= 2104 && base <= 2197) return "Top";
+    if(base >= 2200 && base <= 2295) return "Left";
+    if(base >= 2306 && base <= 2395) return "Bottom";
+    if(base >= 2422 && base <= 2494) return "Right";
+    return "?";
+  }
+
+  function pathTypeLabel(stNum){
+    var base = stNum >= 3000 ? stNum - 1000 : stNum;
+    if(base >= 2104 && base <= 2197) return "PTR/NU";
+    if(base >= 2200 && base <= 2295) return "NU";
+    if(base >= 2306 && base <= 2395) return "NA";
+    if(base >= 2422 && base <= 2494) return "NS";
+    return "NU";
+  }
+
+  window._showCoachingPath = function(){
+    if(!gcaData || !gcaData.items) return;
+    var items = gcaData.items.filter(function(i){return i.status==="PENDING";});
+    var presenceOn = $g("gcaPresenceToggle") && $g("gcaPresenceToggle").checked;
+    if(presenceOn) items = items.filter(function(i){return i.presence==="ACTIVE";});
+    if(gcaOwnerFilter) items = items.filter(function(i){return i.owner===gcaOwnerFilter;});
+
+    var byFloor = {p2:[], p3:[], p1:[]};
+    items.forEach(function(it){
+      var parsed = parseStation(it.station);
+      if(!parsed) return;
+      var floor = parsed.num ? (parsed.num >= 3000 ? "p3" : "p2") : "p1";
+      byFloor[floor].push({item:it, parsed:parsed, num:parsed.num||0, floor:floor});
+    });
+
+    var bestFloor = "p2"; var bestCount = 0;
+    for(var fl in byFloor){ if(byFloor[fl].length > bestCount){ bestCount = byFloor[fl].length; bestFloor = fl; } }
+
+    var pathItems = byFloor[bestFloor];
+    if(!pathItems.length){ alert("No hay coachings con estacion en "+bestFloor.toUpperCase()); return; }
+
+    if(bestFloor==="p2"||bestFloor==="p3"){
+      pathItems.forEach(function(e){ e.pIdx = perimeterIndex(e.num, bestFloor); });
+      pathItems.sort(function(a,b){ return a.pIdx - b.pIdx; });
+    }
+
+    var stationGroups = []; var seen = {};
+    pathItems.forEach(function(e){
+      var key = String(e.num||e.parsed.type+"_"+e.parsed.id);
+      if(!seen[key]){ seen[key]={entries:[e],num:e.num,pIdx:e.pIdx,key:key}; stationGroups.push(seen[key]); }
+      else { seen[key].entries.push(e); }
+    });
+
+    renderPathModal(stationGroups, bestFloor);
+    document.getElementById("gcaPathModal").style.display = "flex";
+  };
+
+  function renderPathModal(groups, floor){
+    var subtitle = $g("pathSubtitle");
+    if(subtitle) subtitle.textContent = floor.toUpperCase()+" · "+(gcaOwnerFilter||"All")+" · "+groups.length+" paradas";
+
+    var listEl = $g("gcaPathList");
+    var totalDist = 0;
+    var h = '<div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px">Ruta Sugerida (Clockwise)</div>';
+    for(var i=0;i<groups.length;i++){
+      var g = groups[i];
+      var logins = g.entries.map(function(e){return e.item.login||"?";}).join(", ");
+      var insights = g.entries.map(function(e){return e.item.insight||"";}).filter(function(x){return x;});
+      var insightStr = insights.length?insights[0]:"";
+      if(insights.length>1) insightStr+=" +"+(insights.length-1);
+      var dist = "";
+      if(i>0 && g.pIdx!==undefined && groups[i-1].pIdx!==undefined){
+        var d = Math.abs(g.pIdx - groups[i-1].pIdx)*3;
+        totalDist += d;
+        dist = "~"+d+"m";
+      }
+      h += '<div class="path-step"><span class="path-num">'+(i+1)+'</span><div><div class="path-station">Est. '+g.num+' ('+pathSectionLabel(g.num)+' · '+pathTypeLabel(g.num)+')</div><div class="path-login">'+logins+(insightStr?" - "+insightStr:"")+'</div></div>';
+      if(dist) h += '<span class="path-dist">'+dist+' </span>';
+      h += '</div>';
+    }
+    var totalCoachings = 0;
+    groups.forEach(function(g){totalCoachings+=g.entries.length;});
+    var walkMin = Math.round(totalDist/1.2/60);
+    var coachMin = totalCoachings*2;
+    h += '<div class="path-summary">Estimado: <b>~'+(walkMin+coachMin)+' min</b> ('+walkMin+'min caminando + '+coachMin+'min coaching)<br>Distancia: ~'+totalDist+'m · '+totalCoachings+' coachings en '+groups.length+' estaciones</div>';
+    listEl.innerHTML = h;
+
+    var mapEl = $g("gcaPathMap");
+    if(!mapEl) return;
+    mapEl.innerHTML = "";
+    var arrays = PATH_ARRAYS[floor];
+    if(!arrays) return;
+
+    var pathNums = {};
+    groups.forEach(function(g,i){ pathNums[String(g.num)]=i+1; });
+
+    function buildSt(stNum){
+      var div = document.createElement("div");
+      var onPath = pathNums[String(stNum)];
+      div.className = "sm-station "+(onPath?"on-path":"sm-empty");
+      var marker = onPath?'<span style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:var(--accent);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center">'+onPath+'</span>':"";
+      div.innerHTML = marker+'<span class="sm-type">'+pathTypeLabel(stNum)+'</span><span class="sm-num">'+String(stNum)+'</span>';
+      return div;
+    }
+
+    var grid = document.createElement("div"); grid.className = "sm-grid";
+    var topDiv = document.createElement("div"); topDiv.className = "sm-row sm-top";
+    arrays.top.forEach(function(n){ topDiv.appendChild(buildSt(n)); });
+    var midDiv = document.createElement("div"); midDiv.className = "sm-middle";
+    var leftDiv = document.createElement("div"); leftDiv.className = "sm-col sm-left";
+    arrays.left.forEach(function(n){ leftDiv.appendChild(buildSt(n)); });
+    var centerDiv = document.createElement("div"); centerDiv.className = "sm-center";
+    centerDiv.innerHTML = '<div style="text-align:center;opacity:0.3"><div style="font-size:32px;font-weight:800;color:var(--text-muted)">'+floor.toUpperCase()+'</div><div style="font-size:10px;color:var(--text-muted)">1 → '+groups.length+'</div></div>';
+    var rightDiv = document.createElement("div"); rightDiv.className = "sm-col sm-right";
+    arrays.right.forEach(function(n){ rightDiv.appendChild(buildSt(n)); });
+    midDiv.appendChild(leftDiv); midDiv.appendChild(centerDiv); midDiv.appendChild(rightDiv);
+    var bottomDiv = document.createElement("div"); bottomDiv.className = "sm-row sm-bottom";
+    arrays.bottom.forEach(function(n){ bottomDiv.appendChild(buildSt(n)); });
+    grid.appendChild(topDiv); grid.appendChild(midDiv); grid.appendChild(bottomDiv);
+    mapEl.appendChild(grid);
+  }
+
+
+})();
+
 
 }); // end DOMContentLoaded

@@ -35,6 +35,7 @@ ROOT_DIR = Path(getattr(paths, "root", Path.cwd()))
 OUTPUT_DIR = Path(getattr(paths, "output", ROOT_DIR / "data" / "output"))
 CONFIG_DIR = ROOT_DIR / "config" / "hermes"
 DOCUMENTS_QUALITY_DIR = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Documents" / "Quality TO"
+
 DOCUMENTS_QUALITY_DIR.mkdir(parents=True, exist_ok=True)
 
 DPMO_TARGETS_PATH = CONFIG_DIR / "dpmo_targets.json"
@@ -159,6 +160,16 @@ def hours_to_dpmo_scale(hours: float) -> tuple[str, int]:
     Returns:
         ('day', 1-10) for early tenure (0-80h)
         ('week', 3-10) for established tenure (81-400h+)
+
+    Week mapping:
+        81-120h  = week 3
+        121-160h = week 4
+        161-200h = week 5
+        201-240h = week 6
+        241-280h = week 7
+        281-320h = week 8
+        321-360h = week 9
+        361-400h+= week 10
     """
     hours = max(0, float(hours or 0))
     if hours <= 14:
@@ -166,7 +177,7 @@ def hours_to_dpmo_scale(hours: float) -> tuple[str, int]:
     if hours <= 80:
         return ("day", min(10, 1 + ceil((hours - 14) / 8)))
     if hours <= 400:
-        return ("week", min(10, 2 + ceil(hours / 40)))
+        return ("week", min(10, 2 + ceil((hours - 80) / 40)))
     return ("week", 10)  # Veteran
 
 
@@ -340,8 +351,99 @@ def _read_roster_presence(fc: str = "BCN4") -> pd.DataFrame:
     return out
 
 
-def _quality_mode_for(fc: str, error_key: str) -> dict:
-    cfg = _load_json("quality_mode.json", {})
+
+def _fetch_punch_presence(fc: str = "BCN4") -> pd.DataFrame:
+    """Lightweight presence check using only 2 SCC API calls.
+    
+    1. /getAssociateProfileDetails/{FC} → empId → login mapping
+    2. /punchStatuses/{FC} → empId → PUNCH_IN/PUNCH_OUT
+    
+    Returns DataFrame with columns: Login, PunchType, Present
+    No file dependency (no Roster_SCC.csv needed).
+    """
+    import platform
+    if platform.system().lower().startswith("win"):
+        try:
+            import pythoncom
+            pythoncom.CoInitialize()
+        except Exception:
+            pass
+
+    SCC_BASE = "https://staffingcommandcenter-eu.aka.amazon.com"
+    fc = fc.strip().upper()
+    referer = f"{SCC_BASE}/{fc}/roster"
+
+    try:
+        import win32com.client
+        from project_hermes.core.auth_midway import get_cookie as _get_cookie
+
+        cookie = _get_cookie(aea=True, max_tries=3)
+
+        def _scc_get(url):
+            http = win32com.client.Dispatch("WinHTTP.WinHTTPRequest.5.1")
+            http.Open("GET", url, False)
+            http.SetAutoLogonPolicy(0)
+            http.SetTimeouts(10000, 10000, 30000, 30000)
+            http.SetRequestHeader("Cookie", cookie)
+            http.SetRequestHeader("Referer", referer)
+            http.SetRequestHeader("Accept", "application/json")
+            http.SetRequestHeader("User-Agent", "Mozilla/5.0")
+            http.SetRequestHeader("X-App-Token", "SCC_FRONTEND_APP_v2")
+            http.Send()
+            status = int(http.Status)
+            if status == 200:
+                import json as _json
+                return _json.loads(http.ResponseText or "{}")
+            log.info(f"SCC {url.split('/')[-1]} returned {status}")
+            return None
+
+        # 1. Get profiles (empId → login)
+        profiles = _scc_get(f"{SCC_BASE}/getAssociateProfileDetails/{fc}")
+        if not profiles or not isinstance(profiles, dict):
+            log.info("Failed to fetch profiles from SCC")
+            return pd.DataFrame(columns=["Login", "PunchType", "Present"])
+
+        eid_to_login = {}
+        for emp_id, prof in profiles.items():
+            if isinstance(prof, dict):
+                login = str(prof.get("employeeLogin", "")).strip().lower()
+                if login:
+                    eid_to_login[str(emp_id).strip()] = login
+
+        # 2. Get punch statuses
+        punch = _scc_get(f"{SCC_BASE}/punchStatuses/{fc}")
+        if not punch or not isinstance(punch, dict):
+            log.info("Failed to fetch punch statuses from SCC")
+            return pd.DataFrame(columns=["Login", "PunchType", "Present"])
+
+        # Combine
+        records = []
+        for emp_id, p in punch.items():
+            emp_id_str = str(emp_id).strip()
+            login = eid_to_login.get(emp_id_str, "")
+            if not login:
+                continue
+            punch_type = p.get("type", "") if isinstance(p, dict) else ""
+            records.append({
+                "Login": login,
+                "PunchType": str(punch_type).strip().upper(),
+                "Present": str(punch_type).strip().upper() == "PUNCH_IN",
+            })
+
+        if not records:
+            return pd.DataFrame(columns=["Login", "PunchType", "Present"])
+
+        out = pd.DataFrame(records)
+        out = out[out["Login"].str.len() > 0].drop_duplicates("Login", keep="first")
+        return out
+
+    except Exception as e:
+        log.info(f"_fetch_punch_presence failed: {e}")
+        return pd.DataFrame(columns=["Login", "PunchType", "Present"])
+
+
+def _quality_mode_for(fc: str, error_key: str, _cfg_cache: dict | None = None) -> dict:
+    cfg = _cfg_cache if _cfg_cache is not None else _load_json("quality_mode.json", {})
     fc_cfg = cfg.get(str(fc).upper(), {}) if isinstance(cfg, dict) else {}
     if not isinstance(fc_cfg, dict):
         fc_cfg = {}
@@ -360,13 +462,8 @@ def _quality_mode_for(fc: str, error_key: str) -> dict:
     return {"mode": mode, "sigma_threshold": sigma, "min_errors": min_errors}
 
 
-def _is_error_enabled(fc: str, error_key: str) -> bool:
-    """Check if an error type is enabled for tracking in a given FC.
-    
-    Errors with "enabled": false in quality_mode.json are skipped.
-    Errors not explicitly configured default to enabled (backward compat).
-    """
-    cfg = _load_json("quality_mode.json", {})
+def _is_error_enabled(fc: str, error_key: str, _cfg_cache: dict | None = None) -> bool:
+    cfg = _cfg_cache if _cfg_cache is not None else _load_json("quality_mode.json", {})
     fc_cfg = cfg.get(str(fc).upper(), {}) if isinstance(cfg, dict) else {}
     if not isinstance(fc_cfg, dict):
         return True
@@ -374,7 +471,7 @@ def _is_error_enabled(fc: str, error_key: str) -> bool:
     if not isinstance(errors, dict):
         return True
     error_cfg = errors.get(error_key, {})
-    return error_cfg.get("enabled", True)  # default enabled if not specified
+    return error_cfg.get("enabled", True)
 
 
 def _course_for_error(error_key: str) -> tuple[str, str]:
@@ -456,12 +553,21 @@ def _load_quality_source(path: Path, fc: str) -> pd.DataFrame:
         out["_count"] = pd.to_numeric(df.loc[out.index, count_col], errors="coerce").fillna(1)
     else:
         out["_count"] = 1
-    # Preserve MetricValue as Opportunities (volume/units processed)
-    metric_col = _find_col(df, ["MetricValue", "Metric Value", "metric_value", "Opportunities", "opportunities"])
+    # Preserve MetricValue as DPMO and calculate Opportunities (volume/units processed)
+    # Atlas MetricValue = DPMO. Opportunities = (Defects * 1,000,000) / DPMO
+    metric_col = _find_col(df, ["MetricValue", "Metric Value", "metric_value"])
     if metric_col:
-        out["_opportunities"] = pd.to_numeric(df.loc[out.index, metric_col], errors="coerce").fillna(0)
+        dpmo_raw = pd.to_numeric(df.loc[out.index, metric_col], errors="coerce").fillna(0)
+        defects = out["_count"].copy()
+        # Opportunities = defects * 1M / DPMO (when DPMO > 0)
+        out["_opportunities"] = (defects * 1_000_000 / dpmo_raw).where(dpmo_raw > 0, 0).round(0).fillna(0)
     else:
-        out["_opportunities"] = 0
+        # Fallback: check for explicit Opportunities column
+        opp_col = _find_col(df, ["Opportunities", "opportunities"])
+        if opp_col:
+            out["_opportunities"] = pd.to_numeric(df.loc[out.index, opp_col], errors="coerce").fillna(0)
+        else:
+            out["_opportunities"] = 0
     out = out[(out["Login"].str.len() > 0) & (out["ErrorKey"].str.len() > 0)].copy()
     return out
 
@@ -542,13 +648,15 @@ def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: dateti
     out["Site Avg"] = pd.to_numeric(out["Site Avg"], errors="coerce").fillna(0.0)
     out["Site Std"] = pd.to_numeric(out["Site Std"], errors="coerce").fillna(0.0)
 
-    modes = out["ErrorKey"].apply(lambda k: _quality_mode_for(fc, k))
+    # Load quality_mode.json once — reused by _quality_mode_for and _is_error_enabled
+    _qmode_cfg = _load_json("quality_mode.json", {})
+    modes = out["ErrorKey"].apply(lambda k: _quality_mode_for(fc, k, _qmode_cfg))
     out["Mode"] = modes.apply(lambda x: x["mode"])
     out["Sigma Threshold"] = modes.apply(lambda x: float(x["sigma_threshold"]))
     out["Min Errors"] = modes.apply(lambda x: int(x["min_errors"]))
 
     # ─── Filter out disabled errors ────────────────────────────────────
-    enabled_mask = out["ErrorKey"].apply(lambda k: _is_error_enabled(fc, k))
+    enabled_mask = out["ErrorKey"].apply(lambda k: _is_error_enabled(fc, k, _qmode_cfg))
     disabled_count = (~enabled_mask).sum()
     if disabled_count > 0:
         log.info(f"Quality filter: removing {disabled_count} rows of disabled error types")
@@ -619,14 +727,13 @@ def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: dateti
     out["Course UUID"] = courses.apply(lambda x: x[0])
     out["Course ID"] = courses.apply(lambda x: x[1])
 
-    # Presence from Roster_SCC PunchType
-    presence = roster_df if (roster_df is not None and not roster_df.empty) else _read_roster_presence(fc)
+    # Presence: use pre-fetched roster_df from parallel pool (avoids a second SCC round-trip)
+    presence = roster_df if (roster_df is not None and not roster_df.empty) else _fetch_punch_presence(fc)
     if not presence.empty:
-        out = out.merge(presence, on="Login", how="left")
+        out = out.merge(presence[["Login", "PunchType", "Present"]], on="Login", how="left")
     else:
         out["PunchType"] = ""
         out["Present"] = False
-
     out["PunchType"] = out.get("PunchType", "").fillna("")
     out["Present"] = out.get("Present", False).fillna(False).astype(bool)
 
@@ -656,6 +763,7 @@ def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: dateti
 
     dpmo_targets_data = _load_dpmo_targets()
     dpmo_list, target_errors_list, pct_list = [], [], []
+    curve_list, tenure_list, home_list = [], [], []
 
     for _, row in out.iterrows():
         error_key = str(row.get("ErrorKey", ""))
@@ -665,7 +773,7 @@ def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: dateti
         actual_errors = float(row.get("Total Errors WK", 0) or 0)
 
         # Determine curve and hours from tenure data
-        curve, hours = "NH", 0.0
+        curve, hours, home_process, tenure_wk = "NH", 0.0, "", 1
         if _tenure_ok:
             try:
                 proc_mapped = map_process(process_raw) if process_raw else ""
@@ -673,6 +781,8 @@ def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: dateti
                     info = get_tenure_for(tenure_df, login, proc_mapped)
                     curve = info.get("curve", "NH")
                     hours = info.get("hours", 0.0)
+                    home_process = info.get("home_process", "")
+                    tenure_wk = info.get("tenure", 1)
                     if curve == "VETERAN":
                         curve = "VETERAN"
                     elif curve == "XT":
@@ -681,6 +791,10 @@ def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: dateti
                         curve = "XT_NH"
             except Exception:
                 pass
+
+        curve_list.append(curve)
+        tenure_list.append(tenure_wk)
+        home_list.append(home_process)
 
         dpmo = get_dpmo_target(fc, error_key, curve, hours)
         target_err = (dpmo * opportunities) / 1_000_000 if opportunities > 0 else 0
@@ -693,12 +807,40 @@ def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: dateti
     out["DPMO_Target"] = dpmo_list
     out["Target_Errors"] = target_errors_list
     out["Pct_to_Target"] = pct_list
+    out["Curve"] = curve_list
+    out["Tenure"] = tenure_list
+    out["HomeProcess"] = home_list
+
+    # ─── Cohort enrichment from Roster ──────────────────────────────────
+    # Roster_SCC.csv has Login + Cohort. Merge to get cohort for each quality row.
+    try:
+        roster_path = OUTPUT_DIR / "Roster_SCC.csv"
+        if roster_path.exists():
+            roster_cohort = pd.read_csv(roster_path, usecols=lambda c: c in ["Login", "Cohort", "login", "cohort"], dtype=str)
+            roster_cohort.columns = [c.title() if c.lower() in ("login", "cohort") else c for c in roster_cohort.columns]
+            if "Login" in roster_cohort.columns and "Cohort" in roster_cohort.columns:
+                roster_cohort["Login"] = roster_cohort["Login"].astype(str).str.strip().str.lower()
+                roster_cohort["Cohort"] = roster_cohort["Cohort"].fillna("").astype(str).str.strip()
+                roster_cohort = roster_cohort[roster_cohort["Cohort"].str.len() > 0].drop_duplicates("Login", keep="first")
+                out["_login_lower"] = out["Login"].astype(str).str.strip().str.lower()
+                cohort_map = dict(zip(roster_cohort["Login"], roster_cohort["Cohort"]))
+                out["Cohort"] = out["_login_lower"].map(cohort_map).fillna("")
+                out.drop(columns=["_login_lower"], inplace=True)
+                log.info("Cohort enriched: %d/%d rows", (out["Cohort"].str.len() > 0).sum(), len(out))
+            else:
+                out["Cohort"] = ""
+        else:
+            out["Cohort"] = ""
+    except Exception as e:
+        log.warning("Cohort enrichment failed: %s", e)
+        out["Cohort"] = ""
 
     ordered = [
         "FC", "Login", "Process", "Error Type", "ErrorKey", "Total Errors WK",
-        "Opportunities", "DPMO_Target", "Target_Errors", "Pct_to_Target",
+        "Opportunities", "Population", "DPMO_Target", "Target_Errors", "Pct_to_Target",
         "Site Avg", "Site Std", "Sigma", "Mode", "Sigma Threshold", "Threshold",
-        "Population", "Max Errors", "Present", "PunchType", "Coached",
+        "Max Errors", "Curve", "Tenure", "HomeProcess", "Cohort",
+        "Present", "PunchType", "Coached",
         "Course UUID", "Course ID", "Transcript URL", "Photo URL",
         "Week Start", "Week End",
     ]
@@ -735,7 +877,7 @@ def run(fc: str = "BCN4", force_download: bool = True) -> Path:
         return fetch_and_build_fps(fc, start_str, end_str, force_refresh=force_download)
 
     def _task_roster():
-        return _read_roster_presence(fc)
+        return _fetch_punch_presence(fc)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
         fut_atlas = pool.submit(_task_atlas)

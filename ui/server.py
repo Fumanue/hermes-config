@@ -27,12 +27,24 @@ from project_hermes.domains.tenure_hours import load_tenure_data, get_tenure_for
 from project_hermes.domains.guided_coaching_uploader import GuidedCoachingUploader
 from project_hermes.services.pipeline import run_pipeline
 from project_hermes.domains.auth_phonetool import get_phonetool_user, resolve_permissions, ALLOWED_SITES
+from project_hermes.domains.gca_compliance import run_gca_compliance_pipeline, load_gca_compliance_cache
 
 # ─────────────────────────────────────────────────────────
 # App
 # ─────────────────────────────────────────────────────────
 app = FastAPI(title="Coaching Hub API", version="1.0.0")
 log = get_logger(__name__)
+
+# ─────────────────────────────────────────────────────────
+# Pipeline job store (for XHR polling — replaces SSE)
+# ─────────────────────────────────────────────────────────
+import uuid as _uuid
+_pipeline_jobs: dict = {}  # job_id → {"pct", "msg", "status": "running"|"done"|"error", "ok", "error"}
+
+def _make_job() -> str:
+    job_id = _uuid.uuid4().hex
+    _pipeline_jobs[job_id] = {"pct": 0, "msg": "Iniciando…", "status": "running"}
+    return job_id
 
 app.add_middleware(
     CORSMiddleware,
@@ -237,7 +249,10 @@ def auto_detect_shift(fc: str = "BCN4", now: datetime | None = None) -> str:
     now = now or datetime.now()
     h, m = now.hour, now.minute
     cur_min = h * 60 + m
+    # Skip "CENTRAL" from auto-detection — user must select it manually
     for shift_key, (sh, sm, eh, em) in _fc_shifts(fc).items():
+        if shift_key.upper() == "CENTRAL":
+            continue
         start = sh * 60 + sm
         end   = eh * 60 + em
         if start < end:
@@ -258,12 +273,22 @@ def compute_shift_range(shift: str, fc: str = "BCN4", now: datetime | None = Non
     # If end <= start time → crosses midnight
     end_base = datetime.combine(today, end_t)
     if (eh * 60 + em) <= (sh * 60 + sm):
-        # crosses midnight: if current time is before end, start was yesterday
         cur_min = now.hour * 60 + now.minute
-        if cur_min < (eh * 60 + em):
+        shift_start_min = sh * 60 + sm
+        shift_end_min = eh * 60 + em
+        # Determine if we are currently INSIDE this overnight shift:
+        # Inside = cur_min >= shift_start (e.g. >=22:00) OR cur_min < shift_end (e.g. <06:00)
+        inside_shift = (cur_min >= shift_start_min) or (cur_min < shift_end_min)
+        if cur_min < shift_end_min:
+            # We're in the early-morning portion (e.g. 04:00) → last night
+            start = datetime.combine(today - timedelta(days=1), time(sh, sm))
+            end_base = datetime.combine(today, end_t)
+        elif not inside_shift:
+            # We're outside the shift entirely (e.g. 14:00) → last night
             start = datetime.combine(today - timedelta(days=1), time(sh, sm))
             end_base = datetime.combine(today, end_t)
         else:
+            # We're in the late-evening portion (e.g. 23:00) → tonight
             end_base = datetime.combine(today + timedelta(days=1), end_t)
     return start, end_base
 
@@ -501,15 +526,17 @@ def health():
 
 
 @app.get("/api/shift")
-def api_shift(fc: str = DEFAULT_FC):
+def api_shift(fc: str = DEFAULT_FC, shift: str = ""):
     now   = datetime.now()
     fc    = (fc or DEFAULT_FC).strip().upper()
-    shift = auto_detect_shift(fc, now)
+    shift = shift.strip().upper() if shift.strip() else auto_detect_shift(fc, now)
     s, e  = compute_shift_range(shift, fc, now)
     shifts = _fc_shifts(fc)
     return {
         "current": shift,
         "label":   SHIFT_DISPLAY.get(shift, shift),
+        "start_full": s.strftime("%Y-%m-%d %H:%M"),
+        "end_full":   e.strftime("%Y-%m-%d %H:%M"),
         "start":   s.strftime("%H:%M"),
         "end":     e.strftime("%H:%M"),
         "time":    now.strftime("%H:%M"),
@@ -693,6 +720,21 @@ def api_dashboard(fc: str = DEFAULT_FC, shift: str = ""):
         "depts":   depts,
         "role_p3": role_p3,
     }
+
+
+@app.get("/api/map-layout")
+def api_map_layout(fc: str = DEFAULT_FC):
+    """Return floor map layout config for the given FC."""
+    fp = CONFIG_DIR / "map_layouts.json"
+    if not fp.exists():
+        return {"floors": []}
+    try:
+        all_layouts = json.loads(fp.read_text(encoding="utf-8"))
+        fc_upper = str(fc or "").strip().upper()
+        layout = all_layouts.get(fc_upper) or {"floors": []}
+        return layout
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/targets")
@@ -911,7 +953,10 @@ def api_shifts(fc: str = DEFAULT_FC):
     for key, (sh, sm, eh, em) in shifts.items():
         label = f"{SHIFT_DISPLAY.get(key, key.replace('_',' ').title())} — {sh:02d}:{sm:02d} → {eh:02d}:{em:02d}"
         result.append({"key": key, "label": label, "is_current": key == current})
-    return {"fc": fc, "shifts": result, "current": current}
+    # Include full datetime range for the current/auto-detected shift
+    s, e = compute_shift_range(current, fc, now)
+    return {"fc": fc, "shifts": result, "current": current,
+            "start_full": s.strftime("%Y-%m-%d %H:%M"), "end_full": e.strftime("%Y-%m-%d %H:%M")}
 
 
 @app.get("/api/auth/me")
@@ -1041,6 +1086,56 @@ def api_pipeline_stream(fc: str = DEFAULT_FC, shift: str = ""):
     )
 
 
+@app.post("/api/pipeline/start")
+def api_pipeline_start(fc: str = DEFAULT_FC, shift: str = ""):
+    """Start pipeline in background, return job_id for polling."""
+    import threading
+
+    fc_upper = str(fc or "").strip().upper()
+    if fc_upper not in ALLOWED_SITES:
+        raise HTTPException(status_code=403, detail="Site no habilitado")
+
+    shift = shift or auto_detect_shift(fc_upper)
+    _log_usage(fc_upper, os.environ.get("USERNAME", "unknown"), "Performance")
+    start_dt, end_dt = compute_shift_range(shift, fc_upper)
+    job_id = _make_job()
+
+    def _worker():
+        buf = StringIO()
+        try:
+            def _progress(pct: int, msg: str):
+                _pipeline_jobs[job_id]["pct"] = pct
+                _pipeline_jobs[job_id]["msg"] = msg
+
+            def _inner():
+                with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                    run_pipeline(fc, start_dt, end_dt, run_clean=True, on_progress=_progress)
+
+            with_com_init(_inner)
+            _pipeline_jobs[job_id].update({"pct": 100, "msg": "✅ Pipeline completado", "status": "done", "ok": True})
+        except Exception as e:
+            import traceback as _tb
+            full_tb = _tb.format_exc()
+            try:
+                _lf = paths.cache / f"pipeline_error_{datetime.now().strftime('%Y%m%d_%H%M%S')}_poll.log"
+                _lf.write_text(full_tb, encoding="utf-8")
+            except Exception:
+                pass
+            _pipeline_jobs[job_id].update({"pct": 100, "msg": f"❌ Error: {e}", "status": "error", "ok": False, "error": str(e)})
+
+    threading.Thread(target=_worker, daemon=True).start()
+    return {"job_id": job_id}
+
+
+@app.get("/api/pipeline/status/{job_id}")
+def api_pipeline_status(job_id: str):
+    """Poll pipeline progress by job_id."""
+    job = _pipeline_jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
+
+
 @app.post("/api/coaching/upload")
 def api_upload(req: UploadRequest):
     try:
@@ -1150,10 +1245,15 @@ def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False, site
             courses_cfg = _load_json("quality_courses.json", {})
             course_base = str(courses_cfg.get("course_base", "")).strip()
             quality_course_urls: set[str] = set()
-            for uuid in (courses_cfg.get("errors") or {}).values():
+            for val in (courses_cfg.get("errors") or {}).values():
+                # Handle both old format (string) and new format (dict)
+                if isinstance(val, dict):
+                    uuid = str(val.get("uuid", "")).strip()
+                else:
+                    uuid = str(val).strip()
                 if uuid:
                     quality_course_urls.add(f"{course_base}{uuid}".lower())
-                    quality_course_urls.add(str(uuid).lower())  # also match bare UUID
+                    quality_course_urls.add(uuid.lower())
 
             # Build employeeID → login mapping from Roster_SCC
             eid_to_login: dict[str, str] = {}
@@ -1169,14 +1269,17 @@ def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False, site
             except Exception as e:
                 log.info("roster eid mapping failed: {e}")
 
-            # Build login → cohort mapping from Dashboard_Full.csv
+            # Build login → cohort mapping from Roster_SCC.csv (has ALL associates, not just active shift)
             cohort_map: dict[str, str] = {}
             try:
-                dash_fp = OUTPUT_DIR / "Dashboard_Full.csv"
-                if dash_fp.exists():
-                    dash_df = pd.read_csv(dash_fp, usecols=["Login", "Cohort"], dtype=str)
-                    for _, dr in dash_df.iterrows():
-                        cohort_map[str(dr.get("Login", "")).strip().lower()] = str(dr.get("Cohort", "")).strip()
+                roster_cohort_fp = OUTPUT_DIR / "Roster_SCC.csv"
+                if roster_cohort_fp.exists():
+                    roster_cohort_df = pd.read_csv(roster_cohort_fp, usecols=["Login", "Cohort"], dtype=str)
+                    for _, dr in roster_cohort_df.iterrows():
+                        lg = str(dr.get("Login", "")).strip().lower()
+                        co = str(dr.get("Cohort", "")).strip()
+                        if lg and co and co.lower() not in ("nan", "none", ""):
+                            cohort_map[lg] = co
             except Exception:
                 pass
 
@@ -1571,3 +1674,57 @@ def api_admin_push_config():
         print(f"[PUSH-CONFIG] Git error: {e}", flush=True)
 
     return {"ok": True, "target": str(target), "files": copied, "count": len(copied), "git": git_result}
+
+
+# ═══════════════════════════════════════════════════════════════
+# GCA COMPLIANCE (independent pipeline)
+# ═══════════════════════════════════════════════════════════════
+
+@app.get("/api/gca/dashboard")
+def api_gca_dashboard(fc: str = DEFAULT_FC):
+    """Return cached GCA compliance data."""
+    fc = (fc or DEFAULT_FC).strip().upper()
+    data = load_gca_compliance_cache(fc)
+    if not data:
+        return {"ok": False, "error": "No data. Run the GCA pipeline first."}
+    return {"ok": True, **data}
+
+
+@app.get("/api/gca/pipeline")
+def api_gca_pipeline_stream(fc: str = DEFAULT_FC):
+    """SSE stream for GCA Compliance pipeline."""
+    import queue, threading, json as _json
+
+    fc_upper = (fc or DEFAULT_FC).strip().upper()
+
+    q: queue.Queue = queue.Queue()
+
+    def _send(pct: int, msg: str):
+        q.put({"pct": pct, "msg": msg})
+
+    def _worker():
+        try:
+            result = with_com_init(
+                lambda: run_gca_compliance_pipeline(fc_upper, on_progress=_send)
+            )
+            q.put({"pct": 100, "msg": "\u2705 GCA Compliance ready", "ok": True,
+                   "kpis": result.get("kpis", {})})
+        except Exception as e:
+            q.put({"pct": 100, "msg": f"\u274c {e}", "ok": False, "error": str(e)})
+        finally:
+            q.put(None)
+
+    def _worker_thread():
+        _worker()
+
+    threading.Thread(target=_worker_thread, daemon=True).start()
+
+    def _gen():
+        while True:
+            item = q.get()
+            if item is None:
+                break
+            yield f"data: {_json.dumps(item)}\n\n"
+
+    from starlette.responses import StreamingResponse
+    return StreamingResponse(_gen(), media_type="text/event-stream")

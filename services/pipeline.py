@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -18,10 +19,25 @@ class PipelineResult:
     output_dir: Path
     dashboard_full: Path
 
+
+def _prefetch_gc_history(fc: str) -> None:
+    """Pre-fetch Guided Coaching history in background while download runs.
+
+    This warms the cache so dashboard_builder doesn't block on the HTTP call.
+    Non-fatal: if it fails, dashboard_builder will fetch it synchronously.
+    """
+    try:
+        from project_hermes.domains.guided_coaching_history import fetch_guided_coaching_history
+        fetch_guided_coaching_history(fc, force_refresh=True)
+        log.info("✓ GC history pre-fetched for %s", fc)
+    except Exception as e:
+        log.info("⚠ GC history pre-fetch failed (non-fatal): %s", e)
+
+
 def run_pipeline(fc: str, start_dt: datetime, end_dt: datetime, run_clean: bool = False, on_progress=None) -> PipelineResult:
     """
     End-to-end pipeline:
-      1) Download raw + cleaned flags (downloader)
+      1) Download raw + cleaned flags (downloader) — GC history pre-fetched in parallel
       2) Optional cleaner pass
       3) Build Dashboard_Full.csv
 
@@ -37,11 +53,18 @@ def run_pipeline(fc: str, start_dt: datetime, end_dt: datetime, run_clean: bool 
     paths = get_paths()
     fc = (fc or "BCN4").strip().upper()
 
+    # Pre-fetch GC history in parallel with downloads (saves 2-5s)
+    gc_thread = threading.Thread(target=_prefetch_gc_history, args=(fc,), daemon=True, name="gc-prefetch")
+    gc_thread.start()
+
     # 1) downloads
     _progress(5, "⬇️ Descargando datos...")
     downloader_run(fc, start_dt, end_dt)
 
-    # 2) optional cleaning pass
+    # Wait for GC pre-fetch to finish before dashboard build
+    gc_thread.join(timeout=30)
+
+    # 2) optional cleaning pass (skip if downloader already cleaned — it does by default)
     if run_clean:
         _progress(70, "🧹 Limpiando datos...")
         cleaner_run(paths.output)

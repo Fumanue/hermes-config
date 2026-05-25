@@ -28,7 +28,7 @@ GC_ENDPOINT = f"{GC_HOST}/api/coaching/SearchCoachingInstances"
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
 
 # ✅ fijo como pediste
-DAYS_FIXED = 7
+DAYS_FIXED = 3
 
 # ✅ SOLO manual (lista explícita mínima; la podrás mover a JSON luego)
 DEFAULT_MANUAL_REASONS = [

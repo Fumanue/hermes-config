@@ -29,7 +29,6 @@ import pandas as pd
 from project_hermes.config import get_paths
 from project_hermes.domains.necro_targets import get_necro_targets, get_necro_targets_wk1
 from project_hermes.domains.guided_coaching_history import fetch_guided_coaching_history
-from project_hermes.domains.guided_coaching_index import build_guided_coaching_course_index
 from project_hermes.domains.atlas_quality import quality_comments_for_dash
 from project_hermes.core.logger import get_logger
 from project_hermes.domains.exemptions import get_exempt_logins_for_process
@@ -223,8 +222,14 @@ except Exception:
 COURSE_BASE_URL = str(GC_COURSE_CFG.get("course_base") or DEFAULT_GC_COURSES["course_base"]).strip()
 TRANSCRIPT_BASE_URL = str(GC_COURSE_CFG.get("transcript_base") or DEFAULT_GC_COURSES["transcript_base"]).strip()
 INSTANCE_BASE_URL = str(GC_COURSE_CFG.get("instance_base_url") or "").strip()
+def _extract_uuid(v) -> str:
+    """Extract UUID from role_to_course_uuid value (supports both dict and string formats)."""
+    if isinstance(v, dict):
+        return str(v.get("uuid", "")).strip().lower()
+    return str(v).strip().lower()
+
 ROLE_TO_COURSE_UUID = {
-    str(k).upper(): str(v).strip().lower()
+    str(k).upper(): _extract_uuid(v)
     for k, v in (GC_COURSE_CFG.get("role_to_course_uuid") or {}).items()
 }
 STATION_COURSE_KEY_OVERRIDES = list(GC_COURSE_CFG.get("station_course_key_overrides") or [])
@@ -250,10 +255,15 @@ def load_csv(name: str) -> pd.DataFrame:
     p = OUTPUT_DIR / name
     if not p.exists():
         raise FileNotFoundError(f"Missing file: {p}")
+    # Check in-memory cache first
+    if name in _csv_cache:
+        return _csv_cache[name]
     try:
-        return norm_cols(pd.read_csv(p))
+        df = norm_cols(pd.read_csv(p))
     except UnicodeDecodeError:
-        return norm_cols(pd.read_csv(p, encoding="latin-1"))
+        df = norm_cols(pd.read_csv(p, encoding="latin-1"))
+    _csv_cache[name] = df
+    return df
 
 
 def try_load_csv(name: str) -> pd.DataFrame | None:
@@ -265,6 +275,10 @@ def try_load_csv(name: str) -> pd.DataFrame | None:
     except Exception as e:
         log.info("⚠ Could not load {name}: {e}")
         return None
+
+
+# In-memory CSV cache — avoids re-reading the same file multiple times during a single build
+_csv_cache: dict[str, pd.DataFrame] = {}
 
 
 def normalize_employee_id(emp_id) -> str:
@@ -382,48 +396,156 @@ def resolve_course_uuid(role: str, station: str = "", dept: str = "") -> str:
 
 
 def _build_gc_coached_column(dash: pd.DataFrame, fc: str) -> pd.Series:
+    """Performance coached check — vectorized version.
+
+    An associate is coached if GC contains a COMPLETED instance for them
+    using one of the Performance course UUIDs valid for their role.
+    """
     result = pd.Series("", index=dash.index, dtype=str)
     try:
         gc_payload = fetch_guided_coaching_history(fc, force_refresh=False)
-        gc_index = build_guided_coaching_course_index(
-            guided_history_payload=gc_payload,
-            transcript_base_url=TRANSCRIPT_BASE_URL,
-            instance_base_url=INSTANCE_BASE_URL,
-        )
-        log.info("Index built: {len(gc_index)} keys")
-        if not gc_index:
+        items = (gc_payload or {}).get("coachingInstances") or []
+        if not items:
             return result
 
-        def _lookup(row) -> str:
-            course_uuid = resolve_course_uuid(
-                str(row.get("Role", "")).upper().strip(),
-                station=str(row.get("Station", "")).strip(),
-                dept=str(row.get("Dept", "")).strip(),
-            )
-            if not course_uuid:
-                return ""
-            all_v: list[str] = []
-            all_v.extend(create_id_variants(str(row.get("EmployeeId", "")).strip()))
-            all_v.extend(create_id_variants(str(row.get("Login", "")).strip()))
-            digits = extract_badge_number(str(row.get("EmployeeId", "")))
-            if digits:
-                all_v.extend(create_id_variants(digits))
-            seen: set[str] = set()
-            for v in all_v:
-                if v in seen:
-                    continue
-                seen.add(v)
-                rec = gc_index.get((v, course_uuid))
-                if rec:
-                    url = str(rec.get("instance_url") or rec.get("url") or "").strip()
-                    url = url.replace("#/coaching-instance/", "#/view-coaching-instance/")
-                    days = int(rec.get("days_ago", 0) or 0)
-                    if url:
-                        sep = "&" if "?" in url else "?"
-                        return f"{url}{sep}d={days}d"
-            return ""
+        import re as _re
+        from datetime import datetime, timezone
 
-        return dash.apply(_lookup, axis=1).astype(str)
+        # Build set of all valid Performance UUIDs from config
+        coached_check = GC_COURSE_CFG.get("coached_check_keys") or {}
+        perf_uuid_set: set[str] = set()
+        for role_key in ROLE_TO_COURSE_UUID:
+            uuid = ROLE_TO_COURSE_UUID.get(role_key, "")
+            if uuid:
+                perf_uuid_set.add(uuid)
+        for _role, aliases in coached_check.items():
+            for alias in aliases:
+                uuid = ROLE_TO_COURSE_UUID.get(alias.upper(), "")
+                if uuid:
+                    perf_uuid_set.add(uuid)
+
+        log.info("Performance valid UUIDs: {len(perf_uuid_set)}")
+
+        now = datetime.now(timezone.utc)
+
+        # Build index: (employee_id_variant, course_uuid) → best record
+        index: dict[tuple[str, str], dict] = {}
+
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            raw_iid = it.get("instanceId")
+            instance_id = str(raw_iid.get("id", "") if isinstance(raw_iid, dict) else raw_iid or "")
+
+            data = it.get("coachingInstanceData") or {}
+            if not isinstance(data, dict):
+                continue
+
+            emp_id = str((data.get("coachee") or {}).get("employeeID") or "").strip()
+            if not emp_id:
+                continue
+
+            lms = str((data.get("coachingReasonDetails") or {}).get("lmsCourseId", {}).get("detail", "") or "")
+            m = _re.search(r"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})", lms)
+            course_uuid = m.group(1).lower() if m else ""
+
+            if not course_uuid or course_uuid not in perf_uuid_set:
+                continue
+
+            closed_ts = str(data.get("coachingClosedTimestamp") or "").strip()
+            closed_dt = None
+            for ts in [closed_ts, str(data.get("creationTime") or "")]:
+                if ts:
+                    try:
+                        closed_dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                        break
+                    except Exception:
+                        pass
+
+            days_ago = 0
+            if closed_dt:
+                if closed_dt.tzinfo is None:
+                    closed_dt = closed_dt.replace(tzinfo=timezone.utc)
+                days_ago = max(0, int((now - closed_dt).total_seconds() // 86400))
+
+            if INSTANCE_BASE_URL and instance_id:
+                url = f"{INSTANCE_BASE_URL.rstrip('/')}/{instance_id}"
+            else:
+                url = f"{TRANSCRIPT_BASE_URL}{emp_id}"
+            url = url.replace("#/coaching-instance/", "#/view-coaching-instance/")
+
+            rec = {"url": url, "days_ago": days_ago, "closed_ts": closed_ts, "course_uuid": course_uuid}
+
+            def _is_newer(old: dict, new: dict) -> bool:
+                try:
+                    od = datetime.fromisoformat(old["closed_ts"].replace("Z", "+00:00")) if old.get("closed_ts") else None
+                    nd = datetime.fromisoformat(new["closed_ts"].replace("Z", "+00:00")) if new.get("closed_ts") else None
+                    return bool(nd and (not od or nd > od))
+                except Exception:
+                    return False
+
+            for v in create_id_variants(emp_id):
+                key = (str(v).strip(), course_uuid)
+                if key not in index or _is_newer(index[key], rec):
+                    index[key] = rec
+
+        log.info("Performance coached index: {len(index)} keys from {len(items)} GC instances")
+
+        # ── Vectorized lookup (replaces dash.apply) ──
+        # Pre-compute role→valid UUIDs mapping
+        role_uuid_cache: dict[tuple[str, str, str], set[str]] = {}
+
+        def _get_role_uuids(role: str, station: str, dept: str) -> set[str]:
+            cache_key = (role, station, dept)
+            if cache_key in role_uuid_cache:
+                return role_uuid_cache[cache_key]
+            role_uuid_set: set[str] = set()
+            primary = resolve_course_uuid(role, station=station, dept=dept)
+            if primary:
+                role_uuid_set.add(primary)
+            for alias in coached_check.get(role, []):
+                u = ROLE_TO_COURSE_UUID.get(alias.upper(), "")
+                if u:
+                    role_uuid_set.add(u)
+            role_uuid_cache[cache_key] = role_uuid_set
+            return role_uuid_set
+
+        # Process all rows in a tight loop (much faster than pandas apply)
+        roles = dash["Role"].astype(str).str.upper().str.strip().values
+        stations = dash["Station"].astype(str).str.strip().values
+        depts = dash["Dept"].astype(str).str.strip().values if "Dept" in dash.columns else [""] * len(dash)
+        eids = dash["EmployeeId"].astype(str).str.strip().values
+
+        results = [""] * len(dash)
+
+        for i in range(len(dash)):
+            role = roles[i]
+            station = stations[i]
+            dept = depts[i]
+            eid = eids[i]
+
+            role_uuid_set = _get_role_uuids(role, station, dept)
+            if not role_uuid_set:
+                continue
+
+            id_variants = create_id_variants(eid)
+            best_rec = None
+
+            for v in id_variants:
+                v = str(v).strip()
+                for uuid in role_uuid_set:
+                    rec = index.get((v, uuid))
+                    if rec:
+                        if best_rec is None or _is_newer(best_rec, rec):
+                            best_rec = rec
+
+            if best_rec:
+                url = best_rec["url"]
+                days = best_rec["days_ago"]
+                sep = "&" if "?" in url else "?"
+                results[i] = f"{url}{sep}d={days}d"
+
+        return pd.Series(results, index=dash.index, dtype=str)
     except Exception as e:
         log.info("⚠ Could not build coached column: {e}")
         return result
@@ -1061,7 +1183,7 @@ def build_comments(
     h1_data: dict | None,
     h2_data: dict | None,
     roboscout_comments: List[str] | None = None,
-    upt: float | None = None,
+    _upt: float | None = None,
     gap_pct: float | None = None,
     gap_threshold: float | None = None,
     upa_val: float | None = None,
@@ -1128,46 +1250,46 @@ def _load_roster(fc: str) -> pd.DataFrame:
         tenure_df = load_tenure_data(fc)
         # Build lookup: (login, main_process) → {tenure, curve, home_process}
         tenure_lookup = {}
-        # Also build per-login best process (highest hours) for fallback
-        login_best = {}  # login → {tenure, curve, home_process} of their top process
+        login_best = {}  # login → entry with highest tenure (fallback when process unknown)
         for _, tr in tenure_df.iterrows():
-            tenure_lookup[(str(tr["login"]).lower(), tr["main_process"])] = {
-                "tenure": int(tr["tenure"]),
-                "curve": str(tr["curve"]),
-                "home_process": str(tr.get("home_process", "")),
-            }
-
-        # Build login_best: for each login, pick the entry with most hours (highest tenure)
-        for _, tr in tenure_df.iterrows():
-            login_key = str(tr["login"]).lower()
             entry = {
                 "tenure": int(tr["tenure"]),
                 "curve": str(tr["curve"]),
                 "home_process": str(tr.get("home_process", "")),
             }
+            tenure_lookup[(str(tr["login"]).lower(), tr["main_process"])] = entry
+            login_key = str(tr["login"]).lower()
             if login_key not in login_best or entry["tenure"] > login_best[login_key]["tenure"]:
                 login_best[login_key] = entry
 
-        def _resolve_tenure(row):
-            login = str(row.get("Login", "")).strip().lower()
-            role = str(row.get("Role", "")).strip().upper()
+        # Vectorized tenure resolution (replaces row-by-row apply)
+        _r_logins = roster["Login"].astype(str).str.strip().str.lower().values
+        _r_roles = roster["Role"].astype(str).str.strip().str.upper().values
+        _tenure_vals = [1] * len(roster)
+        _curve_vals = ["NH"] * len(roster)
+        _home_vals = [""] * len(roster)
+
+        for i in range(len(roster)):
+            login = _r_logins[i]
+            role = _r_roles[i]
             proc = map_process(role)
             info = tenure_lookup.get((login, proc))
             if info is None:
-                # Fallback: use best process for this login (handles NaN/unknown roles)
                 info = login_best.get(login, {"tenure": 1, "curve": "NH", "home_process": ""})
-            return pd.Series(info)
+            _tenure_vals[i] = info["tenure"]
+            _curve_vals[i] = info["curve"]
+            _home_vals[i] = info["home_process"]
 
-        tenure_cols = roster.apply(_resolve_tenure, axis=1)
-        roster["TenureWk"] = tenure_cols["tenure"].clip(1, 99).astype(int)
-        roster["Curve"] = tenure_cols["curve"]
-        roster["HomeProcess"] = tenure_cols["home_process"]
-        roster["NH_Flag"] = tenure_cols.apply(
-            lambda r: "" if r["curve"] == "VETERAN" else f"{r['curve']} T{r['tenure']}" + (f" ({r['home_process']})" if r["curve"] == "XT" and r["home_process"] else ""),
-            axis=1
-        )
-        roster["Dept"] = roster["Curve"].apply(lambda c: "Ops" if c == "VETERAN" else "L&D")
-        log.info("Hours-based tenure applied: {tenure_cols['curve'].value_counts().to_dict()}")
+        import numpy as _np
+        roster["TenureWk"] = _np.clip(_tenure_vals, 1, 99).astype(int)
+        roster["Curve"] = _curve_vals
+        roster["HomeProcess"] = _home_vals
+        roster["NH_Flag"] = [
+            "" if c == "VETERAN" else f"{c} T{t}" + (f" ({h})" if c == "XT" and h else "")
+            for t, c, h in zip(_tenure_vals, _curve_vals, _home_vals)
+        ]
+        roster["Dept"] = ["Ops" if c == "VETERAN" else "L&D" for c in _curve_vals]
+        log.info("Hours-based tenure applied (vectorized)")
     except Exception as e:
         log.info("Hours-based tenure failed, falling back to days: {e}")
         import numpy as _np
@@ -1461,6 +1583,7 @@ def _apply_fallback_rates(dash: pd.DataFrame, fclm_cache: Dict[str, pd.DataFrame
 def run(fc: str = "BCN4") -> Path:
     fc = (fc or "BCN4").strip().upper()
     _refresh_fc_configs(fc)
+    _csv_cache.clear()  # Clear CSV cache for fresh build
     log.info("=" * 70)
     log.info("BUILDING DASHBOARD — {fc}")
     log.info("=" * 70)
@@ -1542,19 +1665,42 @@ def run(fc: str = "BCN4") -> Path:
     necro_targets = {str(k).upper(): float(v) for k, v in get_necro_targets(fc)["targets"].items()}
     curves = load_curves(TENURE_CURVES_JSON)
 
-    def _resolve_target_row(row):
-        role = str(row["Role"]).upper()
-        station = str(row["Station"])
-        wk = min(10, int(row["TenureWk"]))  # Curves only have keys 1-10
-        pack_target, pack_key = resolve_pack_target(role, station)
-        if not pd.isna(pack_target) and pack_target > 0:
-            factor = get_factor(curves, fc, role_to_target_key(role), wk) if PACK_APPLIES_LC else 1.0
-            return pd.Series({"Target_OP2": pack_target, "Factor": factor, "Target_Tenure": pack_target * factor, "PackLine": pack_key})
-        base = necro_targets.get(role_to_target_key(role), float("nan"))
-        factor = get_factor(curves, fc, role_to_target_key(role), wk)
-        return pd.Series({"Target_OP2": base, "Factor": factor, "Target_Tenure": base * factor if not pd.isna(base) else float("nan"), "PackLine": ""})
+    # ── Vectorized target resolution (replaces row-by-row apply) ──
+    def _vectorized_targets(dash_df: pd.DataFrame) -> pd.DataFrame:
+        n = len(dash_df)
+        target_op2 = pd.array([float("nan")] * n, dtype="Float64")
+        factor_arr = pd.array([1.0] * n, dtype="Float64")
+        pack_line_arr = [""] * n
 
-    targets_df = dash.apply(_resolve_target_row, axis=1)
+        roles = dash_df["Role"].astype(str).str.upper().values
+        stations = dash_df["Station"].astype(str).values
+        tenure_wks = dash_df["TenureWk"].clip(1, 10).astype(int).values
+
+        for i in range(n):
+            role = roles[i]
+            station = stations[i]
+            wk = int(tenure_wks[i])
+            pack_target, pack_key = resolve_pack_target(role, station)
+            if not pd.isna(pack_target) and pack_target > 0:
+                f = get_factor(curves, fc, role_to_target_key(role), wk) if PACK_APPLIES_LC else 1.0
+                target_op2[i] = pack_target
+                factor_arr[i] = f
+                pack_line_arr[i] = pack_key
+            else:
+                base = necro_targets.get(role_to_target_key(role), float("nan"))
+                f = get_factor(curves, fc, role_to_target_key(role), wk)
+                target_op2[i] = base
+                factor_arr[i] = f
+
+        result = pd.DataFrame({
+            "Target_OP2": target_op2,
+            "Factor": factor_arr,
+            "PackLine": pack_line_arr,
+        }, index=dash_df.index)
+        result["Target_Tenure"] = result["Target_OP2"] * result["Factor"]
+        return result
+
+    targets_df = _vectorized_targets(dash)
     dash["Target_OP2"] = targets_df["Target_OP2"]
     dash["Factor"] = targets_df["Factor"]
     dash["Target_Tenure"] = targets_df["Target_Tenure"]
@@ -1586,15 +1732,17 @@ def run(fc: str = "BCN4") -> Path:
         for proc in ["PICK", "PACK", "STOW", "RECEIVE", "ICQA", "DECANT"]:
             exempt_by_proc[proc] = get_exempt_logins_for_process(proc)
 
-        def _is_exempt(row):
-            login = str(row.get("Login", "")).strip().lower()
-            if login in exempt_all:
-                return True
-            role = str(row.get("Role", "")).strip().upper()
-            proc = map_process(role)
-            return login in exempt_by_proc.get(proc, set())
+        # Vectorized exemption check (replaces row-by-row apply)
+        logins_lower = dash["Login"].astype(str).str.strip().str.lower()
+        roles_upper = dash["Role"].astype(str).str.strip().str.upper()
+        processes = roles_upper.map(lambda r: map_process(r))
 
-        exempt_mask = dash.apply(_is_exempt, axis=1)
+        exempt_mask = logins_lower.isin(exempt_all)
+        for proc, exempt_set in exempt_by_proc.items():
+            if exempt_set:
+                proc_mask = (processes == proc) & logins_lower.isin(exempt_set)
+                exempt_mask = exempt_mask | proc_mask
+
         n_exempt = exempt_mask.sum()
         if n_exempt > 0:
             dash.loc[exempt_mask, "SigmaLevel"] = 0
@@ -1629,63 +1777,113 @@ def run(fc: str = "BCN4") -> Path:
     except Exception as e:
         log.info("⚠ {e}")
 
-    # UPT removed — Decant now uses Unit Type = Case (no EACH rows available)
-    def _row_comments_data(r):
-        login = r["Login"]
-        role = str(r["Role"]).upper().strip()
-        eid = str(r.get("EmployeeId", "")).strip()
-        digs = str(r.get("EmployeeId Digits", "") or "").strip()
-        h1 = get_fast_start_for_employee(fs_data, login, "H1")
-        h2 = get_fast_start_for_employee(fs_data, login, "H2")
-        rs = get_roboscout_comments(login, role, rs_data)
-        upt = None
+    # ── Vectorized comments data (replaces row-by-row apply) ──
+    # Pre-build lookup structures for fast vectorized access
+    _logins_lower = dash["Login"].astype(str).str.strip().str.lower()
+    _roles_upper = dash["Role"].astype(str).str.strip().str.upper()
+    _eids = dash["EmployeeId"].astype(str).str.strip()
+    _digs = dash.get("EmployeeId Digits", pd.Series("", index=dash.index)).astype(str).str.strip()
 
-        # GAP is driven by custom_targets.json / gap_thresholds.
-        # Keep it only when the associate is in a GAP-applicable role and the
-        # value is above the FC/role threshold. This avoids showing small gaps
-        # and prevents GAP from appearing on unrelated roles.
-        raw_gap = stow_gap_map.get(str(login or "").strip().lower())
-        gap = None
-        gap_threshold = None
-        if role in {"STOW", "QUANTITY_STOW", "PICK_AR", "P2R_PICK"}:
-            try:
-                gap_threshold = gap_threshold_for_role(role)
-                if raw_gap is not None and float(raw_gap) >= gap_threshold:
-                    gap = float(raw_gap)
-            except Exception:
-                gap = None
-                gap_threshold = None
+    # Fast Starts: build login→row lookup once
+    _fs_h1_map: dict[str, dict] = {}
+    _fs_h2_map: dict[str, dict] = {}
+    if fs_data is not None and not fs_data.empty:
+        for half_label, half_map in [("H1", _fs_h1_map), ("H2", _fs_h2_map)]:
+            half_df = fs_data[fs_data["Half"].astype(str).str.upper() == half_label]
+            for _, row in half_df.iterrows():
+                login_key = str(row["Employee Login"]).strip().lower()
+                if login_key and login_key not in half_map:
+                    half_map[login_key] = {
+                        "duration_min": row.get("Duration (min)", pd.NA),
+                        "on_target": str(row["On Target"]).strip().upper() == "YES",
+                    }
 
-        upa = None
+    # Build columns vectorized
+    n = len(dash)
+    h1_on_target = [None] * n
+    h2_on_target = [None] * n
+    _h1_list = [None] * n
+    _h2_list = [None] * n
+    _rs_list: list[list] = [[] for _ in range(n)]
+    _gap_list = [None] * n
+    _gap_threshold_list = [None] * n
+    _upa_list = [None] * n
+    _mix_list = [None] * n
+    _oowa_list = [None] * n
+    _idle_list = [None] * n
+
+    # GAP-applicable roles set
+    _gap_roles = {"STOW", "QUANTITY_STOW", "PICK_AR", "P2R_PICK"}
+    # UPA/Mix/OOWA applicable roles
+    _stow_roles = {"STOW", "QUANTITY_STOW"}
+    _oowa_roles = {"STOW", "QUANTITY_STOW", "PICK_AR", "P2R_PICK"}
+
+    logins_arr = _logins_lower.values
+    roles_arr = _roles_upper.values
+    eids_arr = _eids.values
+    digs_arr = _digs.values
+
+    for i in range(n):
+        login = logins_arr[i]
+        role = roles_arr[i]
+        eid = eids_arr[i]
+        dig = digs_arr[i]
+
+        # Fast Starts
+        h1 = _fs_h1_map.get(login)
+        h2 = _fs_h2_map.get(login)
+        _h1_list[i] = h1
+        _h2_list[i] = h2
+        h1_on_target[i] = h1["on_target"] if h1 else None
+        h2_on_target[i] = h2["on_target"] if h2 else None
+
+        # RoboScout comments
+        _rs_list[i] = get_roboscout_comments(login, role, rs_data)
+
+        # GAP
+        if role in _gap_roles:
+            raw_gap = stow_gap_map.get(login)
+            if raw_gap is not None:
+                try:
+                    gt = gap_threshold_for_role(role)
+                    if float(raw_gap) >= gt:
+                        _gap_list[i] = float(raw_gap)
+                        _gap_threshold_list[i] = gt
+                except Exception:
+                    pass
+
+        # UPA
         if role == "QUANTITY_STOW":
-            raw = _upa_map.get(eid) or (_upa_map.get(digs) if digs else None)
+            raw = _upa_map.get(eid) or (_upa_map.get(dig) if dig else None)
             tgt = UPA_TARGETS.get("QUANTITY_STOW")
             if raw is not None and (tgt is None or raw < tgt):
-                upa = raw
-        mix_share = None
-        if role in {"STOW", "QUANTITY_STOW"}:
-            mix_share = stow_mix_share_map.get(eid) or (stow_mix_share_map.get(digs) if digs else None)
-        oowa = None
-        if role in {"STOW", "QUANTITY_STOW", "PICK_AR", "P2R_PICK"}:
-            oowa = oowa_map.get(str(login or "").strip().lower())
-        idle_pct = compute_idle_pct_for_row(r, pi_data)
-        return {
-            "H1_OnTarget": h1["on_target"] if h1 else None,
-            "H2_OnTarget": h2["on_target"] if h2 else None,
-            "_H1": h1,
-            "_H2": h2,
-            "_RS": rs,
-            "_UPT": upt,
-            "_GAP": gap,
-            "_GAP_THRESHOLD": gap_threshold,
-            "_UPA": upa,
-            "_MIX": mix_share,
-            "_OOWA": oowa,
-            "_IDLE": idle_pct,
-        }
+                _upa_list[i] = raw
 
-    extra = dash.apply(_row_comments_data, axis=1, result_type="expand")
-    dash = dash.join(extra)
+        # Mix Share
+        if role in _stow_roles:
+            _mix_list[i] = stow_mix_share_map.get(eid) or (stow_mix_share_map.get(dig) if dig else None)
+
+        # OOWA
+        if role in _oowa_roles:
+            _oowa_list[i] = oowa_map.get(login)
+
+        # IDLE
+        _idle_list[i] = compute_idle_pct_for_row(
+            {"EmployeeId": eid, "EmployeeId Digits": dig, "Role": role, "ProcessId": dash.iloc[i].get("ProcessId", "")},
+            pi_data,
+        )
+
+    dash["H1_OnTarget"] = h1_on_target
+    dash["H2_OnTarget"] = h2_on_target
+    dash["_H1"] = _h1_list
+    dash["_H2"] = _h2_list
+    dash["_RS"] = _rs_list
+    dash["_GAP"] = _gap_list
+    dash["_GAP_THRESHOLD"] = _gap_threshold_list
+    dash["_UPA"] = _upa_list
+    dash["_MIX"] = _mix_list
+    dash["_OOWA"] = _oowa_list
+    dash["_IDLE"] = _idle_list
     log.info("FS off-target: H1={(dash['H1_OnTarget'].eq(False)).sum()}, H2={(dash['H2_OnTarget'].eq(False)).sum()}")
     log.info("RoboScout flagged: {dash['_RS'].apply(lambda x: bool(x)).sum()} employees")
     log.info("STOW Mix Share: {dash['_MIX'].apply(lambda x: bool(x)).sum()} employees")
@@ -1723,38 +1921,44 @@ def run(fc: str = "BCN4") -> Path:
             return quality_comment
 
         return f"{base_comment}; {quality_comment}"
-    dash["Comments"] = dash.apply(
-        lambda r: _append_quality_comment(
-            build_comments(
-                r["_H1"],
-                r["_H2"],
-                r["_RS"],
-                r.get("_UPT"),
-                r.get("_GAP"),
-                r.get("_GAP_THRESHOLD"),
-                r.get("_UPA"),
-                r.get("_MIX"),
-                r.get("_OOWA"),
-                r.get("_IDLE"),
-                IDLE_COMMENT_ENABLED,
-                IDLE_COMMENT_THRESHOLD,
-            ),
-            _quality_map.get(str(r.get("Login", "")).strip().lower(), ""),
-        ),
-        axis=1,
-    )
+    # ── Vectorized comments build (replaces row-by-row apply) ──
+    _comments_arr = [""] * n
+    for i in range(n):
+        base = build_comments(
+            _h1_list[i],
+            _h2_list[i],
+            _rs_list[i],
+            None,
+            _gap_list[i],
+            _gap_threshold_list[i],
+            _upa_list[i],
+            _mix_list[i],
+            _oowa_list[i],
+            _idle_list[i],
+            IDLE_COMMENT_ENABLED,
+            IDLE_COMMENT_THRESHOLD,
+        )
+        login = logins_arr[i]
+        quality_comment = _quality_map.get(login, "")
+        _comments_arr[i] = _append_quality_comment(base, quality_comment)
+
+    dash["Comments"] = _comments_arr
     dash["%IDLE"] = dash["_IDLE"]
     dash["%Unproductive"] = dash["_IDLE"]
-    dash.drop(columns=["_H1", "_H2", "_RS", "_UPT", "_GAP", "_GAP_THRESHOLD", "_UPA", "_MIX", "_OOWA", "_IDLE"], inplace=True, errors="ignore")
+    dash.drop(columns=["_H1", "_H2", "_RS", "_GAP", "_GAP_THRESHOLD", "_UPA", "_MIX", "_OOWA", "_IDLE"], inplace=True, errors="ignore")
     log.info("✓ Non-empty: {(dash['Comments'].astype(str).str.strip().str.len() > 0).sum()}/{len(dash)}")
 
     # PHASE 4 guided coaching
     dash["Coached"] = _build_gc_coached_column(dash, fc)
 
     # Display-only station cleanup: ICQA_SIMPLE_BIN_COUNT k-A-04-4177 -> 4177.
-    # This does NOT change the existing behavior around blank station filtering.
+    # Vectorized version (replaces row-by-row apply)
     if "Station" in dash.columns and "Role" in dash.columns:
-        dash["Station"] = dash.apply(lambda r: normalize_display_station(r.get("Role", ""), r.get("Station", "")), axis=1)
+        icqa_sbc_mask = dash["Role"].astype(str).str.upper().str.strip() == "ICQA_SIMPLE_BIN_COUNT"
+        if icqa_sbc_mask.any():
+            extracted = dash.loc[icqa_sbc_mask, "Station"].astype(str).str.extract(r"(\d{4})\s*$", expand=False)
+            valid = extracted.notna()
+            dash.loc[icqa_sbc_mask & valid.reindex(dash.index, fill_value=False), "Station"] = extracted[valid].values
 
     # DECANT station filter: only keep ws-rcv-XX-XX stations (real decant workstations)
     if "Role" in dash.columns and "Station" in dash.columns:
@@ -1782,15 +1986,9 @@ def run(fc: str = "BCN4") -> Path:
     ]
     full_df = dash[[c for c in full_cols if c in dash.columns]].copy()
 
-    def _mode_sort_key(mode: int) -> int:
-        if mode == 1:
-            return 0
-        if mode == 2:
-            return 1
-        return 2
-
     if "Mode" in full_df.columns:
-        full_df["_mode_sort"] = full_df["Mode"].apply(_mode_sort_key)
+        _mode_map = {1: 0, 2: 1}
+        full_df["_mode_sort"] = full_df["Mode"].map(_mode_map).fillna(2).astype(int)
         full_df = full_df.sort_values(by=["_mode_sort", "Sigma", "% to OP2"], ascending=[True, False, True]).drop(columns=["_mode_sort"])
     else:
         full_df = full_df.sort_values(by=["Sigma", "% to OP2"], ascending=[False, True])

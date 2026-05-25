@@ -77,6 +77,111 @@
   --scroll-thumb:#5d7585;
   --logo-from:#1e40af;--logo-to:#60a5fa;
 }
+[data-theme="zelda"]{
+  /* Breath of the Wild — #fdffe0, #92c582, #86a5a9, #767676, #536f50 */
+  --bg-body:#f8fce8;
+  --bg-topbar:#eef5d8;
+  --bg-card:#fcfef2;
+  --bg-panel:#f0f6e0;
+  --bg-input:#fcfef2;
+  --bg-modal:#fcfef2;
+  --bg-table-head:#e8f0d0;
+  --border:#c8d8a8;
+  --border-strong:#a0b888;
+  --text:#2a3a24;
+  --text-secondary:#536f50;
+  --text-muted:#767676;
+  --text-dim:#a0b0a0;
+  --accent:#536f50;
+  --accent2:#92c582;
+  --accent-light:rgba(83,111,80,0.08);
+  --accent-border:#536f50;
+  --accent-text:#3a5038;
+  --blue:#86a5a9;
+  --blue-light:rgba(134,165,169,0.12);
+  --green:#92c582;
+  --red:#b85450;
+  --orange:#a08840;
+  --shadow:rgba(42,58,36,0.10);
+  --row-hover:rgba(146,197,130,0.08);
+  --gradient:linear-gradient(90deg,#536f50,#92c582,#86a5a9,#536f50);
+  --tab-active:linear-gradient(135deg,#536f50,#92c582);
+  --btn-pipeline:linear-gradient(135deg,#536f50,#6a9060);
+  --btn-primary:linear-gradient(135deg,#536f50,#92c582);
+  --coached-bg:rgba(146,197,130,0.08);
+  --scroll-thumb:#a0b888;
+  --logo-from:#536f50;--logo-to:#92c582;
+}
+[data-theme="midnight"]{
+  /* Midnight — deep navy, electric cyan, clean contrast */
+  --bg-body:#0d1117;
+  --bg-topbar:#161b22;
+  --bg-card:#1c2128;
+  --bg-panel:#161b22;
+  --bg-input:#21262d;
+  --bg-modal:#1c2128;
+  --bg-table-head:#161b22;
+  --border:#30363d;
+  --border-strong:#3d444d;
+  --text:#e6edf3;
+  --text-secondary:#8b949e;
+  --text-muted:#656d76;
+  --text-dim:#3d444d;
+  --accent:#2f81f7;
+  --accent2:#56d364;
+  --accent-light:rgba(47,129,247,0.1);
+  --accent-border:#1f6feb;
+  --accent-text:#58a6ff;
+  --blue:#58a6ff;
+  --blue-light:rgba(88,166,255,0.1);
+  --green:#3fb950;
+  --red:#f85149;
+  --orange:#d29922;
+  --shadow:rgba(0,0,0,0.3);
+  --row-hover:rgba(47,129,247,0.04);
+  --gradient:linear-gradient(90deg,#1158b5,#2f81f7,#58a6ff,#56d364);
+  --tab-active:linear-gradient(135deg,#1158b5,#2f81f7);
+  --btn-pipeline:linear-gradient(135deg,#1158b5,#2f81f7);
+  --btn-primary:linear-gradient(135deg,#238636,#3fb950);
+  --coached-bg:rgba(56,211,80,0.06);
+  --scroll-thumb:#3d444d;
+  --logo-from:#2f81f7;--logo-to:#56d364;
+}
+[data-theme="cherry"]{
+  /* Cherry blossom — soft light with pink accent, NOT dark */
+  --bg-body:#fdf6f8;
+  --bg-topbar:#f8eef2;
+  --bg-card:#fff9fb;
+  --bg-panel:#f8eef2;
+  --bg-input:#fff9fb;
+  --bg-modal:#fff9fb;
+  --bg-table-head:#f8eef2;
+  --border:#f0d8e4;
+  --border-strong:#e0c0d0;
+  --text:#2a1820;
+  --text-secondary:#704858;
+  --text-muted:#a07888;
+  --text-dim:#d0b0bc;
+  --accent:#d4386c;
+  --accent2:#e8709a;
+  --accent-light:rgba(212,56,108,0.08);
+  --accent-border:#d4386c;
+  --accent-text:#a82855;
+  --blue:#6070cc;
+  --blue-light:rgba(96,112,204,0.1);
+  --green:#38a06a;
+  --red:#d03050;
+  --orange:#d07820;
+  --shadow:rgba(42,24,32,0.1);
+  --row-hover:rgba(212,56,108,0.03);
+  --gradient:linear-gradient(90deg,#a82855,#d4386c,#e8709a,#f0a0c0);
+  --tab-active:linear-gradient(135deg,#a82855,#d4386c);
+  --btn-pipeline:linear-gradient(135deg,#a82855,#d4386c);
+  --btn-primary:linear-gradient(135deg,#287850,#38a06a);
+  --coached-bg:rgba(212,56,108,0.04);
+  --scroll-thumb:#e0c0d0;
+  --logo-from:#d4386c;--logo-to:#e8709a;
+}
 
 /* ═══ BASE ═══ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -84,12 +189,20 @@ html{font-size:14px}
 body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-body);color:var(--text);-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;height:100vh;overflow:hidden}
 
 /* TOPBAR */
-.topbar{background:var(--bg-topbar);height:54px;display:flex;align-items:center;padding:0 16px;flex-shrink:0;position:relative;border-bottom:1px solid var(--border);gap:4px}
+.topbar{background:var(--bg-topbar);display:flex;flex-wrap:wrap;align-items:center;padding:6px 16px 4px;flex-shrink:0;position:relative;border-bottom:1px solid var(--border);gap:0}
 .topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--gradient)}
 .t-logo{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;color:var(--text);padding-right:24px;white-space:nowrap}
 .t-logo .subtitle{font-size:9.5px;font-weight:400;color:var(--text-muted);letter-spacing:0.02em;margin-top:1px;display:block}
 .t-logo .title-gradient{background:linear-gradient(135deg,var(--logo-from),var(--logo-to));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.t-nav{display:flex;height:54px;gap:4px;align-items:center}
+/* Zelda theme overrides */
+[data-theme="zelda"] .t-logo-default{display:none}
+[data-theme="zelda"] .t-logo-zelda{display:flex!important}
+.t-logo-zelda{display:none;align-items:center;gap:8px}
+[data-theme="zelda"] .t-logo .subtitle::after{content:" · It's dangerous to coach alone"}
+[data-theme="zelda"] .topbar::after{background:linear-gradient(90deg,#536f50,#92c582,#86a5a9,#92c582,#536f50)}
+[data-theme="zelda"] .t-logo-zelda svg polygon{fill:#536f50}
+[data-theme="zelda"] .t-logo-zelda svg rect{fill:#92c582}
+.t-nav{display:flex;gap:4px;align-items:center}
 .t-tab{padding:7px 16px;display:flex;align-items:center;font-size:12.5px;color:var(--text-secondary);cursor:pointer;font-weight:500;border-radius:18px;transition:all .2s}
 .t-tab:hover{color:var(--text);background:var(--accent-light)}
 .t-tab.on{color:#fff;background:var(--tab-active);font-weight:600;box-shadow:0 2px 8px var(--shadow)}
@@ -147,23 +260,45 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .theme-toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
 [data-theme="dark"] .theme-toggle{background:var(--accent)}
 [data-theme="dark"] .theme-toggle::after{transform:translateX(16px)}
+[data-theme="midnight"] .theme-toggle{background:var(--accent)}
+[data-theme="midnight"] .theme-toggle::after{transform:translateX(16px)}
 .theme-icon{font-size:12px;margin-left:4px}
 
 /* KPI */
-.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;padding:16px 20px}
-.kpi-tile{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;text-align:center;cursor:pointer;transition:all .25s}
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;padding:12px 20px;position:sticky;top:0;z-index:10;background:var(--bg-body)}
+.kpi-tile{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;cursor:pointer;transition:all .22s;position:relative;overflow:hidden}
 .kpi-tile:hover{box-shadow:0 4px 16px var(--shadow);transform:translateY(-1px)}
-.kpi-tile .kpi-lbl{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
-.kpi-tile .kpi-num{font-size:28px;font-weight:700;line-height:1.3}
-.kpi-tile .kpi-sub{font-size:10.5px;color:var(--text-dim);margin-top:2px}
-.kpi-tile .kpi-split{display:flex;justify-content:center;gap:12px;font-size:10.5px;color:var(--text-secondary);margin-top:4px}
-.kpi-tile.kp3 .kpi-num{color:var(--red)}.kpi-tile.kp3{border-left:3px solid var(--red)}
-.kpi-tile.kp2 .kpi-num{color:var(--orange)}.kpi-tile.kp2{border-left:3px solid var(--orange)}
-.kpi-tile.kp1 .kpi-num{color:var(--green)}.kpi-tile.kp1{border-left:3px solid var(--green)}
-.kpi-tile.kok .kpi-num{color:var(--blue)}.kpi-tile.kok{border-left:3px solid var(--blue)}
-.kpi-tile.kco .kpi-num{color:var(--accent)}.kpi-tile.kco{border-left:3px solid var(--accent)}
+.kpi-tile .kpi-lbl{font-size:9.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:2px}
+.kpi-tile .kpi-num{font-size:32px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi-tile .kpi-sub{font-size:10px;color:var(--text-dim);margin-top:1px}
+.kpi-tile .kpi-split{display:flex;justify-content:flex-start;gap:10px;font-size:10px;color:var(--text-secondary);margin-top:5px}
+.kpi-tile .kpi-split span{display:flex;align-items:center;gap:3px}
+/* Progress bar */
+.kpi-bar-track{height:3px;border-radius:2px;background:var(--border);margin-top:8px;overflow:hidden}
+.kpi-bar-fill{height:100%;border-radius:2px;transition:width .6s cubic-bezier(.4,0,.2,1);width:0%}
+/* Color variants */
+.kpi-tile.kp3{border-top:3px solid var(--red);border-left:none}
+.kpi-tile.kp3 .kpi-num{color:var(--red)}
+.kpi-tile.kp3 .kpi-bar-fill{background:var(--red)}
+.kpi-tile.kp2{border-top:3px solid var(--orange);border-left:none}
+.kpi-tile.kp2 .kpi-num{color:var(--orange)}
+.kpi-tile.kp2 .kpi-bar-fill{background:var(--orange)}
+.kpi-tile.kp1{border-top:3px solid var(--green);border-left:none}
+.kpi-tile.kp1 .kpi-num{color:var(--green)}
+.kpi-tile.kp1 .kpi-bar-fill{background:var(--green)}
+.kpi-tile.kok{border-top:3px solid var(--blue);border-left:none}
+.kpi-tile.kok .kpi-num{color:var(--blue)}
+.kpi-tile.kok .kpi-bar-fill{background:var(--blue)}
+.kpi-tile.kto{border-top:3px solid var(--text-dim);border-left:none}
+.kpi-tile.kto .kpi-num{color:var(--text)}
+.kpi-tile.kco{border-top:3px solid var(--accent);border-left:none}
+.kpi-tile.kco .kpi-num{color:var(--accent)}
+.kpi-tile.kco .kpi-bar-fill{background:var(--accent)}
 .kpi-tile.active-filter{background:var(--accent-light);border-color:var(--accent-border);box-shadow:0 4px 16px var(--shadow);transform:translateY(-2px)}
 .kpi-tile.active-filter .kpi-lbl{color:var(--accent-text);font-weight:800}
+/* Count-up animation */
+@keyframes kpi-pop{0%{transform:scale(1.18);opacity:.6}100%{transform:scale(1);opacity:1}}
+.kpi-num.updated{animation:kpi-pop .3s ease-out}
 
 /* TOOLBAR */
 .toolbar{display:flex;align-items:center;gap:8px;padding:10px 20px;background:var(--bg-panel);border-top:1px solid var(--border);border-bottom:1px solid var(--border);flex-wrap:wrap}
@@ -208,20 +343,20 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .act-btn.act-csv,.act-btn.act-secondary{background:var(--bg-input);border-color:var(--border-strong);color:var(--text-secondary)}
 
 /* TABLE */
-.tab-panel{display:none;flex:1;flex-direction:column;overflow:hidden}
+.tab-panel{display:none;flex:1;flex-direction:column;overflow-y:auto;overflow-x:hidden}
 .tab-panel.active{display:flex}
 .table-wrap{flex:1;overflow-y:auto;overflow-x:auto}
 .main-table{width:100%;border-collapse:collapse;font-size:14px}
 .main-table thead{position:sticky;top:0;z-index:2}
 .main-table th{background:var(--bg-table-head);padding:12px 12px;text-align:center;font-weight:600;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap}
 .main-table th:first-child{text-align:left}
-.main-table td{padding:14px 12px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--text)}
+.main-table td{padding:9px 12px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--text)}
 .main-table tr:hover td{background:var(--row-hover)}
 .main-table .td-assoc{text-align:left}
 .main-table .login-link{color:var(--blue);text-decoration:none;font-weight:600;font-size:13px}
 .main-table .login-link:hover{color:var(--accent)}
 .photo-wrap{display:flex;align-items:center;gap:8px}
-.photo-cell{width:50px;height:50px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid var(--border)}
+.photo-cell{width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid var(--border)}
 .photo-cell img{width:100%;height:100%;object-fit:cover}
 .no-photo{width:100%;height:100%;background:var(--bg-input);display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:14px}
 .pr{font-weight:700;font-size:13px}
@@ -248,11 +383,45 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .td-notes{text-align:left!important;max-width:380px}
 
 /* COACHED */
-.coached-row td{background:var(--coached-bg)!important}
-.coached-chk .chk-circle{background:var(--tab-active);color:#fff;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.coached-row td{background:var(--coached-bg)!important;opacity:.72}
+.coached-row td:first-child{border-left:3px solid var(--green)}
+.coached-row .login-name{text-decoration:line-through;text-decoration-color:var(--green);text-decoration-thickness:1.5px}
+.coached-chk .chk-circle{background:var(--green);color:#fff;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;box-shadow:0 0 6px rgba(5,150,105,0.4)}
 .row-btn{padding:4px 11px;font-size:10.5px;border-radius:12px;border:1px solid var(--border-strong);background:var(--bg-input);color:var(--text);cursor:pointer;font-weight:500;transition:all .15s}
 .row-btn:hover:not(:disabled){background:var(--accent-light);border-color:var(--accent-border);color:var(--accent-text)}
 .row-btn:disabled{opacity:.3;cursor:not-allowed}
+
+/* MAP LIST VIEW */
+.map-list-zone{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;overflow:hidden}
+.map-list-zone-header{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;user-select:none;transition:background .15s}
+.map-list-zone-header:hover{background:var(--accent-light)}
+.map-list-zone-label{font-size:12px;font-weight:700;color:var(--text);flex:1}
+.map-list-zone-pills{display:flex;gap:5px;align-items:center}
+.map-list-pill{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;line-height:1.4}
+.map-list-pill.gap{background:rgba(220,38,38,0.12);color:var(--red)}
+.map-list-pill.idle{background:rgba(234,179,8,0.12);color:#ca8a04}
+.map-list-pill.fs{background:rgba(139,92,246,0.12);color:#7c3aed}
+.map-list-pill.gca{background:rgba(245,158,11,0.12);color:#d97706}
+.map-list-pill.ok{background:rgba(5,150,105,0.08);color:var(--green)}
+.map-list-caret{font-size:10px;color:var(--text-muted);transition:transform .2s}
+.map-list-zone.open .map-list-caret{transform:rotate(90deg)}
+.map-list-rows{display:none;border-top:1px solid var(--border)}
+.map-list-zone.open .map-list-rows{display:block}
+.map-list-row{display:flex;align-items:center;gap:8px;padding:6px 14px;font-size:12px;border-bottom:1px solid var(--border);transition:background .1s}
+.map-list-row:last-child{border-bottom:none}
+.map-list-row:hover{background:var(--row-hover)}
+.map-list-row.row-gap{border-left:3px solid var(--red)}
+.map-list-row.row-idle{border-left:3px solid #eab308}
+.map-list-row.row-fs{border-left:3px solid #8b5cf6}
+.map-list-row.row-ok{border-left:3px solid var(--green)}
+.map-list-row .ml-login{font-weight:700;min-width:80px;color:var(--text)}
+.map-list-row .ml-station{font-size:11px;color:var(--text-muted);min-width:60px}
+.map-list-row .ml-rate{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-secondary);min-width:55px}
+.map-list-row .ml-pct{font-size:11px;font-weight:700;min-width:44px}
+.map-list-row .ml-notes{flex:1;font-size:10.5px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}
+.map-view-toggle{display:flex;border:1px solid var(--border-strong);border-radius:6px;overflow:hidden}
+.map-view-toggle button{padding:3px 9px;font-size:10px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;font-weight:600;transition:all .15s}
+.map-view-toggle button.active{background:var(--accent);color:#fff}
 
 /* STATUSBAR */
 .statusbar{height:28px;display:flex;align-items:center;padding:0 20px;background:var(--bg-body);border-top:1px solid var(--border);font-size:10.5px;color:var(--text-muted);flex-shrink:0}
@@ -356,15 +525,28 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 /* Admin Config panel */
 .cfg-scroll{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;padding:20px;align-items:start;overflow-y:auto;flex:1}
 @media(max-width:1200px){.cfg-scroll{grid-template-columns:1fr}}
-.cfg-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px var(--shadow)}
-.cfg-card-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;color:#fff;font-weight:800;font-size:13px}
-.cfg-card-hdr.hdr-targets{background:#2563eb}
-.cfg-card-hdr.hdr-quality{background:#dc2626}
-.cfg-card-hdr.hdr-courses{background:#7c3aed}
-.cfg-card-hdr.hdr-shifts{background:#059669}
-.cfg-card-hdr.hdr-stations{background:#d97706}
-.cfg-card-title{font-size:13px;font-weight:900;color:#fff;letter-spacing:-.01em}
-.cfg-card-body{padding:0;overflow-x:auto;max-height:350px;overflow-y:auto}
+/* Admin layout: sidebar tabs on left, content on right */
+.cfg-layout{display:flex;flex:1;overflow:hidden;min-height:0}
+.cfg-sidebar{width:180px;flex-shrink:0;border-right:1px solid var(--border);background:var(--bg-panel);padding:8px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.cfg-sidebar-tab{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text-secondary);transition:all .15s;border:none;background:transparent;text-align:left;width:100%}
+.cfg-sidebar-tab:hover{background:var(--accent-light);color:var(--accent-text)}
+.cfg-sidebar-tab.active{background:var(--accent-light);color:var(--accent-text);font-weight:800}
+.cfg-sidebar-tab .cfg-tab-icon{font-size:14px;flex-shrink:0}
+.cfg-content{flex:1;overflow-y:auto;overflow-x:hidden;padding:20px 24px}
+.cfg-section{display:none}
+.cfg-section.active{display:block}
+.cfg-section-title{font-size:15px;font-weight:800;color:var(--text);margin:0 0 4px}
+.cfg-section-sub{font-size:11px;color:var(--text-muted);margin-bottom:16px}
+.cfg-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px}
+.cfg-card-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg-panel)}
+.cfg-card-hdr-title{font-size:12px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:.06em}
+.cfg-card-body{padding:0;overflow-x:auto}
+.cfg-card-hdr.hdr-targets{background:var(--bg-panel)}
+.cfg-card-hdr.hdr-quality{background:var(--bg-panel)}
+.cfg-card-hdr.hdr-courses{background:var(--bg-panel)}
+.cfg-card-hdr.hdr-shifts{background:var(--bg-panel)}
+.cfg-card-hdr.hdr-stations{background:var(--bg-panel)}
+.cfg-card-title{font-size:12px;font-weight:800;color:var(--text);letter-spacing:.04em}
 .cfg-save{background:rgba(255,255,255,.2)!important;border-color:rgba(255,255,255,.4)!important;color:#fff!important;font-size:11px;padding:4px 12px;border-radius:6px}
 .cfg-save:hover{background:rgba(255,255,255,.35)!important}
 .cfg-add-row{display:flex;gap:8px;align-items:center;padding:10px 14px;border-top:1px dashed var(--border);background:var(--bg-hover)}
@@ -522,14 +704,136 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   .ms-btn{font-size:10.5px;padding:4px 8px}
 }
 
+
+/* ═══ FLOOR MAP ═══ */
+.fm-station{width:28px;height:28px;border-radius:5px;position:absolute;cursor:pointer;transition:all .2s;border:1.5px solid transparent;display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--text-muted);padding:2px;overflow:hidden}
+.fm-station:hover{transform:scale(1.4);z-index:10!important}
+.fm-station.pick{background:rgba(37,99,235,0.2);border-color:rgba(37,99,235,0.4)}
+.fm-station.stow{background:rgba(6,182,212,0.2);border-color:rgba(6,182,212,0.4)}
+.fm-station.count{background:rgba(16,185,129,0.2);border-color:rgba(16,185,129,0.4)}
+.fm-station.pending{animation:stationPulse 2s infinite;background:rgba(239,68,68,0.6);border-color:rgba(239,68,68,0.8);box-shadow:0 0 10px rgba(239,68,68,0.5)}
+.fm-station.coached{animation:stationPulse 2s infinite;background:#f59e0b;border-color:#fbbf24;box-shadow:0 0 10px rgba(245,158,11,0.5)}
+.fm-station.gap{background:#ef4444;border-color:#f87171;box-shadow:0 0 8px rgba(239,68,68,0.4)}
+.fm-station.idle{background:#eab308;border-color:#facc15;box-shadow:0 0 8px rgba(234,179,8,0.4)}
+.fm-station.faststart{background:#8b5cf6;border-color:#a78bfa;box-shadow:0 0 8px rgba(139,92,246,0.4)}
+.fm-station.normal{background:#22c55e;border-color:#4ade80;box-shadow:0 0 5px rgba(34,197,94,0.4)}
+.fm-station .fm-badge{position:absolute;top:-6px;right:-6px;width:14px;height:14px;border-radius:50%;background:#ef4444;color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1;box-shadow:0 0 4px rgba(239,68,68,0.6);pointer-events:none}
+.fm-station .fm-gca-flag{position:absolute;top:-12px;left:50%;transform:translateX(-50%);min-width:14px;height:14px;border-radius:7px;padding:0 3px;background:#f59e0b;color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1;box-shadow:0 0 6px rgba(245,158,11,0.7);pointer-events:none;z-index:6}
+@keyframes stationPulse{0%,100%{opacity:1;transform:scale(1);filter:brightness(1)}50%{opacity:.85;transform:scale(1.05);filter:brightness(1.2)}}
+.gca-floor-tab{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);font-size:11px;cursor:pointer;font-weight:500;color:var(--text-secondary)}
+.gca-floor-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.gca-floor-tab:hover:not(.active){background:var(--accent-light)}
+.gca-floor-container{min-height:480px!important}
+.fm-p1-section{margin-bottom:14px}
+.fm-p1-section-title{font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:4px;padding-left:100px}
+.fm-p1-line{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.fm-p1-label{width:94px;font-size:10px;color:var(--text-muted);text-align:right;flex-shrink:0}
+.fm-p1-spine{display:flex;gap:3px;flex-wrap:wrap}
+.fm-p1-station{width:24px;height:24px;border-radius:4px;position:relative;cursor:pointer;transition:all .2s;border:1.5px solid transparent;display:flex;align-items:center;justify-content:center;font-size:7px;color:var(--text-muted)}
+.fm-p1-station:hover{transform:scale(1.3);z-index:10!important}
+.fm-p1-station.pick{background:rgba(37,99,235,0.15);border-color:rgba(37,99,235,0.3)}
+.fm-p1-station.coached{background:#f59e0b;border-color:#fbbf24;box-shadow:0 0 6px rgba(245,158,11,0.5)}
+.fm-p1-station.gap{background:#ef4444;border-color:#f87171;box-shadow:0 0 6px rgba(239,68,68,0.4)}
+.fm-p1-station.idle{background:#eab308;border-color:#facc15}
+.fm-p1-station.faststart{background:#8b5cf6;border-color:#a78bfa}
+.fm-p1-station.normal{background:#22c55e;border-color:#4ade80;box-shadow:0 0 4px rgba(34,197,94,0.3)}
+/* ═══ Station Map (AR floors) ═══ */
+.sm-grid{display:flex;flex-direction:column;gap:2px;align-items:center}
+.sm-row{display:flex;gap:2px;justify-content:center;flex-wrap:wrap;padding:4px 0}
+.sm-middle{display:flex;gap:8px;align-items:stretch;width:100%}
+.sm-col{display:flex;flex-direction:column;gap:1px;align-items:center;padding:2px 0}
+.sm-center{flex:1;display:flex;align-items:center;justify-content:center;min-height:80px}
+.sm-station{width:34px;height:42px;border-radius:4px;border:1.5px solid #d1d5db;background:#fff;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .15s;gap:2px}
+.sm-station:hover{transform:scale(1.2);z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.25)}
+.sm-station .sm-type{font-size:7px;font-weight:600;color:#6b7280;text-transform:uppercase;line-height:1}
+.sm-station .sm-num{font-size:10px;font-weight:700;color:#374151;line-height:1}
+.sm-station.sm-empty{border-color:#e5e7eb;background:#f9fafb;opacity:0.5}
+.sm-station.sm-empty .sm-type,.sm-station.sm-empty .sm-num{color:#9ca3af}
+.sm-station.sm-active{border-color:#3b82f6;background:#eff6ff}
+.sm-station.sm-ontarget{border-color:#22c55e;background:#f0fdf4}
+.sm-station.sm-danger{border-color:#ef4444;background:#fef2f2;box-shadow:0 0 6px rgba(239,68,68,0.3)}
+.sm-station.sm-idle{border-color:#eab308;background:#fefce8}
+.sm-station.sm-faststart{border-color:#8b5cf6;background:#f5f3ff}
+.sm-badge{position:absolute;top:-9px;left:50%;transform:translateX(-50%);min-width:16px;height:13px;border-radius:3px;font-size:8px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1}
+.sm-badge.bg-green{background:#22c55e}
+.sm-badge.bg-red{background:#ef4444}
+.sm-badge.bg-yellow{background:#eab308}
+.sm-badge.bg-purple{background:#8b5cf6}
+.sm-station .fm-gca-flag{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);min-width:14px;height:13px;border-radius:6px;padding:0 3px;background:#f59e0b;color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 4px rgba(245,158,11,0.6)}
+.sm-summary{text-align:center;padding:20px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;min-width:200px}
+.sm-summary-title{font-size:32px;font-weight:800;color:var(--text);opacity:0.15;margin-bottom:12px}
+.sm-counts{display:flex;gap:16px;justify-content:center;margin-bottom:12px}
+.sm-count{display:flex;flex-direction:column;align-items:center;gap:2px}
+.sm-count-val{font-size:20px;font-weight:700;color:var(--text)}
+.sm-count-lbl{font-size:9px;color:var(--text-muted);text-transform:uppercase}
+.sm-c-active{color:#3b82f6}
+.sm-c-empty{color:#9ca3af}
+.sm-c-danger{color:#ef4444}
+.sm-types{display:flex;gap:12px;justify-content:center;font-size:10px;color:var(--text-secondary)}
+.sm-types b{color:var(--text)}
+
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px 18px;min-width:100px;text-align:center}
+.kpi-card .kpi-val{font-size:22px;font-weight:700;color:var(--text)}
+.kpi-card .kpi-lbl{font-size:10px;color:var(--text-muted);margin-top:2px}
+.gca-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.gca-bar-label{width:120px;font-size:11px;color:var(--text-secondary);text-align:right}
+.gca-bar-track{flex:1;height:18px;background:var(--bg-panel);border-radius:9px;overflow:hidden;border:1px solid var(--border)}
+.gca-bar-fill{height:100%;border-radius:9px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-size:9px;font-weight:600;color:#fff;transition:width .4s}
+.gca-bar-fill.high{background:linear-gradient(90deg,#22c55e,#4ade80)}
+.gca-bar-fill.mid{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.gca-bar-fill.low{background:linear-gradient(90deg,#ef4444,#f87171)}
+.gca-bar-nums{font-size:10px;color:var(--text-muted);min-width:50px}
+.gca-pill{padding:4px 10px;border-radius:12px;font-size:10px;border:1px solid var(--border);background:var(--bg-card);cursor:pointer;color:var(--text-secondary)}
+.gca-pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.main-table .login-name{font-weight:600;font-size:13px;color:var(--text)}
+/* ═══ TOPBAR 2-ROW ═══ */
+.t-row1{display:flex;align-items:center;width:100%;gap:4px;min-height:42px}
+.t-infobar{display:flex;align-items:center;gap:8px;width:100%;padding:4px 12px;font-size:11px;color:var(--text-secondary)}
+.t-infobar .info-label{font-weight:600;color:var(--accent)}
+.t-infobar .info-dates{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)}
+.t-infobar .info-sep{color:var(--border)}
+
+.path-step{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:4px;font-size:12px}
+.path-step:hover{background:rgba(59,130,246,0.08)}
+.path-num{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.path-station{font-weight:600;font-size:12px}
+.path-login{color:var(--text-muted);font-size:11px}
+.path-dist{color:var(--text-muted);font-size:10px;margin-left:auto}
+.path-summary{background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px 14px;margin-top:12px;font-size:11px;color:var(--green)}
+.sm-station.on-path{border-color:var(--accent)!important;background:rgba(59,130,246,0.15)!important;box-shadow:0 0 8px rgba(59,130,246,0.4)}
+.sm-row.sm-p2r{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;padding:6px 0;border-top:1px dashed rgba(59,130,246,0.2)}
+.sm-p2r-station{width:24px!important;height:30px!important;border-radius:3px;opacity:0.85}
+
+/* v111 Visual improvements */
+@keyframes smPulse{0%,100%{box-shadow:0 0 2px currentColor}50%{box-shadow:0 0 6px currentColor}}
+.sm-station.sm-danger{animation:smPulse 3s infinite ease-in-out;color:#ef4444}
+.sm-station.sm-idle{animation:smPulse 4s infinite ease-in-out;color:#eab308}
+.sm-row:hover .sm-station:not(:hover){opacity:0.4;transform:scale(0.95)}
+.sm-row:hover .sm-station:hover{transform:scale(1.3);z-index:20!important;opacity:1}
+.sm-col:hover .sm-station:not(:hover){opacity:0.4;transform:scale(0.95)}
+.sm-col:hover .sm-station:hover{transform:scale(1.3);z-index:20!important;opacity:1}
+.sm-station .sm-login{font-size:5px;color:inherit;opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:1}
+.sm-station .sm-pbar{position:absolute;bottom:1px;left:2px;right:2px;height:3px;border-radius:1.5px;background:rgba(0,0,0,0.2);overflow:hidden}
+.sm-station .sm-pbar-fill{height:100%;border-radius:1.5px;transition:width .3s}
+.sm-type-sep{width:2px;height:24px;background:var(--border);border-radius:1px;margin:0 3px;flex-shrink:0;align-self:center}
+.path-step{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:4px;font-size:12px}
+.path-step:hover{background:rgba(59,130,246,0.08)}
+.path-num{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.path-station{font-weight:600;font-size:12px}
+.path-login{color:var(--text-muted);font-size:11px}
+.path-dist{color:var(--text-muted);font-size:10px;margin-left:auto}
+.path-summary{background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px 14px;margin-top:12px;font-size:11px;color:var(--green)}
+.sm-station.on-path{border-color:var(--accent)!important;background:rgba(59,130,246,0.15)!important;box-shadow:0 0 8px rgba(59,130,246,0.4)}
 </style>
 </head>
 <body>
 
 <!-- TOPBAR -->
 <div class="topbar">
+  <div class="t-row1">
   <div class="t-logo">
-    <div class="t-logo-sq">
+    <!-- Default logo (light/dark) -->
+    <div class="t-logo-sq t-logo-default">
       <svg width="30" height="30" viewBox="0 0 34 34" fill="none">
         <defs><linearGradient id="argosG" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#1e40af"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient></defs>
         <circle cx="17" cy="17" r="15" stroke="url(#argosG)" stroke-width="2.2" fill="none"/>
@@ -544,6 +848,18 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
         <circle cx="17" cy="30.5" r="1.6" fill="#f472b6"/>
       </svg>
     </div>
+    <!-- Zelda logo: Triforce + Master Sword -->
+    <div class="t-logo-zelda">
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
+        <!-- Triforce -->
+        <polygon points="16,3 22,14 10,14" fill="#d4aa38" opacity="0.95"/>
+        <polygon points="10,14 16,25 4,25" fill="#d4aa38" opacity="0.75"/>
+        <polygon points="22,14 28,25 16,25" fill="#d4aa38" opacity="0.75"/>
+        <!-- Master Sword hint (small, bottom) -->
+        <rect x="15.2" y="26" width="1.6" height="5" rx=".6" fill="#5ccf5c" opacity=".9"/>
+        <rect x="13" y="29.5" width="6" height="1.2" rx=".5" fill="#d4aa38" opacity=".9"/>
+      </svg>
+    </div>
     <div><span class="title-gradient">Project Argos</span><span class="subtitle" data-i18n="subtitle">Your L&D / Operational One Stop Tool</span></div>
   </div>
   <div class="t-nav">
@@ -552,28 +868,11 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <div class="t-tab" data-tab="targets" data-i18n="tab_targets">Targets</div>
     <div class="t-tab" data-tab="quality" data-i18n="tab_quality">Quality</div>
     <div class="t-tab" data-tab="faq" data-i18n="tab_faq">FAQ</div>
+        <div class="t-tab" data-tab="gca">GCA</div>
     <div class="t-tab" data-tab="config" id="tabConfig" style="display:none">⚙️ Config</div>
 
   </div>
-  <div class="t-filters">
-        <span class="tf-label" data-i18n="lbl_process">Process</span>
-    <div class="ms" id="procMs">
-      <button class="ms-btn" id="procMsBtn" type="button" aria-haspopup="listbox" aria-expanded="false">
-        <span class="ms-label" id="procMsLabel">All</span>
-        <span class="ms-caret">▾</span>
-      </button>
-      <div class="ms-panel" id="procMsPanel" role="listbox" aria-multiselectable="true"></div>
-    </div>
-
-    <span class="tf-label" data-i18n="lbl_sub">Sub</span>
-    <div class="ms" id="subMs">
-      <button class="ms-btn" id="subMsBtn" type="button" aria-haspopup="listbox" aria-expanded="false" style="min-width:155px">
-        <span class="ms-label" id="subMsLabel">All</span>
-        <span class="ms-caret">▾</span>
-      </button>
-      <div class="ms-panel" id="subMsPanel" role="listbox" aria-multiselectable="true"></div>
-    </div>
-  </div>
+  <div style="flex:1"></div>
   <div class="t-right">
     <div class="t-user" id="userPill" title="Checking user...">
       <span class="t-user-dot loading" id="userDot"></span>
@@ -603,6 +902,28 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     </div>
     <button class="settings-btn" id="btnSettings" title="Settings">⚙️</button>
   </div>
+  </div>
+  <div class="t-infobar">
+    <span class="info-label">FCLM</span>
+    <span class="info-dates" id="infoFclmDates">—</span>
+    <span class="info-sep">|</span>
+    <span class="tf-label" data-i18n="lbl_process">Process</span>
+    <div class="ms" id="procMs">
+      <button class="ms-btn" id="procMsBtn" type="button" aria-haspopup="listbox" aria-expanded="false">
+        <span class="ms-label" id="procMsLabel">All</span>
+        <span class="ms-caret">▾</span>
+      </button>
+      <div class="ms-panel" id="procMsPanel" role="listbox" aria-multiselectable="true"></div>
+    </div>
+    <span class="tf-label" data-i18n="lbl_sub">Sub</span>
+    <div class="ms" id="subMs">
+      <button class="ms-btn" id="subMsBtn" type="button" aria-haspopup="listbox" aria-expanded="false" style="min-width:155px">
+        <span class="ms-label" id="subMsLabel">All</span>
+        <span class="ms-caret">▾</span>
+      </button>
+      <div class="ms-panel" id="subMsPanel" role="listbox" aria-multiselectable="true"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ SETTINGS POPOVER ═══ -->
@@ -610,9 +931,12 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   <div class="sp-title">⚙️ Settings</div>
   <div class="sp-row">
     <span class="sp-label" data-i18n="lbl_theme">Tema</span>
-    <div class="sp-toggle-group">
-      <button class="sp-opt" id="spThemeLight" data-val="light">☀️ Light</button>
-      <button class="sp-opt" id="spThemeDark" data-val="dark">🌙 Dark</button>
+    <div class="sp-toggle-group" style="flex-wrap:wrap;gap:4px">
+      <button class="sp-opt" id="spThemeLight"    data-val="light">☀️ Light</button>
+      <button class="sp-opt" id="spThemeDark"     data-val="dark">🌙 Dark</button>
+      <button class="sp-opt" id="spThemeZelda"    data-val="zelda">🗡️ Zelda</button>
+      <button class="sp-opt" id="spThemeMidnight" data-val="midnight">⚡ Midnight</button>
+      <button class="sp-opt" id="spThemeCherry"   data-val="cherry">🌸 Cherry</button>
     </div>
   </div>
   <div class="sp-row">
@@ -643,20 +967,40 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 <div class="tab-panel active" id="panel-dashboard">
   <div class="kpi-row">
     <div class="kpi-tile kp3" data-f="3">
-      <div class="kpi-lbl" data-i18n="kpi_p3">Priority 3</div><div class="kpi-num" id="n3">0</div><div class="kpi-sub" data-i18n="kpi_p3_sub">Below 80%</div>
+      <div class="kpi-lbl" data-i18n="kpi_p3">Priority 3</div>
+      <div class="kpi-num" id="n3">0</div>
+      <div class="kpi-bar-track"><div class="kpi-bar-fill" id="bar3"></div></div>
       <div class="kpi-split"><span>L&amp;D <b id="n3ld">0</b></span><span>Ops <b id="n3ops">0</b></span></div>
     </div>
     <div class="kpi-tile kp2" data-f="2">
-      <div class="kpi-lbl" data-i18n="kpi_p2">Priority 2</div><div class="kpi-num" id="n2">0</div>
+      <div class="kpi-lbl" data-i18n="kpi_p2">Priority 2</div>
+      <div class="kpi-num" id="n2">0</div>
+      <div class="kpi-bar-track"><div class="kpi-bar-fill" id="bar2"></div></div>
       <div class="kpi-split"><span>L&amp;D <b id="n2ld">0</b></span><span>Ops <b id="n2ops">0</b></span></div>
     </div>
     <div class="kpi-tile kp1" data-f="1">
-      <div class="kpi-lbl" data-i18n="kpi_p1">Priority 1</div><div class="kpi-num" id="n1">0</div>
+      <div class="kpi-lbl" data-i18n="kpi_p1">Priority 1</div>
+      <div class="kpi-num" id="n1">0</div>
+      <div class="kpi-bar-track"><div class="kpi-bar-fill" id="bar1"></div></div>
       <div class="kpi-split"><span>L&amp;D <b id="n1ld">0</b></span><span>Ops <b id="n1ops">0</b></span></div>
     </div>
-    <div class="kpi-tile kok" data-f="0"><div class="kpi-lbl" data-i18n="kpi_on_target">On Target</div><div class="kpi-num" id="n0">0</div><div class="kpi-sub" data-i18n="kpi_on_target_sub">Above 100%</div></div>
-    <div class="kpi-tile" data-f="all"><div class="kpi-lbl" data-i18n="kpi_total">Total Active</div><div class="kpi-num" id="nAll">0</div><div class="kpi-sub" data-i18n="kpi_total_sub">Ops + L&amp;D</div></div>
-    <div class="kpi-tile kco" data-f="coached"><div class="kpi-lbl" data-i18n="kpi_coached">Coached</div><div class="kpi-num" id="nCo">0</div><div class="kpi-sub" data-i18n="kpi_coached_sub">Este turno</div></div>
+    <div class="kpi-tile kok" data-f="0">
+      <div class="kpi-lbl" data-i18n="kpi_on_target">On Target</div>
+      <div class="kpi-num" id="n0">0</div>
+      <div class="kpi-bar-track"><div class="kpi-bar-fill" id="bar0"></div></div>
+      <div class="kpi-sub" data-i18n="kpi_on_target_sub">Above 100%</div>
+    </div>
+    <div class="kpi-tile kto" data-f="all">
+      <div class="kpi-lbl" data-i18n="kpi_total">Total Active</div>
+      <div class="kpi-num" id="nAll">0</div>
+      <div class="kpi-sub" data-i18n="kpi_total_sub">Ops + L&amp;D</div>
+    </div>
+    <div class="kpi-tile kco" data-f="coached">
+      <div class="kpi-lbl" data-i18n="kpi_coached">Coached</div>
+      <div class="kpi-num" id="nCo">0</div>
+      <div class="kpi-bar-track"><div class="kpi-bar-fill" id="barCo"></div></div>
+      <div class="kpi-sub" data-i18n="kpi_coached_sub">Este turno</div>
+    </div>
   </div>
   <div class="toolbar">
     <div class="tb-search"><span style="color:#ccc;font-size:13px">⌕</span><input id="searchInput" placeholder="Login, role, station…"></div>
@@ -687,6 +1031,9 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <button class="act-btn act-secondary" id="btnBulk" data-i18n="btn_bulk">↑↑ Bulk Upload</button>
     <button class="act-btn act-pipeline" id="btnPipeline" data-i18n="btn_run_pipeline">▶ Run Pipeline</button>
     <button class="act-btn act-csv" id="btnDownloadCSV">↓ CSV</button>
+    <button class="act-btn" id="btnPerfMap" style="background:var(--accent-light);color:var(--accent-text);border:1px solid var(--accent-border)">🗺️ Map</button>
+    <button onclick="if(window._showCoachingPath)window._showCoachingPath()" class="act-btn" style="font-size:11px;padding:7px 14px;background:var(--bg-panel);border:1px solid var(--border)">🧭 Path</button>
+
     <div class="tb-count">Showing <b id="rowCount">0</b> of <b id="totalCount">0</b></div>
   </div>
   <div class="table-wrap">
@@ -715,6 +1062,53 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <span class="sb-l">Showing <b id="sbCount">0</b> records · filter: <b id="sbFilter">P3+P2+P1</b> · <span data-i18n="lbl_updated">Updated</span> <b id="updatedAt">—</b></span>
     <span class="sb-r"><span class="ldot"></span> <span data-i18n="lbl_live">Live</span> · <b id="sbFc">BCN4</b></span>
   </div>
+
+<!-- ═══ PERFORMANCE FLOOR MAP ═══ -->
+<div id="perfMapWrap" style="display:none;padding:12px 16px">
+  <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;overflow:visible">
+    <div style="display:flex;gap:4px;padding:10px 14px;border-bottom:1px solid var(--border);align-items:center;flex-wrap:wrap;row-gap:6px">
+      <!-- Floor tabs injected dynamically by _buildFloorTabs() -->
+      <div class="perf-floor-tabs" style="display:contents"></div>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+      <!-- Highlight filters -->
+      <button id="mapHlGap"  class="map-hl-btn" data-hl="gap"  title="Highlight Gap only" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1.5px solid #ef4444;background:transparent;color:#ef4444;cursor:pointer;font-weight:700">● Gap</button>
+      <button id="mapHlIdle" class="map-hl-btn" data-hl="idle" title="Highlight Idle only" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1.5px solid #eab308;background:transparent;color:#eab308;cursor:pointer;font-weight:700">● Idle</button>
+      <button id="mapHlGca"  class="map-hl-btn" data-hl="gca"  title="Highlight GCA Pending" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1.5px solid #f59e0b;background:transparent;color:#f59e0b;cursor:pointer;font-weight:700">● GCA</button>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+      <!-- Process filters -->
+      <button class="map-proc-btn on" data-proc="ALL" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-strong);background:var(--accent-light);color:var(--accent-text);cursor:pointer;font-weight:700">All</button>
+      <button class="map-proc-btn" data-proc="PICK" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-strong);background:transparent;color:var(--text-secondary);cursor:pointer">Pick</button>
+      <button class="map-proc-btn" data-proc="STOW" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-strong);background:transparent;color:var(--text-secondary);cursor:pointer">Stow</button>
+      <button class="map-proc-btn" data-proc="QS"   style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-strong);background:transparent;color:var(--text-secondary);cursor:pointer">QS</button>
+      <button class="map-proc-btn" data-proc="PACK" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-strong);background:transparent;color:var(--text-secondary);cursor:pointer">Pack</button>
+      <button class="map-proc-btn" data-proc="DEC"  style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-strong);background:transparent;color:var(--text-secondary);cursor:pointer">Decant</button>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+      <button id="mapRefreshGca" title="Refresh GCA pending badges" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-strong);background:transparent;color:var(--text-secondary);cursor:pointer">⟳ GCA</button>
+      <div style="flex:1"></div>
+      <!-- Live counters -->
+      <div id="mapCounters" style="display:flex;gap:8px;align-items:center;font-size:11px;font-weight:700;margin-right:8px">
+        <span id="mapCntGap"  style="color:#ef4444">Gap: <b>0</b></span>
+        <span id="mapCntIdle" style="color:#eab308">Idle: <b>0</b></span>
+        <span id="mapCntGca"  style="color:#f59e0b">GCA: <b>0</b></span>
+        <span id="mapCntOk"   style="color:#22c55e">OK: <b>0</b></span>
+      </div>
+      <!-- Legend -->
+      <div style="display:flex;align-items:center;gap:8px;font-size:10px;color:var(--text-secondary)">
+        <span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:3px;background:#ef4444"></span>Gap</span>
+        <span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:3px;background:#8b5cf6"></span>Fast Start</span>
+        <span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:3px;background:#eab308"></span>Idle</span>
+        <span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:3px;background:#22c55e"></span>OK</span>
+        <label style="display:flex;align-items:center;gap:4px;margin-left:4px;cursor:pointer"><input type="checkbox" id="perfShowAll" style="accent-color:var(--accent)"> All</label>
+        <div class="map-view-toggle" style="margin-left:8px">
+          <button id="mapViewGrid" class="active" title="Grid view">⊞</button>
+          <button id="mapViewList" title="List view">☰</button>
+        </div>
+      </div>
+    </div>
+    <!-- Floor containers injected dynamically by _buildFloorTabs() -->
+    <div id="perfFloorWrap"></div>
+  </div>
+</div>
 </div>
 
 <!-- ═══ HISTORY ═══ -->
@@ -826,6 +1220,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
           <th style="width:180px;text-align:left;padding-left:20px;cursor:pointer" data-qsort="login"><span data-i18n="qth_associate">Associate</span> ⇅</th>
           <th style="width:60px;cursor:pointer" data-qsort="fc">FC ⇅</th>
           <th style="width:240px;text-align:left;cursor:pointer" data-qsort="error_key"><span data-i18n="qth_error">Error Type</span> ⇅</th>
+          <th style="width:50px" title="Opportunities (units processed)">Vol</th>
           <th style="width:100px;cursor:pointer" data-qsort="total_errors_wk"><span data-i18n="qth_errors_wk">Errors WK</span> ⇅</th>
           <th style="width:80px" data-i18n="qth_target">Target</th>
           <th style="width:90px;cursor:pointer" data-qsort="pct_to_target">% Target ⇅</th>
@@ -840,7 +1235,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       </thead>
       <tbody id="qualityTbody">
         <tr>
-          <td colspan="12" style="text-align:center;padding:40px;color:#999">
+          <td colspan="14" style="text-align:center;padding:40px;color:#999">
             Click <b>▶ Run Pipeline</b> or <b>↻ Refresh</b> to load quality data…
           </td>
         </tr>
@@ -919,75 +1314,205 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
+
+<!-- ═══ GCA COMPLIANCE ═══ -->
+<div class="tab-panel" id="panel-gca">
+  <!-- GCA Header -->
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+    <h2 style="margin:0;font-size:16px;font-weight:700;color:var(--text)">GCA Compliance</h2>
+    <span id="gcaSubtitle" style="font-size:11px;color:var(--text-muted)">Last 7 days</span>
+    <div style="flex:1"></div>
+    <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary);cursor:pointer">
+      <input type="checkbox" id="gcaPresenceToggle" checked style="accent-color:var(--accent)"> Presence filter
+    </label>
+    <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary);cursor:pointer">
+      <input type="checkbox" id="gcaAutoRefresh" style="accent-color:var(--green)"> Auto (90m)
+    </label>
+    <button onclick="if(window._showCoachingPath)window._showCoachingPath()" class="act-btn" style="font-size:11px;padding:7px 14px;background:var(--bg-panel);border:1px solid var(--border)">🧭 Path</button>
+    <button class="act-btn act-primary" id="btnGcaPipeline" style="font-size:11px;padding:7px 14px">▶ Run GCA Pipeline</button>
+  </div>
+
+  <!-- GCA Progress bar -->
+  <div id="gcaProgress" style="display:none;margin:0 16px 8px">
+    <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden"><div id="gcaProgBar" style="height:100%;width:0%;background:var(--accent);transition:width .3s;border-radius:2px"></div></div>
+    <div id="gcaProgMsg" style="font-size:10px;color:var(--text-muted);margin-top:4px"></div>
+  </div>
+
+  <!-- ═══ GCA INLINE FLOOR MAP (pending only, collapsed by default) ═══ -->
+  <div id="gcaFloorMap" style="background:var(--bg-panel);border-bottom:1px solid var(--border)">
+    <div style="display:flex;gap:4px;padding:8px 16px;align-items:center;cursor:pointer" id="gcaMapToggleBar">
+      <span id="gcaMapArrow" style="font-size:10px;color:var(--text-muted);transition:transform .2s">▶</span>
+      <span style="font-size:12px;font-weight:700;color:var(--text)">Station Map</span>
+      <span id="gcaMapPendingBadge" style="font-size:10px;color:#ef4444;font-weight:700;margin-left:4px"></span>
+      <div style="flex:1"></div>
+      <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-secondary)">
+        <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 5px rgba(239,68,68,0.7)"></span> Pending only
+      </span>
+    </div>
+    <div id="gcaMapBody" style="display:none;padding:0 16px 10px">
+      <div style="display:flex;gap:4px;padding:0 0 8px;align-items:center">
+        <div class="gca-floor-tabs" style="display:contents"></div>
+      </div>
+      <div id="gcaFloorWrap" style="overflow-x:auto"></div>
+    </div>
+  </div>
+<!-- Compliance Details (collapsable) -->
+  <div style="padding:0 16px;margin-top:12px">
+    <button id="btnToggleCompliance" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:4px">
+      <span id="complianceArrow">▶</span> Compliance Details
+    </button>
+    <div id="gcaComplianceWrap" style="display:none;margin-top:8px">
+      <!-- KPI Cards -->
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+        <div class="kpi-card"><div class="kpi-val" id="gcaKpiTotal">0</div><div class="kpi-lbl">Total</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="gcaKpiCompleted">0</div><div class="kpi-lbl">Completed</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="gcaKpiPending">0</div><div class="kpi-lbl">Pending</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="gcaKpiPct">0%</div><div class="kpi-lbl">Compliance</div></div>
+      </div>
+      <!-- Owner Bars -->
+      <div id="gcaBars"></div>
+    </div>
+  </div>
+
+  <!-- Owner Filter Pills -->
+  <div id="gcaOwnerFilters" style="display:flex;gap:6px;flex-wrap:wrap;padding:8px 16px"></div>
+
+  <!-- GCA Table -->
+  <div style="padding:0 16px 16px;overflow-x:auto">
+    <div id="gcaShowing" style="font-size:10px;color:var(--text-muted);margin-bottom:6px;padding:0 16px"></div>
+    <table class="main-table" id="gcaTable">
+      <thead>
+        <tr>
+          <th>Associate</th><th>Insight</th><th>Owner</th><th>Notes</th><th>Presence</th><th>Open GCA</th>
+        </tr>
+      </thead>
+      <tbody id="gcaTbody"></tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- Coaching Path Modal -->
+<div id="gcaPathModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9000;background:rgba(0,0,0,0.5);padding:20px;overflow-y:auto;align-items:flex-start;justify-content:center">
+  <div style="max-width:1100px;width:100%;margin:0 auto;background:var(--bg-card);border-radius:12px;border:1px solid var(--border);box-shadow:0 16px 48px rgba(0,0,0,0.3)">
+    <div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border)">
+      <span style="font-weight:700;font-size:14px">🧭 Coaching Path</span>
+      <span id="pathSubtitle" style="margin-left:8px;font-size:11px;color:var(--text-muted)"></span>
+      <div style="flex:1"></div>
+      <button onclick="document.getElementById('gcaPathModal').style.display='none'" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary)">&times;</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;padding:16px">
+      <div id="gcaPathMap" style="min-height:400px;position:relative;border:1px solid var(--border);border-radius:8px;padding:12px;overflow:hidden"></div>
+      <div id="gcaPathList" style="max-height:500px;overflow-y:auto"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ ADMIN CONFIG ═══ -->
-<div class="tab-panel" id="panel-config">
-  <div class="panel-header">
-    <div style="display:flex;align-items:center;gap:12px">
-      <div style="width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center">
-        <span style="color:#fff;font-size:16px">⚙</span>
-      </div>
-      <div>
-        <div class="panel-title">Admin Config</div>
-        <div class="panel-sub">Edit targets, quality mode, and shift configuration</div>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <span class="tb-label">FC</span>
-      <select id="cfgFcFilter" class="tselect" style="height:28px;min-width:90px;font-size:11px">
-        <option value="">All</option>
-        <option value="BCN1">BCN1</option>
-        <option value="BCN4">BCN4</option>
-        <option value="MAD7">MAD7</option>
-        <option value="OVD1">OVD1</option>
-        <option value="RMU1">RMU1</option>
-        <option value="SVQ1">SVQ1</option>
-      </select>
-      <button class="act-btn act-multi" id="cfgPushBtn" style="font-size:11px;padding:4px 12px">🔄 Update Data Central</button>
-    </div>
+<div class="tab-panel" id="panel-config" style="flex-direction:column">
+  <!-- Topbar -->
+  <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0">
+    <span style="font-size:14px;font-weight:800;color:var(--text)">⚙️ Admin Config</span>
+    <div style="flex:1"></div>
+    <span class="tb-label">FC</span>
+    <select id="cfgFcFilter" class="tselect" style="height:28px;min-width:90px;font-size:11px">
+      <option value="">All</option>
+      <option value="BCN1">BCN1</option>
+      <option value="BCN4">BCN4</option>
+      <option value="MAD7">MAD7</option>
+      <option value="OVD1">OVD1</option>
+      <option value="RMU1">RMU1</option>
+      <option value="SVQ1">SVQ1</option>
+    </select>
+    <button class="act-btn act-multi" id="cfgPushBtn" style="font-size:11px;padding:4px 12px">🔄 Sync</button>
+    <span id="cfgStatus" style="font-size:11px;color:var(--text-muted)"></span>
   </div>
 
-  <div class="cfg-scroll">
-
-    <!-- UPH Targets -->
-    <div class="cfg-card">
-      <div class="cfg-card-hdr hdr-targets"><span class="cfg-card-title">📊 Pack Line Targets</span><button class="act-btn cfg-save" id="cfgSaveTargets">💾 Save</button></div>
-      <div class="cfg-card-body" id="cfgTargetsBody"><div class="cfg-loading">Loading…</div></div>
+  <!-- Sidebar + Content -->
+  <div class="cfg-layout">
+    <!-- Sidebar nav -->
+    <div class="cfg-sidebar">
+      <button class="cfg-sidebar-tab active" data-cfg-tab="targets"><span class="cfg-tab-icon">📊</span>Pack Targets</button>
+      <button class="cfg-sidebar-tab" data-cfg-tab="quality"><span class="cfg-tab-icon">🎯</span>Quality Mode</button>
+      <button class="cfg-sidebar-tab" data-cfg-tab="courses"><span class="cfg-tab-icon">🎓</span>Courses</button>
+      <button class="cfg-sidebar-tab" data-cfg-tab="shifts"><span class="cfg-tab-icon">🕐</span>Shifts</button>
+      <button class="cfg-sidebar-tab" data-cfg-tab="stations"><span class="cfg-tab-icon">📍</span>Stations</button>
     </div>
 
-    <!-- Quality Mode -->
-    <div class="cfg-card">
-      <div class="cfg-card-hdr hdr-quality"><span class="cfg-card-title">🎯 Quality Mode & Sigma</span><button class="act-btn cfg-save" id="cfgSaveQuality">💾 Save</button></div>
-      <div class="cfg-card-body" id="cfgQualityBody"><div class="cfg-loading">Loading…</div></div>
-    </div>
+    <!-- Content area -->
+    <div class="cfg-content">
 
-    <!-- Coaching Courses -->
-    <div class="cfg-card">
-      <div class="cfg-card-hdr hdr-courses"><span class="cfg-card-title">🎓 Coaching Courses</span><button class="act-btn cfg-save" id="cfgSaveCourses">💾 Save</button></div>
-      <div class="cfg-card-body" id="cfgCoursesBody">
-        <div class="cfg-section-divider">🎯 Quality Courses — by Error Type</div>
-        <div id="cfgQualityCoursesArea"><div class="cfg-loading">Loading…</div></div>
-        <div class="cfg-section-divider">📊 Performance Courses — by Role</div>
-        <div id="cfgPerfCoursesArea"><div class="cfg-loading">Loading…</div></div>
+      <!-- TARGETS -->
+      <div class="cfg-section active" id="cfg-section-targets">
+        <div class="cfg-section-title">Pack Line Targets</div>
+        <div class="cfg-section-sub">UPH targets per role and pack line. Applied to all associates on that line.</div>
+        <div class="cfg-card">
+          <div class="cfg-card-hdr hdr-targets">
+            <span class="cfg-card-title">Pack Line Targets</span>
+            <button class="act-btn act-primary cfg-save" id="cfgSaveTargets" style="font-size:11px;padding:4px 12px">💾 Save</button>
+          </div>
+          <div class="cfg-card-body" id="cfgTargetsBody"><div class="cfg-loading">Loading…</div></div>
+        </div>
       </div>
+
+      <!-- QUALITY -->
+      <div class="cfg-section" id="cfg-section-quality">
+        <div class="cfg-section-title">Quality Mode & Sigma</div>
+        <div class="cfg-section-sub">Per-error detection thresholds. Mode controls when to flag an associate.</div>
+        <div class="cfg-card">
+          <div class="cfg-card-hdr hdr-quality">
+            <span class="cfg-card-title">Quality Mode & Sigma</span>
+            <button class="act-btn act-primary cfg-save" id="cfgSaveQuality" style="font-size:11px;padding:4px 12px">💾 Save</button>
+          </div>
+          <div class="cfg-card-body" id="cfgQualityBody"><div class="cfg-loading">Loading…</div></div>
+        </div>
+      </div>
+
+      <!-- COURSES -->
+      <div class="cfg-section" id="cfg-section-courses">
+        <div class="cfg-section-title">Coaching Courses</div>
+        <div class="cfg-section-sub">Maps error types and roles to their Guided Coaching course UUIDs.</div>
+        <div class="cfg-card">
+          <div class="cfg-card-hdr hdr-courses">
+            <span class="cfg-card-title">Quality Courses</span>
+            <button class="act-btn act-primary cfg-save" id="cfgSaveCourses" style="font-size:11px;padding:4px 12px">💾 Save</button>
+          </div>
+          <div class="cfg-card-body" id="cfgCoursesBody">
+            <div class="cfg-section-divider">🎯 Quality — by Error Type</div>
+            <div id="cfgQualityCoursesArea"><div class="cfg-loading">Loading…</div></div>
+            <div class="cfg-section-divider">📊 Performance — by Role</div>
+            <div id="cfgPerfCoursesArea"><div class="cfg-loading">Loading…</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SHIFTS -->
+      <div class="cfg-section" id="cfg-section-shifts">
+        <div class="cfg-section-title">Shift Configuration</div>
+        <div class="cfg-section-sub">Define shift windows and H1/H2 half-shift boundaries per FC.</div>
+        <div class="cfg-card">
+          <div class="cfg-card-hdr hdr-shifts">
+            <span class="cfg-card-title">Shift Config</span>
+            <button class="act-btn act-primary cfg-save" id="cfgSaveShifts" style="font-size:11px;padding:4px 12px">💾 Save</button>
+          </div>
+          <div class="cfg-card-body" id="cfgShiftsBody"><div class="cfg-loading">Loading…</div></div>
+        </div>
+      </div>
+
+      <!-- STATIONS -->
+      <div class="cfg-section" id="cfg-section-stations">
+        <div class="cfg-section-title">Station Overrides</div>
+        <div class="cfg-section-sub">Override role assignment based on station name pattern matching.</div>
+        <div class="cfg-card">
+          <div class="cfg-card-hdr hdr-stations">
+            <span class="cfg-card-title">Station Map</span>
+            <button class="act-btn act-primary cfg-save" id="cfgSaveStations" style="font-size:11px;padding:4px 12px">💾 Save</button>
+          </div>
+          <div class="cfg-card-body" id="cfgStationsBody"><div class="cfg-loading">Loading…</div></div>
+        </div>
+      </div>
+
     </div>
-
-    <!-- Shift Config -->
-    <div class="cfg-card">
-      <div class="cfg-card-hdr hdr-shifts"><span class="cfg-card-title">🕐 Shift Config</span><button class="act-btn cfg-save" id="cfgSaveShifts">💾 Save</button></div>
-      <div class="cfg-card-body" id="cfgShiftsBody"><div class="cfg-loading">Loading…</div></div>
-    </div>
-
-    <!-- Station Map -->
-    <div class="cfg-card">
-      <div class="cfg-card-hdr hdr-stations"><span class="cfg-card-title">📍 Station Map</span><button class="act-btn cfg-save" id="cfgSaveStations">💾 Save</button></div>
-      <div class="cfg-card-body" id="cfgStationsBody"><div class="cfg-loading">Loading…</div></div>
-    </div>
-
-  </div>
-
-  <div class="statusbar">
-    <span class="sb-l">Admin Config · Changes saved to config/hermes/</span>
-    <span class="sb-r" id="cfgStatus"></span>
   </div>
 </div>
 
@@ -1066,6 +1591,10 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
-<script src="/static/app.js?v=v52_grid_layout_20260521" defer></script>
+
+<!-- ═══ SHARED MAP TOOLTIP ═══ -->
+<div id="gcaMapTooltip" style="display:none;position:fixed;z-index:9999;background:#1a2736;border:1px solid #2a3a4a;border-radius:12px;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,0.5);max-width:500px;max-height:80vh;overflow-y:auto;font-size:14px;pointer-events:auto;color:#e8ecf0" onmouseenter="clearTimeout(window._ttHideTimer)" onmouseleave="window._ttHideTimer=setTimeout(()=>{this.style.display='none'},500)"></div>
+
+<script src="/static/app.js?v=v144_gcamap_themes_20260524" defer></script>
 </body>
 </html>

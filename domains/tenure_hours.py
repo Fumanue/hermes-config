@@ -221,7 +221,7 @@ def load_tenure_data(fc: Optional[str] = None) -> pd.DataFrame:
     agg["tenure"] = agg["total_hours"].apply(hours_to_tenure)
     agg["is_veteran"] = agg["total_hours"] >= VETERAN_THRESHOLD
 
-    # Find each login's "main process" (most hours)
+    # Find each login's "home process" = process with MOST hours (regardless of threshold)
     main_proc_by_login = (
         agg.loc[agg.groupby("login")["total_hours"].idxmax()]
         .set_index("login")["main_process"]
@@ -229,21 +229,19 @@ def load_tenure_data(fc: Optional[str] = None) -> pd.DataFrame:
     )
 
     # Determine curve classification
-    # For each login, find which processes they're veteran in
-    veteran_by_login = (
-        agg[agg["is_veteran"]]
-        .groupby("login")["main_process"]
-        .apply(set)
-        .to_dict()
-    )
-
+    # - VETERAN: 400+ hours in THIS process
+    # - XT: This is NOT your home process (home = process with most hours)
+    # - NH: This IS your home process but < 400 hours (new hire in their main process)
     def _classify(row):
-        vet_procs = veteran_by_login.get(row["login"], set())
-        if row["main_process"] in vet_procs:
+        login = row["login"]
+        home = main_proc_by_login.get(login, "")
+        if row["total_hours"] >= VETERAN_THRESHOLD:
             return "VETERAN"
-        elif len(vet_procs) > 0:
+        elif row["main_process"] != home:
+            # Working in a process that is NOT their strongest → cross-trainee
             return "XT"
         else:
+            # Working in their home process but not yet veteran
             return "NH"
 
     agg["curve"] = agg.apply(_classify, axis=1)
@@ -267,30 +265,49 @@ def get_tenure_for(tenure_df: pd.DataFrame, login: str, process: str) -> dict:
         hours: float (total hours in this process)
         curve: str ("VETERAN", "XT", or "NH")
         is_veteran: bool (400+ hours in this process)
+        home_process: str (process with most hours overall)
     """
     login = str(login or "").strip().lower()
     process = map_process(process) if process not in ("PACK", "PICK", "STOW", "DECANT", "ICQA") else process
 
-    mask = (tenure_df["login"].str.lower() == login) & (tenure_df["main_process"] == process)
+    # Find all entries for this login
+    login_mask = tenure_df["login"].str.lower() == login
+    login_entries = tenure_df[login_mask]
+
+    if login_entries.empty:
+        return {"tenure": 1, "hours": 0.0, "curve": "NH", "is_veteran": False, "home_process": ""}
+
+    # Determine home process (most hours)
+    home_row = login_entries.sort_values("total_hours", ascending=False).iloc[0]
+    home_process = str(home_row["main_process"])
+
+    # Find entry for the requested process
+    mask = login_mask & (tenure_df["main_process"] == process)
     match = tenure_df[mask]
 
     if match.empty:
-        # Check if veteran in any other process
-        any_vet = tenure_df[
-            (tenure_df["login"].str.lower() == login) & (tenure_df["is_veteran"])
-        ]
-        if not any_vet.empty:
-            home = tenure_df[tenure_df["login"].str.lower() == login].sort_values("total_hours", ascending=False).iloc[0]["main_process"]
-            return {"tenure": 1, "hours": 0.0, "curve": "XT", "is_veteran": False, "home_process": home}
-        return {"tenure": 1, "hours": 0.0, "curve": "NH", "is_veteran": False, "home_process": ""}
+        # No hours in this process at all → cross-trainee (home is elsewhere)
+        return {"tenure": 1, "hours": 0.0, "curve": "XT", "is_veteran": False, "home_process": home_process}
 
     row = match.iloc[0]
+    hours = float(row["total_hours"])
+    tenure = int(row["tenure"])
+    is_veteran = hours >= VETERAN_THRESHOLD
+
+    # Classify: VETERAN if 400+, XT if not home process, NH if home but < 400
+    if is_veteran:
+        curve = "VETERAN"
+    elif process != home_process:
+        curve = "XT"
+    else:
+        curve = "NH"
+
     return {
-        "tenure": int(row["tenure"]),
-        "hours": float(row["total_hours"]),
-        "curve": str(row["curve"]),
-        "is_veteran": bool(row["is_veteran"]),
-        "home_process": str(row.get("home_process", "")),
+        "tenure": tenure,
+        "hours": hours,
+        "curve": curve,
+        "is_veteran": is_veteran,
+        "home_process": home_process,
     }
 
 

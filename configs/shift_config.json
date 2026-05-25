@@ -214,55 +214,55 @@
   },
   "RMU1": {
     "Outbound": {
-      "Day": {
-        "shift_start": 360,
-        "shift_end": 840,
-        "H1_start": 360,
-        "H1_end": 600,
-        "H2_start": 600,
-        "H2_end": 840
+      "Early": {
+        "shift_start": 420,
+        "shift_end": 900,
+        "H1_start": 420,
+        "H1_end": 660,
+        "H2_start": 660,
+        "H2_end": 900
       },
-      "Evening": {
-        "shift_start": 840,
-        "shift_end": 1320,
-        "H1_start": 840,
+      "Late": {
+        "shift_start": 900,
+        "shift_end": 1380,
+        "H1_start": 900,
         "H1_end": 1140,
         "H2_start": 1140,
-        "H2_end": 1320
+        "H2_end": 1380
       },
       "Night": {
-        "shift_start": 1320,
-        "shift_end": 360,
-        "H1_start": 1320,
+        "shift_start": 1380,
+        "shift_end": 420,
+        "H1_start": 1380,
         "H1_end": 180,
         "H2_start": 180,
-        "H2_end": 360
+        "H2_end": 420
       }
     },
     "Inbound": {
-      "Day": {
-        "shift_start": 360,
-        "shift_end": 840,
-        "H1_start": 360,
-        "H1_end": 630,
-        "H2_start": 630,
-        "H2_end": 840
+      "Early": {
+        "shift_start": 420,
+        "shift_end": 900,
+        "H1_start": 420,
+        "H1_end": 660,
+        "H2_start": 660,
+        "H2_end": 900
       },
-      "Evening": {
-        "shift_start": 840,
-        "shift_end": 1320,
-        "H1_start": 840,
-        "H1_end": 1110,
-        "H2_start": 1110,
-        "H2_end": 1320
+      "Late": {
+        "shift_start": 900,
+        "shift_end": 1380,
+        "H1_start": 900,
+        "H1_end": 1140,
+        "H2_start": 1140,
+        "H2_end": 1380
       },
       "Night": {
-        "shift_start": 1320,
-        "shift_end": 360,
-        "H1_start": 1320,
-        "H1_end": 150,
-        "H2_start": 150,
-        "H2_end": 360
+        "shift_start": 1380,
+        "shift_end": 420,
+        "H1_start": 1380,
+        "H1_end": 180,
+        "H2_start": 180,
+        "H2_end": 420
       }
     },
     "default_department": "Outbound"

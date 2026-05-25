@@ -41,7 +41,16 @@ log = get_logger(__name__)
 paths = get_paths()
 CONFIG_DIR = paths.config_dir
 BACKUP_DIR = CONFIG_DIR / "backups"
-SRC_DIR = paths.root / "src" / "project_hermes"
+# In one-folder frozen mode, .pyd files are in root/project_hermes/ (no src/ prefix)
+# In dev mode, they're in root/src/project_hermes/
+_src_candidate = paths.root / "src" / "project_hermes"
+_flat_candidate = paths.root / "project_hermes"
+if _src_candidate.exists():
+    SRC_DIR = _src_candidate
+elif _flat_candidate.exists():
+    SRC_DIR = _flat_candidate
+else:
+    SRC_DIR = _src_candidate  # fallback to dev layout
 REMOTE_CONFIG_PATH = CONFIG_DIR / "remote_config.json"
 STATE_PATH = CONFIG_DIR / ".update_state.json"
 STATUS_PATH = CONFIG_DIR / ".update_status.json"

@@ -1,18 +1,18 @@
-import re
+﻿import re
 import math
 import json
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
 import pandas as pd
-from project_hermes.config import get_paths
-from project_hermes.core.logger import get_logger
+from project_argos.config import get_paths
+from project_argos.core.logger import get_logger
 log = get_logger(__name__)
 
 
 # ---------------- paths ----------------
 paths = get_paths()
-CONFIG_PATH = paths.root / "config" / "hermes" / "cleaning_rules.json"
+CONFIG_PATH = paths.root / "config" / "argos" / "cleaning_rules.json"
 
 
 # ---------------- config loader ----------------
@@ -190,7 +190,7 @@ def run(output_dir: Path | None = None) -> Path:
     paths = get_paths()
     out_dir = Path(output_dir) if output_dir else paths.output
 
-    print("\nClean_step.run() — Hermes Config Driven\n")
+    print("\nClean_step.run() — Argos Config Driven\n")
     log.info("Using config: {CONFIG_PATH}")
     log.info("Output dir: {out_dir}")
 

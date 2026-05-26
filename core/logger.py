@@ -1,10 +1,10 @@
-# src/project_hermes/core/logger.py
+﻿# src/project_argos/core/logger.py
 """
 Centralized logging for Project Argos.
 Handles console=False .exe mode (sys.stdout=None) gracefully.
 
 Usage in any module:
-    from project_hermes.core.logger import get_logger
+    from project_argos.core.logger import get_logger
     log = get_logger(__name__)
     log.info("Pipeline started for %s", fc)
     log.warning("Cache stale, using fallback")
@@ -12,7 +12,7 @@ Usage in any module:
 
 Log output:
     - Console: colored, concise (INFO+)
-    - File: data/logs/hermes.log (DEBUG+, rotating 5MB × 3 backups)
+    - File: data/logs/argos.log (DEBUG+, rotating 5MB × 3 backups)
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from logging.handlers import RotatingFileHandler
 from logging import FileHandler
 from pathlib import Path
 
-from project_hermes.config import get_paths
+from project_argos.config import get_paths
 
 # ─── Config ────────────────────────────────────────────────────────────────
 LOG_FILE_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
@@ -42,7 +42,7 @@ def _setup_root_logger() -> None:
     _initialized = True
 
     paths = get_paths()
-    log_file = paths.logs / "hermes.log"
+    log_file = paths.logs / "argos.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
 
     # ─── Emergency desktop log (for .exe crash diagnosis) ───────────────
@@ -54,7 +54,7 @@ def _setup_root_logger() -> None:
     except Exception:
         efh = None
 
-    root = logging.getLogger("hermes")
+    root = logging.getLogger("argos")
     root.setLevel(logging.DEBUG)
 
     # Prevent duplicate handlers on reload
@@ -87,10 +87,10 @@ def _setup_root_logger() -> None:
 
 def get_logger(name: str) -> logging.Logger:
     """
-    Get a named logger under the 'hermes' namespace.
+    Get a named logger under the 'argos' namespace.
 
     Args:
-        name: Module name (typically __name__), e.g. 'project_hermes.domains.quality_pipeline'
+        name: Module name (typically __name__), e.g. 'project_argos.domains.quality_pipeline'
 
     Returns:
         Logger instance with file + console handlers configured.
@@ -98,5 +98,5 @@ def get_logger(name: str) -> logging.Logger:
     _setup_root_logger()
 
     # Strip common prefix for cleaner log names
-    short = name.replace("project_hermes.", "").replace("src.", "")
-    return logging.getLogger(f"hermes.{short}")
+    short = name.replace("project_argos.", "").replace("src.", "")
+    return logging.getLogger(f"argos.{short}")

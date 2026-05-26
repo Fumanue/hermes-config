@@ -1,4 +1,4 @@
-# downloader.py — WORKING + OPTIMIZED (Hermes)
+﻿# downloader.py — Project Argos data downloader
 # - Keeps your WORKING behavior (WinHTTP redirects + intraday URL builders + robust parsers)
 # - Adds: thread-local COM+WinHTTP reuse + parallel tasks + flags cleaning
 # - Supports RoboScout config:
@@ -24,18 +24,18 @@ import pandas as pd
 import pythoncom
 import win32com.client
 
-from project_hermes.config import get_paths
-from project_hermes.core.config_store import load_json
-from project_hermes.core.auth_midway import get_cookie
-from project_hermes.domains.atlas_quality import fetch_and_save_atlas_quality
-from project_hermes.core.logger import get_logger
+from project_argos.config import get_paths
+from project_argos.core.config_store import load_json
+from project_argos.core.auth_midway import get_cookie
+from project_argos.domains.atlas_quality import fetch_and_save_atlas_quality
+from project_argos.core.logger import get_logger
 log = get_logger(__name__)
 
 
 paths = get_paths()
 OUTPUT_DIR: Path = paths.output
 
-# ---------------- Hermes Config (JSON) ----------------
+# ---------------- Config (JSON) ----------------
 _cfg_sources_default = {
     "default_fc": "BCN4",
     "max_workers": 8,
@@ -884,7 +884,7 @@ def download_process_inspector(process_id: str, proc_name: str, fc: str, start_d
 def download_roster(fc: str) -> DownloadResult:
     name = "Roster_SCC.csv"
     try:
-        from project_hermes.domains.roster_scc import build_roster_scc
+        from project_argos.domains.roster_scc import build_roster_scc
         df = build_roster_scc(fc)
         return DownloadResult(name, True, df_to_csv(df), count=len(df))
     except Exception as e:

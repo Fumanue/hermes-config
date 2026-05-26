@@ -1,4 +1,4 @@
-# src/project_hermes/domains/exemptions.py
+﻿# src/project_argos/domains/exemptions.py
 """
 Exemption List — associates excluded from coaching flags.
 
@@ -9,7 +9,7 @@ Process values: PACK, PICK, STOW, RECEIVE, ICQA, ALL
 Cache: 48h (once every 2 days)
 
 Usage:
-    from project_hermes.domains.exemptions import is_exempt, load_exemptions
+    from project_argos.domains.exemptions import is_exempt, load_exemptions
 
     if is_exempt("fumanue", "PICK"):
         # skip coaching flag for this person in PICK
@@ -23,8 +23,8 @@ from typing import Optional
 
 import pandas as pd
 
-from project_hermes.config import get_paths
-from project_hermes.core.logger import get_logger
+from project_argos.config import get_paths
+from project_argos.core.logger import get_logger
 
 log = get_logger(__name__)
 

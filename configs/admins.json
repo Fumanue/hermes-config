@@ -1,6 +1,6 @@
 {
   "super_admin": ["fumanue"],
-  "admins": ["mferruz", "poangelr", "fumanue", "larezaha"],
+  "admins": ["mferruz", "poangelr", "fumanue", "larezaha", "baidiego", "arandig", "rieralbe", "mmaradey", "ymurimon", "uinmacul", "banghizl", "navjesuw", "callegma"],
   "permissions": {
     "multi_site_request": true,
     "view_all_sites": true,

@@ -1,4 +1,4 @@
-"""auth_phonetool.py - Phonetool lookup + permissions.amazon.com team membership.
+﻿"""auth_phonetool.py - Phonetool lookup + permissions.amazon.com team membership.
 
 Flujo real (basado en HAR + error 401 de Midway directo):
   1. get_cookie() via AEA -> jar con amazon_enterprise_access
@@ -8,7 +8,7 @@ Flujo real (basado en HAR + error 401 de Midway directo):
 """
 from __future__ import annotations
 import json, os, re, time
-from project_hermes.core.logger import get_logger
+from project_argos.core.logger import get_logger
 log = get_logger(__name__)
 
 from pathlib import Path
@@ -200,7 +200,7 @@ def check_team_membership(login: str, debug: bool = False) -> bool:
             if debug: log.info("    [dbg] Cache hit: {login}={res}")
             return res
 
-    from project_hermes.core.auth_midway import get_cookie
+    from project_argos.core.auth_midway import get_cookie
     aea = get_cookie(aea=True, max_tries=4)
 
     http  = _establish_permissions_session(aea, debug=debug)
@@ -232,7 +232,7 @@ def check_team_membership(login: str, debug: bool = False) -> bool:
 
 def get_phonetool_user(login: str | None = None,
                        midway_cookie: str | None = None) -> dict[str, Any]:
-    from project_hermes.core.auth_midway import get_cookie
+    from project_argos.core.auth_midway import get_cookie
     login  = (login or os.environ.get("USERNAME", "")).strip().lower()
     if not login:
         raise RuntimeError("No se pudo determinar el login del usuario.")

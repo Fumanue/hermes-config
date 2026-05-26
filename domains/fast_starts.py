@@ -1,4 +1,4 @@
-# FastStarts_script.py - v6 (OPTIMIZED)
+﻿# FastStarts_script.py - v6 (OPTIMIZED)
 
 import json
 import sys
@@ -11,9 +11,9 @@ import pandas as pd
 import pythoncom
 import win32com.client
 
-from project_hermes.domains.roster_scc import midway_cookie_v2_like_vba, COOKIE_FILE
-from project_hermes.config import get_paths
-from project_hermes.core.logger import get_logger
+from project_argos.domains.roster_scc import midway_cookie_v2_like_vba, COOKIE_FILE
+from project_argos.config import get_paths
+from project_argos.core.logger import get_logger
 log = get_logger(__name__)
 
 

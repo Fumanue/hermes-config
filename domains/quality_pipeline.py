@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import concurrent.futures
@@ -14,26 +14,26 @@ from typing import Any
 
 import pandas as pd
 
-from project_hermes.config import get_paths
-from project_hermes.core.auth_midway import get_cookie
-from project_hermes.core.logger import get_logger
+from project_argos.config import get_paths
+from project_argos.core.auth_midway import get_cookie
+from project_argos.core.logger import get_logger
 log = get_logger(__name__)
 
 
 try:
-    from project_hermes.domains.atlas_quality import fetch_and_save_atlas_quality
+    from project_argos.domains.atlas_quality import fetch_and_save_atlas_quality
 except Exception:  # pragma: no cover - keeps UI alive if module is unavailable
     fetch_and_save_atlas_quality = None
 
 try:
-    from project_hermes.domains.diver_quality import fetch_and_build_fps
+    from project_argos.domains.diver_quality import fetch_and_build_fps
 except Exception:  # pragma: no cover
     fetch_and_build_fps = None
 
 paths = get_paths()
 ROOT_DIR = Path(getattr(paths, "root", Path.cwd()))
 OUTPUT_DIR = Path(getattr(paths, "output", ROOT_DIR / "data" / "output"))
-CONFIG_DIR = ROOT_DIR / "config" / "hermes"
+CONFIG_DIR = ROOT_DIR / "config" / "argos"
 DOCUMENTS_QUALITY_DIR = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Documents" / "Quality TO"
 
 DOCUMENTS_QUALITY_DIR.mkdir(parents=True, exist_ok=True)
@@ -325,7 +325,7 @@ def _read_roster_presence(fc: str = "BCN4") -> pd.DataFrame:
 
     if needs_download:
         try:
-            from project_hermes.domains.roster_scc import build_roster_scc
+            from project_argos.domains.roster_scc import build_roster_scc
             log.info("Downloading fresh Roster_SCC for {fc}…")
             roster_df = build_roster_scc(fc)
             roster_df.to_csv(fp, index=False, encoding="utf-8-sig")
@@ -375,7 +375,7 @@ def _fetch_punch_presence(fc: str = "BCN4") -> pd.DataFrame:
 
     try:
         import win32com.client
-        from project_hermes.core.auth_midway import get_cookie as _get_cookie
+        from project_argos.core.auth_midway import get_cookie as _get_cookie
 
         cookie = _get_cookie(aea=True, max_tries=3)
 
@@ -753,7 +753,7 @@ def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: dateti
     # ─── DPMO Target Calculation ────────────────────────────────────────
     # Requires tenure hours data for curve/hours lookup
     try:
-        from project_hermes.domains.tenure_hours import load_tenure_data, get_tenure_for, map_process
+        from project_argos.domains.tenure_hours import load_tenure_data, get_tenure_for, map_process
         tenure_df = load_tenure_data(fc)
         _tenure_ok = tenure_df is not None and not tenure_df.empty
     except Exception as e:

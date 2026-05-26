@@ -1,4 +1,4 @@
-# tenure_hours.py — Hours-based tenure classification
+﻿# tenure_hours.py — Hours-based tenure classification
 """
 Tenure model based on actual hours worked per process (not hire date).
 
@@ -17,7 +17,7 @@ Rules:
     NH      — Not veteran in any process
 
 Usage:
-    from project_hermes.domains.tenure_hours import load_tenure_data, get_tenure_for
+    from project_argos.domains.tenure_hours import load_tenure_data, get_tenure_for
     tenure_df = load_tenure_data("BCN4")
     info = get_tenure_for(tenure_df, "fumanue", "PACK")
     # → {"tenure": 5, "hours": 187.3, "curve": "NH", "is_veteran": False}
@@ -32,8 +32,8 @@ from typing import Optional
 
 import pandas as pd
 
-from project_hermes.config import get_paths
-from project_hermes.core.logger import get_logger
+from project_argos.config import get_paths
+from project_argos.core.logger import get_logger
 log = get_logger(__name__)
 
 

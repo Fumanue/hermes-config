@@ -1,4 +1,4 @@
-# atlas_quality.py — Hermes Quality Layer
+﻿# atlas_quality.py — Argos Quality Layer
 from __future__ import annotations
 
 import json
@@ -12,9 +12,9 @@ import pandas as pd
 import pythoncom
 import win32com.client
 
-from project_hermes.config import get_paths
-from project_hermes.core.auth_midway import get_cookie
-from project_hermes.core.logger import get_logger
+from project_argos.config import get_paths
+from project_argos.core.auth_midway import get_cookie
+from project_argos.core.logger import get_logger
 log = get_logger(__name__)
 
 
@@ -45,7 +45,7 @@ def _paths():
 
 def _config_path() -> Path:
     paths = _paths()
-    return paths.root / "config" / "hermes" / "quality_config.json"
+    return paths.root / "config" / "argos" / "quality_config.json"
 
 
 def load_quality_config(default: Optional[dict] = None) -> dict:

@@ -179,8 +179,9 @@ const _stationParseCache = new Map();
 function parsePerfStationCached(raw){
   if(!raw) return null;
   if(_stationParseCache.has(raw)) return _stationParseCache.get(raw);
-  const result = parsePerfStation(raw);
-  _stationParseCache.set(raw, result);
+  // parsePerfStation is defined later in a closure — use it via window
+  const result = (typeof parsePerfStation === "function") ? parsePerfStation(raw) : null;
+  if(result !== undefined) _stationParseCache.set(raw, result);
   return result;
 }
 
@@ -262,7 +263,7 @@ function norm(r){
   const photo_url     = String(r.photo_url??"").trim()
     ||(login?`https://badgephotos.amazon.com/?Region=Master&FullsizeImage=Yes&uid=${encodeURIComponent(login)}`:"");
 
-  return{login,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,notes,rate,pct,course_id,employee_id,transcript_url,photo_url,process:inferProcess(role)};
+  return{login,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,notes,rate,pct,course_id,employee_id,transcript_url,photo_url,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority};
 }
 
 // Build the notes string to upload (rate + pct + comments)
@@ -300,6 +301,7 @@ const state={
   sub:new Set(),
   curve:"ALL",
   tenureFilter:"",
+  priorityOnly:false,
 };
 
 // ── Modals ─────────────────────────────────────────────────
@@ -365,7 +367,7 @@ function _applyPermissions(perms){
 // Persisted in localStorage so a post-pipeline reload skips the auth fetch.
 let _authCache = (()=>{
   try{
-    const raw = localStorage.getItem("argos_auth_cache");
+    const raw = localStorage.getItem("argos_auth_v2");
     if(raw){ const p = JSON.parse(raw); if(p && p.date) return p; }
   }catch(ex){}
   return null;
@@ -389,6 +391,16 @@ async function loadUserInfo(){
     dot.className = "t-user-dot";
     window._userLogin = u.login || "";
     if(d.permissions) _applyPermissions(d.permissions);
+    // Restore admin state from cache
+    if(d.admin && d.admin.is_admin){
+      window._isAdmin = true;
+      window._isSuperAdmin = d.admin.is_super_admin || false;
+      if($("tabQuality")) $("tabQuality").style.display = "";
+      if($("tabGca")) $("tabGca").style.display = "";
+      if($("btnPerfMap")) $("btnPerfMap").style.display = "";
+      if($("btnQualityMulti")) $("btnQualityMulti").style.display = "inline-flex";
+      if($("tabConfig")) $("tabConfig").style.display = "";
+    }
     _unblockUI();
     return;
   }
@@ -398,7 +410,7 @@ async function loadUserInfo(){
   try{
     const d = await jget(`${API}/api/auth/me`);
     _authCache = { date: today, data: d };
-    try{ localStorage.setItem("argos_auth_cache", JSON.stringify(_authCache)); }catch(ex){}
+    try{ localStorage.setItem("argos_auth_v2", JSON.stringify(_authCache)); }catch(ex){}
     const u = d.user || {};
     const login = u.login         || "—";
     const title = u.job_title     || "";
@@ -431,6 +443,15 @@ async function loadUserInfo(){
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "inline-flex";
       // Show Config tab
       if($("tabConfig")) $("tabConfig").style.display = "";
+      // Show beta tabs (Quality, GCA, Map) — admin only
+      if($("tabQuality")) $("tabQuality").style.display = "";
+      if($("tabGca")) $("tabGca").style.display = "";
+      if($("btnPerfMap")) $("btnPerfMap").style.display = "";
+    } else {
+      // Non-admin: ensure beta features stay hidden
+      if($("tabQuality")) $("tabQuality").style.display = "none";
+      if($("tabGca")) $("tabGca").style.display = "none";
+      if($("btnPerfMap")) $("btnPerfMap").style.display = "none";
     }
 
     _unblockUI();
@@ -476,6 +497,9 @@ document.querySelectorAll(".modal-overlay").forEach(el=>
 function switchTab(name){
   document.querySelectorAll(".t-tab").forEach(t=>t.classList.toggle("on",t.dataset.tab===name));
   document.querySelectorAll(".tab-panel").forEach(p=>p.classList.toggle("active",p.id==="panel-"+name));
+  // Show filter bar only on Performance tab
+  const infobar = document.querySelector(".t-infobar");
+  if(infobar) infobar.style.display = (name === "dashboard") ? "" : "none";
   if(name==="history") loadHistory();
   if(name==="targets") loadTargets();
   if(name==="quality") loadQuality();
@@ -514,6 +538,7 @@ function _updateDefaultFcBtn(){
 
 $("btnDefaultFc") && $("btnDefaultFc").addEventListener("click",()=>{
   localStorage.setItem("Argos_default_fc", currentFC);
+  jpost(`${API}/api/prefs`, {default_fc: currentFC}).catch(()=>{});
   _updateDefaultFcBtn();
   showToast && showToast(`✅ ${currentFC} establecido como FC predeterminado`);
 });
@@ -784,6 +809,8 @@ function getFiltered(){
   rows=rows.filter(r=>state.prio.has(rowSigmaBucket(r.prio)));
   if(state.coachedOnly) rows=rows.filter(r=>r.coached);
   if(state.hideCoached) rows=rows.filter(r=>!r.coached);
+  // Priority mode filter (Sigma >= Mode)
+  if(state.priorityOnly) rows=rows.filter(r=>r.is_priority);
   // Curve filter (NH / XT / VETERAN)
   if(state.curve && state.curve !== "ALL"){
     rows = rows.filter(r => String(r.curve||"").toUpperCase() === state.curve.toUpperCase());
@@ -817,6 +844,13 @@ function getFiltered(){
       return state.sortAsc?cmp:-cmp;
     });
   }
+  // Sort by priority: sigma desc (P3 first), then % to target asc (worst first)
+  rows.sort((a,b) => {
+    const sa = Number(a.sigma||0), sb = Number(b.sigma||0);
+    if(sa !== sb) return sb - sa;  // higher sigma first
+    const pa = Number(a.pct_op2||999), pb = Number(b.pct_op2||999);
+    return pa - pb;  // lower % first
+  });
   return{rows:rows.slice(0,state.maxRows),total:rows.length};
 }
 
@@ -933,6 +967,7 @@ function renderTable(){
           <div class="photo-cell">
             ${photoHtml}
             <div class="no-photo" style="${r.photo_url?"display:none":""}">?</div>
+            ${r.is_priority?'<span class="prio-badge" title="Priority (Sigma ≥ Mode)">⚡</span>':""}
           </div>
           <div class="ident">
             <span class="login-name">${esc(r.login||"—")}</span>
@@ -1024,6 +1059,9 @@ function updateKpis(){
   _set("n3ld",c3ld); _set("n3ops",c3ops);
   _set("n2ld",c2ld); _set("n2ops",c2ops);
   _set("n1ld",c1ld); _set("n1ops",c1ops);
+  // Priority count (Sigma >= Mode)
+  const prioCount = rows.filter(r => r.is_priority).length;
+  _set("prioCount", prioCount > 0 ? prioCount : "");
 }
 
 function renderAll(){
@@ -2008,24 +2046,39 @@ async function exportQualityCSV(){
   if(qFilterSigma > 0) rows = rows.filter(r => Number(qualityValue(r,["sigma","Sigma"],0)) >= qFilterSigma);
   if(qFilterCurve.size) rows = rows.filter(r => qFilterCurve.has(String(qualityValue(r,["curve","Curve"],"")).toUpperCase()));
   if(qualityPresentOnly) rows = rows.filter(qualityPresentValue);
+  if(qualityHideCoached) rows = rows.filter(r => { const v=qualityValue(r,["coached","Coached"],""); return !(String(v).toLowerCase()==="true" || String(v).toUpperCase()==="YES"); });
+  if(qualityHideOnTarget) rows = rows.filter(r => { const pct=parseFloat(qualityValue(r,["pct_to_target","Pct_to_Target"],"0")); return isNaN(pct)||pct<100; });
+  const search = String($("qualitySearchInput")?.value || "").trim().toLowerCase();
+  if(search) rows = rows.filter(r => { const l=String(qualityValue(r,["login","Login"],"")).toLowerCase(); const e=String(qualityErrorLabel(r)).toLowerCase(); return l.includes(search)||e.includes(search); });
 
   if(!rows.length){ alert("No data to export."); return; }
 
   const payload = rows.map(r=>({
+    "FC": String(qualityValue(r,["fc","FC"],"")).trim(),
     "Login": qualityValue(r,["login","Login"],""),
     "Error Type": qualityErrorLabel(r),
     "Errors WK": qualityValue(r,["total_errors_wk","Total Errors WK"],0),
+    "Volume": qualityValue(r,["opportunities","Opportunities"],0),
+    "Target": Number(qualityValue(r,["target_errors","Target_Errors"],0)).toFixed(1),
+    "% Target": Number(qualityValue(r,["pct_to_target","Pct_to_Target"],0)).toFixed(0)+"%",
+    "Cohort": qualityValue(r,["cohort","Cohort"],""),
     "Sigma": Number(qualityValue(r,["sigma","Sigma"],0)).toFixed(2),
+    "Curve": qualityValue(r,["curve","Curve"],""),
+    "Tenure": qualityValue(r,["tenure","Tenure"],""),
     "Mode": qualityValue(r,["mode","Mode"],""),
     "Present": qualityPresentValue(r)?"YES":"NO",
     "Coached": (()=>{const v=qualityValue(r,["coached","Coached"],"");return String(v).toLowerCase()==="true"?"YES":"NO";})()
   }));
 
+  // Use "multi" as FC label when exporting multi-site data
+  const fcs = [...new Set(payload.map(r=>r.FC).filter(Boolean))];
+  const exportFc = fcs.length > 1 ? "MULTI" : (fcs[0] || currentFC);
+
   try{
     const res = await fetch(`${API}/api/export/csv`,{
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({fc: currentFC, rows: payload}),
+      body: JSON.stringify({fc: exportFc, rows: payload}),
     });
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     const savedPath = res.headers.get("X-Saved-Path");
@@ -2078,8 +2131,14 @@ document.addEventListener("keydown",(e)=>{
 });
 
 async function _initApp(){
-  const saved=localStorage.getItem("Argos_default_fc")||"BCN4";
+  // Load persisted prefs from server (survives pywebview localStorage resets)
+  let prefs = {default_fc:"BCN4", theme:"light", lang:"es"};
+  try{ prefs = await jget(`${API}/api/prefs`); }catch(_){}
+  const saved = prefs.default_fc || localStorage.getItem("Argos_default_fc") || "BCN4";
   currentFC=saved;
+  localStorage.setItem("Argos_default_fc", saved);
+  if(prefs.theme) { document.documentElement.setAttribute("data-theme", prefs.theme); localStorage.setItem("Argos_theme", prefs.theme); }
+  if(prefs.lang) { _lang = prefs.lang; localStorage.setItem("Argos_lang", prefs.lang); }
   const sel=$("fcSelect");
   if(sel){ const opt=sel.querySelector(`option[value="${saved}"]`); if(opt) sel.value=saved; }
   const sbFc=$("sbFc"); if(sbFc) sbFc.textContent=currentFC;
@@ -2320,6 +2379,12 @@ $("toggleCoached").addEventListener("click",()=>{
   $("coachToggleIcon").textContent=state.hideCoached?"●":"○";
   renderAll();
 });
+$("togglePriority").addEventListener("click",()=>{
+  state.priorityOnly=!state.priorityOnly;
+  $("togglePriority").classList.toggle("active",state.priorityOnly);
+  $("prioToggleIcon").textContent=state.priorityOnly?"●":"○";
+  renderAll();
+});
 document.querySelectorAll(".main-table thead th[data-k]").forEach(th=>{
   th.addEventListener("click",()=>{
     const k=th.dataset.k;
@@ -2378,7 +2443,7 @@ if(_spBtn && _spPanel){
   });
 
   // Theme buttons
-  const _themeButtons = ["spThemeLight","spThemeDark","spThemeZelda","spThemeMidnight","spThemeCherry"].map($).filter(Boolean);
+  const _themeButtons = ["spThemeLight","spThemeDark","spThemeKokiri","spThemeMidnight","spThemeCherry"].map($).filter(Boolean);
   function _syncThemeButtons(){
     const cur = document.documentElement.getAttribute("data-theme") || "light";
     _themeButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.val === cur));
@@ -2389,6 +2454,7 @@ if(_spBtn && _spPanel){
       const val = btn.dataset.val;
       document.documentElement.setAttribute("data-theme", val);
       localStorage.setItem("argos-theme", val);
+      jpost(`${API}/api/prefs`, {theme: val}).catch(()=>{});
       _syncThemeButtons();
     });
   });
@@ -3348,10 +3414,11 @@ document.addEventListener("click",(e)=>{
 
     var gcaPending = window._gcaPendingLogins || new Set();
 
-    // Group rows by station
+    // Group rows by station (with inline cache for performance)
     var stationData = {};
     rows.forEach(function(r){
-      var parsed = parsePerfStationCached(r.stationRaw || r.station);
+      var rawSt = r.stationRaw || r.station;
+      var parsed = _stationParseCache.has(rawSt) ? _stationParseCache.get(rawSt) : (function(){ var p = parsePerfStation(rawSt); _stationParseCache.set(rawSt, p); return p; })();
       if(!parsed) return;
       var wallPart = parsed.wall ? "_"+parsed.wall : "";
       var key = parsed.num ? parsed.floor+"_"+parsed.num : parsed.floor+"_"+parsed.type+"_"+parsed.id+wallPart+"_"+parsed.pos;
@@ -3359,9 +3426,10 @@ document.addEventListener("click",(e)=>{
       stationData[key].rows.push(r);
       var curState = stationData[key].state;
       if(r.pct >= 100){/* at/above target */}
-      else if(r.pct < 80 && curState !== "gap") stationData[key].state = "gap";
+      else if(String(r.notes||"").indexOf("Gap") !== -1 && curState !== "gap") stationData[key].state = "gap";
       else if(String(r.notes||"").indexOf("IDLE") !== -1 && curState !== "gap") stationData[key].state = "idle";
-      else if(r.nhFlag && curState !== "gap" && curState !== "idle") stationData[key].state = "faststart";
+      else if(r.pct < 80 && curState !== "gap" && curState !== "idle") stationData[key].state = "below";
+      else if(r.nhFlag && curState !== "gap" && curState !== "idle" && curState !== "below") stationData[key].state = "faststart";
     });
 
     // Post-process: all at/above target → ontarget
@@ -3372,9 +3440,10 @@ document.addEventListener("click",(e)=>{
     });
 
     // Live counters
-    var cntGap=0, cntIdle=0, cntGca=0, cntOk=0;
+    var cntGap=0, cntIdle=0, cntGca=0, cntOk=0, cntBelow=0;
     Object.values(stationData).forEach(function(sd){
       if(sd.state === "gap") cntGap++;
+      else if(sd.state === "below") cntBelow++;
       else if(sd.state === "idle") cntIdle++;
       else if(sd.state === "ontarget" || sd.state === "normal") cntOk++;
       if(sd.rows.some(function(r){ return gcaPending.has((r.login||"").toLowerCase()); })) cntGca++;
@@ -3382,7 +3451,7 @@ document.addEventListener("click",(e)=>{
     var cg=$("mapCntGap"); if(cg) cg.innerHTML='Gap: <b>'+cntGap+'</b>';
     var ci=$("mapCntIdle"); if(ci) ci.innerHTML='Idle: <b>'+cntIdle+'</b>';
     var cc=$("mapCntGca"); if(cc) cc.innerHTML='GCA: <b>'+cntGca+'</b>';
-    var co=$("mapCntOk"); if(co) co.innerHTML='OK: <b>'+cntOk+'</b>';
+    var co=$("mapCntOk"); if(co) co.innerHTML='OK: <b>'+(cntOk+cntBelow)+'</b>';
 
     // Expose highlight + proc filter + gcaPending to renderers
     window._perfMapHighlight = perfMapHighlight;
@@ -3456,6 +3525,7 @@ document.addEventListener("click",(e)=>{
       if(!data) return 'sm-empty';
       var s = data.state || 'normal';
       if(s === 'gap') return 'sm-danger';
+      if(s === 'below') return 'sm-danger';
       if(s === 'idle') return 'sm-idle';
       if(s === 'faststart') return 'sm-faststart';
       if(s === 'ontarget') return 'sm-ontarget';
@@ -3466,6 +3536,7 @@ document.addEventListener("click",(e)=>{
       if(!data) return '';
       var s = data.state || 'normal';
       if(s === 'gap') return '<span class="sm-badge bg-red">G</span>';
+      if(s === 'below') return '<span class="sm-badge bg-red">↓</span>';
       if(s === 'idle') return '<span class="sm-badge bg-yellow">I</span>';
       if(s === 'faststart') return '<span class="sm-badge bg-purple">FS</span>';
       return '';
@@ -3526,7 +3597,7 @@ document.addEventListener("click",(e)=>{
         var displayLabel = type + ' ' + numStr;
         div.style.cursor = "pointer";
         div.onmouseenter = function(ev){ showPerfTooltip(ev, displayLabel, data); };
-        div.onmouseleave = function(){ window._ttHideTimer = setTimeout(function(){ var tt=document.getElementById("gcaMapTooltip"); if(tt && !tt.matches(":hover")) tt.style.display="none"; },800); };
+        div.onmouseleave = function(){ window._ttHideTimer = setTimeout(function(){ var tt=document.getElementById("gcaMapTooltip"); if(tt) tt.style.display="none"; },150); };
         // Click: open upload modal prefilled with first uncoached associate
         div.onclick = function(){
           var target = data.rows.find(function(r){ return !r.coached; }) || data.rows[0];
@@ -3621,7 +3692,7 @@ document.addEventListener("click",(e)=>{
           }
           p2rSt.style.cursor="pointer";
           p2rSt.onmouseenter = function(ev){ showPerfTooltip(ev, lbl, p2rData); };
-          p2rSt.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=document.getElementById("gcaMapTooltip"); if(tt&&!tt.matches(":hover"))tt.style.display="none"; },800); };
+          p2rSt.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=document.getElementById("gcaMapTooltip"); if(tt) tt.style.display="none"; },150); };
           p2rSt.onclick = function(){ var t=p2rData.rows.find(function(r){return !r.coached;})||p2rData.rows[0]; if(t) openUploadPrefill(t.login); };
         }
         p2rDiv.appendChild(p2rSt);
@@ -3773,7 +3844,7 @@ document.addEventListener("click",(e)=>{
             }
             st.style.cursor="pointer";
             st.onmouseenter = function(ev){ showPerfTooltip(ev, ln.label+" #"+pos, data); };
-            st.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=document.getElementById("gcaMapTooltip"); if(tt&&!tt.matches(":hover"))tt.style.display="none"; },800); };
+            st.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=document.getElementById("gcaMapTooltip"); if(tt) tt.style.display="none"; },150); };
             st.onclick = function(){ var t=data.rows.find(function(r){return !r.coached;})||data.rows[0]; if(t) openUploadPrefill(t.login); };
           }
           row.appendChild(st);
@@ -3991,7 +4062,7 @@ document.addEventListener("click",(e)=>{
     tt.style.display = "block";
     tt.style.left = Math.min(e.clientX + 12, window.innerWidth - 200) + "px";
     tt.style.top = (e.clientY - 40) + "px";
-    tt.onmouseleave = function(){ setTimeout(function(){ tt.style.display = 'none'; }, 200); };
+    tt.onmouseleave = function(){ tt.style.display = "none"; };
   }
 
 })();
@@ -4191,7 +4262,7 @@ document.addEventListener("click",(e)=>{
       div.innerHTML = badge + '<span class="sm-type">'+type+'</span><span class="sm-num">'+String(stNum)+'</span>';
       if(pending){
         div.onmouseenter = function(e){ showMapTooltip(e, stNum, pending, type); };
-        div.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=$g("gcaMapTooltip"); if(tt&&!tt.matches(":hover"))tt.style.display="none";},800);};
+        div.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=$g("gcaMapTooltip"); if(tt) tt.style.display="none";},150);};
       }
       return div;
     }
@@ -4291,7 +4362,7 @@ document.addEventListener("click",(e)=>{
           div.innerHTML = badge + '<span class="sm-type">'+ln.prefix.slice(0,3).toUpperCase()+'</span><span class="sm-num">'+pos+'</span>';
           if(pending){
             div.onmouseenter = function(e){ showMapTooltip(e, ln.label+' #'+pos, pending, ln.prefix); };
-            div.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=$g("gcaMapTooltip"); if(tt&&!tt.matches(":hover"))tt.style.display="none";},800);};
+            div.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=$g("gcaMapTooltip"); if(tt) tt.style.display="none";},150);};
           }
           row.appendChild(div);
         }
@@ -4333,7 +4404,7 @@ document.addEventListener("click",(e)=>{
     tt.style.left = Math.min(e.clientX + 10, window.innerWidth - 300) + "px";
     tt.style.top = Math.min(e.clientY - 10, window.innerHeight - 200) + "px";
     // Close when mouse leaves tooltip
-    tt.onmouseleave = function(){ setTimeout(function(){ tt.style.display = 'none'; }, 200); };
+    tt.onmouseleave = function(){ tt.style.display = "none"; };
   }
   // ═══ END FLOOR MAP ═══
 

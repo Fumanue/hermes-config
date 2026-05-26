@@ -1,4 +1,4 @@
-import os
+﻿import os
 import re
 import json
 import subprocess
@@ -9,9 +9,9 @@ from typing import Any, Dict, Tuple, Optional
 import pandas as pd
 import win32com.client  # pip install pywin32
 
-from project_hermes.core.auth_config import load_settings
-from project_hermes.config import get_paths
-from project_hermes.core.logger import get_logger
+from project_argos.core.auth_config import load_settings
+from project_argos.config import get_paths
+from project_argos.core.logger import get_logger
 log = get_logger(__name__)
 
 
@@ -296,7 +296,7 @@ def build_roster_scc(fc: str) -> pd.DataFrame:
 
 
 def main():
-    from project_hermes.config import get_paths
+    from project_argos.config import get_paths
     fc = (input("FC (default BCN4): ").strip() or "BCN4").upper()
     paths = get_paths()
     out_dir = paths.output

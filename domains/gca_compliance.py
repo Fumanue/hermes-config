@@ -1,4 +1,4 @@
-"""
+﻿"""
 GCA Compliance Pipeline
 ========================
 Independent pipeline that fetches PENDING + COMPLETED coaching instances
@@ -18,9 +18,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from project_hermes.config import get_paths
-from project_hermes.core.logger import get_logger
-from project_hermes.domains.guided_coaching_history import (
+from project_argos.config import get_paths
+from project_argos.core.logger import get_logger
+from project_argos.domains.guided_coaching_history import (
     GuidedCoachingHistoryClient,
     GC_ENDPOINT,
     GC_HOST,
@@ -33,7 +33,7 @@ from project_hermes.domains.guided_coaching_history import (
 log = get_logger(__name__)
 
 paths = get_paths()
-CONFIG_DIR = Path(paths.root) / "config" / "hermes"
+CONFIG_DIR = Path(paths.root) / "config" / "argos"
 CACHE_DIR = Path(paths.cache)
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -77,6 +77,7 @@ def _normalize_key(value: str) -> str:
     s = re.sub(r"[\u2010-\u2015]", "-", s)
     s = re.sub(r"\s+", " ", s)
     s = re.sub(r"\s*/\s*", "/", s)
+    s = re.sub(r"\s*_\s*", "_", s)  # Remove spaces around underscores
     return s.strip().upper()
 
 
@@ -223,7 +224,7 @@ def _fetch_location_standalone(emp_id: str, cookie: str) -> Dict[str, Any]:
 
 def _fetch_location(emp_id: str, client: GuidedCoachingHistoryClient) -> Dict[str, Any]:
     """Fetch last seen location for a single employee (single-threaded fallback)."""
-    from project_hermes.core.auth_midway import get_cookie
+    from project_argos.core.auth_midway import get_cookie
     return _fetch_location_standalone(emp_id, get_cookie(aea=True, max_tries=2))
 
 
@@ -329,7 +330,7 @@ def run_gca_compliance_pipeline(
     pending_emp_ids = list({it["employee_id"] for it in all_items if it["status"] == "PENDING" and it["employee_id"]})
     locations: Dict[str, Dict] = {}
     if pending_emp_ids:
-        from project_hermes.core.auth_midway import get_cookie as _gc
+        from project_argos.core.auth_midway import get_cookie as _gc
         _loc_cookie = _gc(aea=True, max_tries=3)
         _total_loc = len(pending_emp_ids)
         _done_loc = 0

@@ -1,9 +1,9 @@
-# src/project_hermes/core/config_updater.py
+﻿# src/project_argos/core/config_updater.py
 """
 Remote config & code updater — syncs configs and source code from GitHub.
   - timeout_seconds: HTTP timeout
 
-Reads `config/hermes/remote_config.json` for connection settings:
+Reads `config/argos/remote_config.json` for connection settings:
   - owner / repo / branch: GitHub repository coordinates
   - token_env: env variable name holding GitHub PAT
   - timeout_seconds: HTTP timeout
@@ -12,11 +12,11 @@ Uses `config/Manifest.json` to map local filenames → remote paths.
 Downloads changed files from GitHub raw content API.
 
 State files:
-  - config/hermes/.update_state.json: last successful update info
-  - config/hermes/.update_status.json: last check result
+  - config/argos/.update_state.json: last successful update info
+  - config/argos/.update_status.json: last check result
 
 Usage:
-    from project_hermes.core.config_updater import check_and_update
+    from project_argos.core.config_updater import check_and_update
     result = check_and_update()  # → {"ok": True, "status": "updated", ...}
 """
 from __future__ import annotations
@@ -32,8 +32,8 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
-from project_hermes.config import get_paths
-from project_hermes.core.logger import get_logger
+from project_argos.config import get_paths
+from project_argos.core.logger import get_logger
 
 log = get_logger(__name__)
 
@@ -41,10 +41,10 @@ log = get_logger(__name__)
 paths = get_paths()
 CONFIG_DIR = paths.config_dir
 BACKUP_DIR = CONFIG_DIR / "backups"
-# In one-folder frozen mode, .pyd files are in root/project_hermes/ (no src/ prefix)
-# In dev mode, they're in root/src/project_hermes/
-_src_candidate = paths.root / "src" / "project_hermes"
-_flat_candidate = paths.root / "project_hermes"
+# In one-folder frozen mode, .pyd files are in root/project_argos/ (no src/ prefix)
+# In dev mode, they're in root/src/project_argos/
+_src_candidate = paths.root / "src" / "project_argos"
+_flat_candidate = paths.root / "project_argos"
 if _src_candidate.exists():
     SRC_DIR = _src_candidate
 elif _flat_candidate.exists():
@@ -56,7 +56,7 @@ STATE_PATH = CONFIG_DIR / ".update_state.json"
 STATUS_PATH = CONFIG_DIR / ".update_status.json"
 MANIFEST_PATH = paths.root / "config" / "Manifest.json"
 
-DEFAULT_TOKEN_ENV = "HERMES_CONFIG_TOKEN"
+DEFAULT_TOKEN_ENV = "ARGOS_CONFIG_TOKEN"
 DEFAULT_TIMEOUT_SECONDS = 5
 
 _UPDATE_LOCK = threading.Lock()
@@ -288,7 +288,7 @@ def _do_update() -> Dict[str, Any]:
                 # Root-level file
                 local_path = paths.root / "tenure_curves.json"
             else:
-                # Config files → config/hermes/
+                # Config files → config/argos/
                 local_path = CONFIG_DIR / local_name
 
             # Backup existing

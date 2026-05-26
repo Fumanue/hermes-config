@@ -1,6 +1,6 @@
-# src/project_hermes/services/dashboard_builder.py
+﻿# src/project_argos/services/dashboard_builder.py
 """
-Dashboard builder — Project Hermes v7d
+Dashboard builder — Project Argos v8
 (Roster + FCLM + Fast Starts + RoboScout + Guided Coaching + STOW Mix Share)
 
 What this version fixes:
@@ -8,7 +8,7 @@ What this version fixes:
   - STOW / QUANTITY_STOW Mix Share is calculated from FCLM_1002976 Size rows.
   - Existing comments are preserved: Fast Start, RoboScout, STOW GAP, DECANT UPT, QUANTITY_STOW UPA.
 
-Required config files under config/hermes/:
+Required config files under config/argos/:
   - fclm_mapping.json
   - guided_coaching.json
   - shift_config.json
@@ -26,16 +26,16 @@ from typing import Any, Dict, List
 
 import pandas as pd
 
-from project_hermes.config import get_paths
-from project_hermes.domains.necro_targets import get_necro_targets, get_necro_targets_wk1
-from project_hermes.domains.guided_coaching_history import fetch_guided_coaching_history
-from project_hermes.domains.atlas_quality import quality_comments_for_dash
-from project_hermes.core.logger import get_logger
-from project_hermes.domains.exemptions import get_exempt_logins_for_process
+from project_argos.config import get_paths
+from project_argos.domains.necro_targets import get_necro_targets, get_necro_targets_wk1
+from project_argos.domains.guided_coaching_history import fetch_guided_coaching_history
+from project_argos.domains.atlas_quality import quality_comments_for_dash
+from project_argos.core.logger import get_logger
+from project_argos.domains.exemptions import get_exempt_logins_for_process
 log = get_logger(__name__)
 
 
-log.info("🔥 DASHBOARD_BUILDER VERSION: hermes-v7h-decant-jph-each-fix")
+log.info("🔥 DASHBOARD_BUILDER VERSION: argos-v8-priority-mode")
 
 # =========================================================
 # Paths
@@ -46,7 +46,7 @@ OUTPUT_DIR = Path(getattr(paths, "output", ROOT_DIR / "data" / "output"))
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 TENURE_CURVES_JSON = ROOT_DIR / "tenure_curves.json"
-HERMES_CONFIG_DIR = ROOT_DIR / "config" / "hermes"
+ARGOS_CONFIG_DIR = ROOT_DIR / "config" / "argos"
 _WS_RE = re.compile(r"\s+")
 
 
@@ -100,12 +100,12 @@ DEFAULT_DOWNLOADER_SOURCES = {
     "icqa_rate_col_index": None,
 }
 
-_ALL_FCLM_CFG = _load_json_raw(HERMES_CONFIG_DIR, "fclm_mapping.json")
-_ALL_CUSTOM_TARGETS = _load_json_raw(HERMES_CONFIG_DIR, "custom_targets.json")
-_ALL_SHIFT_CONFIG = _load_json_raw(HERMES_CONFIG_DIR, "shift_config.json")
-_ALL_PROCESS_MAPPING = _load_json_raw(HERMES_CONFIG_DIR, "process_mapping.json")
-DOWNLOADER_SOURCES_CFG = _load_json_direct(HERMES_CONFIG_DIR, "downloader_sources.json", DEFAULT_DOWNLOADER_SOURCES)
-GC_COURSE_CFG = _load_json_direct(HERMES_CONFIG_DIR, "guided_coaching.json", DEFAULT_GC_COURSES)
+_ALL_FCLM_CFG = _load_json_raw(ARGOS_CONFIG_DIR, "fclm_mapping.json")
+_ALL_CUSTOM_TARGETS = _load_json_raw(ARGOS_CONFIG_DIR, "custom_targets.json")
+_ALL_SHIFT_CONFIG = _load_json_raw(ARGOS_CONFIG_DIR, "shift_config.json")
+_ALL_PROCESS_MAPPING = _load_json_raw(ARGOS_CONFIG_DIR, "process_mapping.json")
+DOWNLOADER_SOURCES_CFG = _load_json_direct(ARGOS_CONFIG_DIR, "downloader_sources.json", DEFAULT_DOWNLOADER_SOURCES)
+GC_COURSE_CFG = _load_json_direct(ARGOS_CONFIG_DIR, "guided_coaching.json", DEFAULT_GC_COURSES)
 
 
 def _is_fc_keyed(d: dict) -> bool:
@@ -780,7 +780,7 @@ ROLE_TO_MODE_GROUP: dict[str, str] = {
     "PICK_AR": "PICK",
     "P2R_PICK": "PICK",
     "P2R_PACK": "PACK_MULTIS",
-    "AFE_PACK": "PACK_MULTIS",
+    "AFE_PACK": "PACK_AFE",
     "SM": "PACK_SINGLES",
     "SM2": "PACK_SINGLES",
     "SMMIX": "PACK_SINGLES",
@@ -795,57 +795,45 @@ MIN_SIGMA_POPULATION = 5
 
 
 def compute_sigma_priorities(dash: pd.DataFrame, mode_groups: dict) -> pd.DataFrame:
+    """
+    Assign sigma levels based on % to target thresholds:
+      P3 (Sigma 3): < 80%  — highest priority
+      P2 (Sigma 2): 80-89%
+      P1 (Sigma 1): 90-99%
+      P0 (Sigma 0): >= 100% — on target
+    
+    Mode (from WK-1 necro) determines who is "priority":
+      is_priority = sigma >= mode
+    """
     dash = dash.copy()
-    dash["SigmaLevel"] = 0
     dash["ModeGroup"] = dash["Role"].apply(lambda r: ROLE_TO_MODE_GROUP.get(str(r).strip().upper(), ""))
     dash["Mode"] = dash["ModeGroup"].apply(lambda g: mode_groups.get(g, {}).get("mode", 1) if g and g != "ICQA" else 0)
-    dash["SigmaEligible"] = False
 
     pct_series = pd.to_numeric(dash["% to OP2"], errors="coerce")
-    log.info("\n[SIGMA] pct valid: {pct_series.notna().sum()}/{len(pct_series)}")
 
-    for group in sorted(dash["ModeGroup"].dropna().unique()):
-        if not group:
-            continue
-        mask = dash["ModeGroup"] == group
-        grp_pct = pct_series[mask].dropna()
-        n = len(grp_pct)
-        mode = int(mode_groups.get(group, {}).get("mode", 1)) if group != "ICQA" else None
-        if n < MIN_SIGMA_POPULATION:
-            log.info("{group}: n={n} < {MIN_SIGMA_POPULATION} — Sigma 0")
-            continue
-        mu = float(grp_pct.mean())
-        std = float(grp_pct.std(ddof=1))
-        if std < 0.01:
-            log.info("{group}: σ≈0 — Sigma 0")
-            continue
-        t1, t2, t3 = mu - std, mu - 2 * std, mu - 3 * std
-        log.info("{group} Mode {mode}: n={n}, μ={mu:.1f}, σ={std:.1f}")
-
-        def _level(p):
-            if pd.isna(p):
-                return 0
-            if p < t3:
-                return 3
-            if p < t2:
-                return 2
-            if p < t1:
-                return 1
+    # Fixed thresholds: <80% = P3, 80-89% = P2, 90-99% = P1, >=100% = P0
+    def _sigma_from_pct(p):
+        if pd.isna(p):
             return 0
+        if p < 80:
+            return 3
+        if p < 90:
+            return 2
+        if p < 100:
+            return 1
+        return 0
 
-        levels = pct_series[mask].apply(_level).astype(int)
-        dash.loc[mask, "SigmaLevel"] = levels.values
-        if mode is None:
-            dash.loc[mask, "SigmaEligible"] = True
-        elif mode == 3:
-            dash.loc[mask, "SigmaEligible"] = levels.values >= 3
-        elif mode == 2:
-            dash.loc[mask, "SigmaEligible"] = levels.values >= 2
-        else:
-            dash.loc[mask, "SigmaEligible"] = levels.values >= 1
+    dash["Sigma"] = pct_series.apply(_sigma_from_pct).astype(int)
 
-    dash["Sigma"] = dash.apply(lambda r: int(r["SigmaLevel"]) if r["SigmaEligible"] else 0, axis=1)
-    log.info("✅ Total eligible: {(dash['Sigma'] > 0).sum()}/{len(dash)}")
+    s1 = int((dash["Sigma"] == 1).sum())
+    s2 = int((dash["Sigma"] == 2).sum())
+    s3 = int((dash["Sigma"] == 3).sum())
+    log.info(f"  [SIGMA] P3(<80%)={s3}, P2(80-89%)={s2}, P1(90-99%)={s1}")
+
+    # Summary
+    summary = dash.groupby("ModeGroup").agg({"Mode": "first", "Sigma": "max", "Login": "count"}).rename(columns={"Login": "n"})
+    log.info(f"  Summary:\n{summary}")
+
     return dash
 
 
@@ -1246,7 +1234,7 @@ def _load_roster(fc: str) -> pd.DataFrame:
 
     # ─── Hours-based tenure (replaces old day-based system) ────────────
     try:
-        from project_hermes.domains.tenure_hours import load_tenure_data, map_process
+        from project_argos.domains.tenure_hours import load_tenure_data, map_process
         tenure_df = load_tenure_data(fc)
         # Build lookup: (login, main_process) → {tenure, curve, home_process}
         tenure_lookup = {}
@@ -1726,7 +1714,7 @@ def run(fc: str = "BCN4") -> Path:
 
     # ─── Exemptions: remove coaching priority for exempt associates ─────
     try:
-        from project_hermes.domains.tenure_hours import map_process
+        from project_argos.domains.tenure_hours import map_process
         exempt_all = get_exempt_logins_for_process("ALL")
         exempt_by_proc: dict[str, set] = {}
         for proc in ["PICK", "PACK", "STOW", "RECEIVE", "ICQA", "DECANT"]:

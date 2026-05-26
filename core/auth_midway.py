@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional
 
-from project_hermes.domains.roster_scc import midway_cookie_v2_like_vba, COOKIE_FILE
+from project_argos.domains.roster_scc import midway_cookie_v2_like_vba, COOKIE_FILE
 
 
 def get_cookie(aea: bool = True, max_tries: int = 4, cookie_file: Optional[Path] = None) -> str:

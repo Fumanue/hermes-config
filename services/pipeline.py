@@ -1,15 +1,15 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import threading
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from project_hermes.config import get_paths
-from project_hermes.services.downloader import run as downloader_run
-from project_hermes.services.cleaner import run as cleaner_run
-from project_hermes.services.dashboard_builder import run as dashboard_builder_run
-from project_hermes.core.logger import get_logger
+from project_argos.config import get_paths
+from project_argos.services.downloader import run as downloader_run
+from project_argos.services.cleaner import run as cleaner_run
+from project_argos.services.dashboard_builder import run as dashboard_builder_run
+from project_argos.core.logger import get_logger
 log = get_logger(__name__)
 
 
@@ -27,7 +27,7 @@ def _prefetch_gc_history(fc: str) -> None:
     Non-fatal: if it fails, dashboard_builder will fetch it synchronously.
     """
     try:
-        from project_hermes.domains.guided_coaching_history import fetch_guided_coaching_history
+        from project_argos.domains.guided_coaching_history import fetch_guided_coaching_history
         fetch_guided_coaching_history(fc, force_refresh=True)
         log.info("✓ GC history pre-fetched for %s", fc)
     except Exception as e:

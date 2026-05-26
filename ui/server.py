@@ -1,4 +1,4 @@
-import contextlib
+﻿import contextlib
 import json
 import platform
 import re
@@ -14,25 +14,25 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from project_hermes.config import get_paths
-from project_hermes.core.logger import get_logger
-from project_hermes.domains.guided_coaching_history import fetch_guided_coaching_history
-from project_hermes.domains.necro_targets import get_necro_targets
-from project_hermes.domains.quality_pipeline import (
+from project_argos.config import get_paths
+from project_argos.core.logger import get_logger
+from project_argos.domains.guided_coaching_history import fetch_guided_coaching_history
+from project_argos.domains.necro_targets import get_necro_targets
+from project_argos.domains.quality_pipeline import (
     load_output, load_output_multi, _load_json,
     _course_for_error, normalize_error_key,
     run as run_quality_pipeline,
 )
-from project_hermes.domains.tenure_hours import load_tenure_data, get_tenure_for, map_process
-from project_hermes.domains.guided_coaching_uploader import GuidedCoachingUploader
-from project_hermes.services.pipeline import run_pipeline
-from project_hermes.domains.auth_phonetool import get_phonetool_user, resolve_permissions, ALLOWED_SITES
-from project_hermes.domains.gca_compliance import run_gca_compliance_pipeline, load_gca_compliance_cache
+from project_argos.domains.tenure_hours import load_tenure_data, get_tenure_for, map_process
+from project_argos.domains.guided_coaching_uploader import GuidedCoachingUploader
+from project_argos.services.pipeline import run_pipeline
+from project_argos.domains.auth_phonetool import get_phonetool_user, resolve_permissions, ALLOWED_SITES
+from project_argos.domains.gca_compliance import run_gca_compliance_pipeline, load_gca_compliance_cache
 
 # ─────────────────────────────────────────────────────────
 # App
 # ─────────────────────────────────────────────────────────
-app = FastAPI(title="Coaching Hub API", version="1.0.0")
+app = FastAPI(title="Project Argos API", version="2.0.0")
 log = get_logger(__name__)
 
 # ─────────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ app.add_middleware(
 paths         = get_paths()
 OUTPUT_DIR    = paths.output
 DASHBOARD_CSV = OUTPUT_DIR / "Dashboard_Full.csv"
-CONFIG_DIR    = paths.root / "config" / "hermes"
+CONFIG_DIR    = paths.root / "config" / "argos"
 DEFAULT_FC    = "BCN4"
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -335,11 +335,12 @@ def load_dashboard() -> pd.DataFrame:
     for col in [
         "Dept", "Login", "Station", "Role", "Rate", "% to OP2", "Sigma",
         "TenureWk", "Process Tenure Week", "TenureInDays", "TenureDays", "Cohort",
-        "Comments", "H1_OnTarget", "H2_OnTarget", "%IDLE", "Coached",
+        "Comments", "H1_OnTarget", "H2_OnTarget", "%IDLE", "Coached", "Mode",
     ]:
         if col not in df.columns:
             df[col] = None
     df["Sigma"] = pd.to_numeric(df["Sigma"], errors="coerce").fillna(0).astype(int)
+    df["Mode"] = pd.to_numeric(df["Mode"], errors="coerce").fillna(0).astype(int)
     return df
 
 
@@ -525,6 +526,37 @@ def health():
     }
 
 
+# ─────────────────────────────────────────────────────────
+# User Preferences (persisted to data/user_prefs.json)
+# ─────────────────────────────────────────────────────────
+_USER_PREFS_PATH = paths.data / "user_prefs.json"
+
+@app.get("/api/prefs")
+def api_get_prefs():
+    if _USER_PREFS_PATH.exists():
+        try:
+            return json.loads(_USER_PREFS_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {"default_fc": "BCN4", "theme": "light", "lang": "es"}
+
+@app.post("/api/prefs")
+def api_save_prefs(body: dict):
+    try:
+        # Merge with existing prefs
+        existing = {}
+        if _USER_PREFS_PATH.exists():
+            try:
+                existing = json.loads(_USER_PREFS_PATH.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        existing.update(body)
+        _USER_PREFS_PATH.write_text(json.dumps(existing, indent=2), encoding="utf-8")
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 @app.get("/api/shift")
 def api_shift(fc: str = DEFAULT_FC, shift: str = ""):
     now   = datetime.now()
@@ -684,6 +716,8 @@ def api_dashboard(fc: str = DEFAULT_FC, shift: str = ""):
             "rate":           rate,
             "pct_op2":        pct,
             "sigma":          int(row.get("Sigma", 0)),
+            "mode":           int(row.get("Mode", 0)),
+            "is_priority":    int(row.get("Sigma", 0)) >= int(row.get("Mode", 0)) if int(row.get("Mode", 0)) > 0 else False,
             "tenure_wk":      row.get("TenureWk"),
             "comments":       comments,
             "course_key":     ck,
@@ -704,6 +738,7 @@ def api_dashboard(fc: str = DEFAULT_FC, shift: str = ""):
         "p0":     int((sigma == 0).sum()),
         "total":  len(base),
         "coached": len(coached_set),
+        "priority": sum(1 for r in records if r.get("is_priority")),
     }
     roles   = base["Role"].astype(str).str.strip().str.upper().value_counts().to_dict()
     depts   = base["Dept"].astype(str).str.strip().value_counts().to_dict()
@@ -713,18 +748,29 @@ def api_dashboard(fc: str = DEFAULT_FC, shift: str = ""):
         .value_counts().to_dict()
     )
 
+    # Load WK-1 mode groups for UI display
+    mode_groups_data = {}
+    try:
+        from project_argos.domains.necro_targets import get_necro_targets_wk1, ROLE_TO_MODE_GROUP
+        wk1 = get_necro_targets_wk1(fc or DEFAULT_FC)
+        mode_groups_data = wk1.get("mode_groups", {})
+    except Exception:
+        pass
+
     return {
         "data":    records,
         "kpis":    kpis,
         "roles":   roles,
         "depts":   depts,
         "role_p3": role_p3,
+        "mode_groups": mode_groups_data,
     }
 
 
 @app.get("/api/map-layout")
 def api_map_layout(fc: str = DEFAULT_FC):
     """Return floor map layout config for the given FC."""
+    _require_admin()
     fp = CONFIG_DIR / "map_layouts.json"
     if not fp.exists():
         return {"floors": []}
@@ -746,7 +792,7 @@ def api_targets(fc: str = DEFAULT_FC):
 def api_targets_quality(fc: str = DEFAULT_FC):
     """Return DPMO quality targets for the given FC."""
     try:
-        from project_hermes.domains.quality_pipeline import _load_dpmo_targets
+        from project_argos.domains.quality_pipeline import _load_dpmo_targets
         targets = _load_dpmo_targets()
         fc_targets = targets.get(fc.strip().upper(), {})
         # Return structured data for the UI
@@ -993,8 +1039,8 @@ def api_auth_me():
     if phonetool_error:
         perms["phonetool_error"] = phonetool_error
 
-    # Admin info
-    is_admin = login in [a.lower() for a in admin_list]
+    # Admin info — uses hardcoded list (not editable from deployed folder)
+    is_admin = _is_admin(login)
     is_super_admin = login in [a.lower() for a in super_admins]
     admin_info = {
         "is_admin": is_admin,
@@ -1203,10 +1249,35 @@ def api_bulk_upload(req: BulkUploadRequest):
     }
 
 # ═════════════════════════════════════════════════════════
-# QUALITY COACHING ROUTES
+# BETA FEATURE GATE — Admin-only check
+# ═════════════════════════════════════════════════════════
+# Hardcoded admin list — NOT editable from the deployed folder.
+# To update: change this list, rebuild, and redeploy.
+_HARDCODED_ADMINS = frozenset([
+    "fumanue", "mferruz", "poangelr", "larezaha",
+])
+
+
+def _is_admin(login: str = "") -> bool:
+    """Check if login is in the hardcoded admin set."""
+    if not login:
+        login = os.environ.get("USERNAME", "").strip().lower()
+    return login.lower() in _HARDCODED_ADMINS
+
+
+def _require_admin():
+    """Raise 403 if current user is not in admin list. Used for beta features."""
+    login = os.environ.get("USERNAME", "").strip().lower()
+    if login not in _HARDCODED_ADMINS:
+        raise HTTPException(status_code=403, detail="Beta feature — admin access required")
+
+
+# ═════════════════════════════════════════════════════════
+# QUALITY COACHING ROUTES (beta — admin only)
 # ═════════════════════════════════════════════════════════
 @app.get("/api/quality/dashboard")
 def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False, sites: str = ""):
+    _require_admin()
     import math
 
     def _safe_int(v, default=0):
@@ -1406,6 +1477,7 @@ def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False, site
 
 @app.post("/api/quality/run")
 def api_quality_run(req: QualityRunRequest):
+    _require_admin()
     fc_upper = str(req.fc or DEFAULT_FC).strip().upper()
     _log_usage(fc_upper, os.environ.get("USERNAME", "unknown"), "Quality")
     if fc_upper not in ALLOWED_SITES:
@@ -1432,6 +1504,7 @@ def api_quality_run(req: QualityRunRequest):
 @app.post("/api/quality/run-multi")
 def api_quality_run_multi(req: QualityMultiRunRequest):
     """Run quality pipeline for multiple sites (admin only). Merges results."""
+    _require_admin()
     login = os.environ.get("USERNAME", "").strip().lower()
     _admins_path = CONFIG_DIR / "admins.json"
     _admins_cfg = json.loads(_admins_path.read_text(encoding="utf-8")) if _admins_path.exists() else {}
@@ -1477,6 +1550,7 @@ def api_quality_run_multi(req: QualityMultiRunRequest):
 @app.post("/api/quality/refresh-coached")
 def api_quality_refresh_coached(fc: str = DEFAULT_FC):
     """Force-refresh the Guided Coaching history cache for this FC."""
+    _require_admin()
     fc_upper = (fc or DEFAULT_FC).strip().upper()
     try:
         gc_data = with_com_init(
@@ -1525,6 +1599,7 @@ def api_feedback(req: FeedbackRequest):
 
 @app.post("/api/quality/upload")
 def api_quality_upload(req: QualityUploadRequest):
+    _require_admin()
     try:
         log.info(f"Quality upload: fc={req.fc} login={req.login} course_id={req.course_id!r} "
                  f"error_type={req.error_type!r} total={req.total_errors_wk} sigma={req.sigma}")
@@ -1640,9 +1715,9 @@ def api_admin_push_config():
         except Exception as e:
             print(f"[PUSH-CONFIG] Failed to copy {fp.name}: {e}", flush=True)
 
-    # 2) Git push to Data Central (hermes-config repo)
+    # 2) Git push to Data Central (argos-config repo)
     git_exe = r"C:\Users\fumanue\AppData\Local\Programs\Git\cmd\git.exe"
-    repo_dir = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Documents" / "hermes-config"
+    repo_dir = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Documents" / "argos-config"
     git_result = {"pushed": False, "message": ""}
 
     try:
@@ -1683,6 +1758,7 @@ def api_admin_push_config():
 @app.get("/api/gca/dashboard")
 def api_gca_dashboard(fc: str = DEFAULT_FC):
     """Return cached GCA compliance data."""
+    _require_admin()
     fc = (fc or DEFAULT_FC).strip().upper()
     data = load_gca_compliance_cache(fc)
     if not data:
@@ -1693,6 +1769,7 @@ def api_gca_dashboard(fc: str = DEFAULT_FC):
 @app.get("/api/gca/pipeline")
 def api_gca_pipeline_stream(fc: str = DEFAULT_FC):
     """SSE stream for GCA Compliance pipeline."""
+    _require_admin()
     import queue, threading, json as _json
 
     fc_upper = (fc or DEFAULT_FC).strip().upper()

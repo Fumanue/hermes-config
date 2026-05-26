@@ -1,4 +1,4 @@
-# src/project_hermes/domains/necro_targets.py
+﻿# src/project_argos/domains/necro_targets.py
 from __future__ import annotations
 
 import os
@@ -17,9 +17,9 @@ import pandas as pd
 import pythoncom
 import win32com.client
 
-from project_hermes.config import get_paths
-from project_hermes.core.auth_midway import get_cookie
-from project_hermes.core.logger import get_logger
+from project_argos.config import get_paths
+from project_argos.core.auth_midway import get_cookie
+from project_argos.core.logger import get_logger
 log = get_logger(__name__)
 
 
@@ -173,9 +173,11 @@ def build_payload(fc: str, year: int, week: int) -> str:
 def build_payload_actuals_vs_op2(fc: str, year: int, week: int) -> str:
     """
     Payload for WK-1 Mode calculation.
-    comp = Actuals (what really happened last week)
-    base = OP2 (the target)
-    → Comp TPH / Base TPH = % to goal
+    comp = OP2 (the target)
+    base = Actuals (what really happened last week)
+    Uses Diluted hours (matching regional productivity script).
+    → Base TPH = Actual, Comp TPH = OP2 target
+    → % to OP2 = Base TPH / Comp TPH (Actual / Target)
     """
     payload = {
         "data": {
@@ -187,8 +189,8 @@ def build_payload_actuals_vs_op2(fc: str, year: int, week: int) -> str:
             "baseEndDate": str(week),
             "compFc": fc,
             "baseFc": fc,
-            "compScenario": "Actuals",
-            "baseScenario": "OP2",
+            "compScenario": "OP2",
+            "baseScenario": "Actuals",
             "comp_benchmark_fc_clusters": [],
             "base_benchmark_fc_clusters": [],
             "hours_type": "Hours",
@@ -222,6 +224,13 @@ def to_num(x):
 
 
 def extract_targets_from_table(df: pd.DataFrame) -> dict:
+    """
+    Extract OP2 TPH targets from Necro HTML table using proper aggregation.
+    Uses the same logic as the regional productivity aggregator:
+    - If "- Total" row exists for a path, use it directly
+    - Otherwise, sum Small/Medium/Large/Heavy-Bulky sizes (weighted TPH = vol/hrs)
+    - Direct paths (Transfer In Decant) taken as-is
+    """
     df = df.copy()
     df.columns = [re.sub(r"\s+", " ", str(c).strip()) for c in df.columns]
 
@@ -231,42 +240,65 @@ def extract_targets_from_table(df: pd.DataFrame) -> dict:
     base_tph_col = "Base TPH"
 
     df[path_col] = df[path_col].astype(str).str.strip()
-    df["PATH_UP"] = df[path_col].str.upper()
 
     for c in [base_vol_col, base_hours_col, base_tph_col]:
         if c in df.columns:
             df[c] = df[c].apply(to_num)
 
+    SIZE_SUFFIXES = [" - Small", " - Medium", " - Large", " - Heavy/Bulky", " - Heavy Bulky"]
+    TOTAL_SUFFIXES = [" - Total"]
+
+    def _aggregate_path(df: pd.DataFrame, path_family: str) -> float:
+        """Get weighted TPH for a path family using Total row or summing sizes."""
+        # 1) Try "- Total" row first
+        for suffix in TOTAL_SUFFIXES:
+            total_row = df[df[path_col].str.lower() == f"{path_family.lower()}{suffix.lower()}"]
+            if not total_row.empty:
+                vol = total_row[base_vol_col].apply(lambda x: x if x else 0).sum()
+                hrs = total_row[base_hours_col].apply(lambda x: x if x else 0).sum()
+                if hrs > 0:
+                    return round(vol / hrs)
+                tph = total_row[base_tph_col].iloc[0]
+                return round(tph) if tph else 0
+
+        # 2) Sum size rows (Small + Medium + Large + Heavy/Bulky)
+        size_rows = pd.DataFrame()
+        for suffix in SIZE_SUFFIXES:
+            match = df[df[path_col].str.lower() == f"{path_family.lower()}{suffix.lower()}"]
+            if not match.empty:
+                size_rows = pd.concat([size_rows, match])
+
+        if not size_rows.empty:
+            vol = size_rows[base_vol_col].fillna(0).sum()
+            hrs = size_rows[base_hours_col].fillna(0).sum()
+            if hrs > 0:
+                return round(vol / hrs)
+
+        # 3) Try exact match (direct path like "Transfer In Decant")
+        exact = df[df[path_col].str.lower() == path_family.lower()]
+        if not exact.empty:
+            vol = exact[base_vol_col].fillna(0).sum()
+            hrs = exact[base_hours_col].fillna(0).sum()
+            if hrs > 0:
+                return round(vol / hrs)
+            tph = exact[base_tph_col].iloc[0]
+            return round(tph) if tph else 0
+
+        return 0
+
     targets: Dict[str, float] = {}
+    targets["STOW"] = _aggregate_path(df, "Each Transfer In")
+    targets["DECANT"] = _aggregate_path(df, "Transfer In Decant")
 
-    stow_row = df[df["PATH_UP"] == "EACH TRANSFER IN - TOTAL"]
-    targets["STOW"] = round(stow_row.iloc[0][base_tph_col]) if not stow_row.empty and stow_row.iloc[0][base_tph_col] is not None else 0
+    pick_tph = _aggregate_path(df, "Pick")
+    targets["PICK_AR"] = pick_tph
+    targets["P2R_PICK"] = pick_tph
 
-    pick_row = df[df["PATH_UP"] == "PICKING"]
-    if not pick_row.empty:
-        v = pick_row.iloc[0][base_tph_col]
-        v2 = round(v) if v is not None else 0
-        targets["PICK_AR"] = v2
-        targets["P2R_PICK"] = v2
-    else:
-        targets["PICK_AR"] = 0
-        targets["P2R_PICK"] = 0
+    targets["P2R_PACK"] = _aggregate_path(df, "Pack Multis")
+    targets["AFE_PACK"] = _aggregate_path(df, "Chutings")
 
-    pack = df[df["PATH_UP"].str.startswith("PACK MULTIS - ", na=False)]
-    if not pack.empty and base_vol_col in df.columns and base_hours_col in df.columns:
-        vol = pack[base_vol_col].fillna(0).sum()
-        hrs = pack[base_hours_col].fillna(0).sum()
-        targets["P2R_PACK"] = round(vol / hrs) if hrs > 0 else 0
-    else:
-        targets["P2R_PACK"] = 0
-
-    chut = df[df["PATH_UP"].str.startswith("CHUTINGS - ", na=False)]
-    if not chut.empty and base_vol_col in df.columns and base_hours_col in df.columns:
-        vol = chut[base_vol_col].fillna(0).sum()
-        hrs = chut[base_hours_col].fillna(0).sum()
-        targets["AFE_PACK"] = round(vol / hrs) if hrs > 0 else 0
-    else:
-        targets["AFE_PACK"] = 0
+    # Pack Singles (SM, SM2, etc.)
+    targets["PACK_SINGLES"] = _aggregate_path(df, "Pack Singles")
 
     return targets
 
@@ -350,13 +382,14 @@ ROLE_TO_MODE_GROUP: dict[str, str] = {
     # IB
     "STOW":            "STOW",
     "QUANTITY_STOW":   "STOW",
-    "DECANT":          "DECANT",          # Transfer In Decant — separate from Stow
+    "DECANT":          "DECANT",
     # OB Pick
     "PICK_AR":         "PICK",
     "P2R_PICK":        "PICK",
     # OB Pack Multis
     "P2R_PACK":        "PACK_MULTIS",
-    "AFE_PACK":        "PACK_MULTIS",
+    # OB Pack AFE (Chutings)
+    "AFE_PACK":        "PACK_AFE",
     # OB Pack Singles
     "SM":              "PACK_SINGLES",
     "SM2":             "PACK_SINGLES",
@@ -373,9 +406,11 @@ ROLE_TO_MODE_GROUP: dict[str, str] = {
 # Mode group → necro path keys that feed into it
 MODE_GROUP_NECRO_KEYS: dict[str, list[str]] = {
     "STOW":         ["STOW"],
-    "PICK":         ["PICK_AR", "P2R_PICK"],
-    "PACK_MULTIS":  ["P2R_PACK", "AFE_PACK"],
-    "PACK_SINGLES": ["P2R_PACK"],   # singles use same pack target row in necro
+    "DECANT":       ["DECANT"],
+    "PICK":         ["PICK_AR"],
+    "PACK_MULTIS":  ["P2R_PACK"],
+    "PACK_AFE":     ["AFE_PACK"],
+    "PACK_SINGLES": ["PACK_SINGLES"],
 }
 
 
@@ -393,25 +428,22 @@ def _prev_iso_week(year: int, week: int) -> tuple[int, int]:
 def get_necro_targets_wk1(fc: str, force_refresh: bool = False) -> dict:
     """
     Download Necro OP2 targets for last week (WK-1) and compute
-    % to OP2 goal per Mode group.
+    % to OP2 goal per Mode group using proper aggregation.
+
+    Applies overrides from overrides.csv when OP2 targets are too aggressive.
 
     Returns:
     {
       "fc": "BCN4",
-      "year": 2026, "week": 7,
+      "year": 2026, "week": 21,
       "targets_wk1": {"STOW": 280, "PICK_AR": 320, ...},
       "mode_groups": {
-          "STOW":         {"target": 280, "actual": 258, "pct": 0.921, "mode": 2},
-          "PICK":         {"target": 320, "actual": 290, "pct": 0.906, "mode": 2},
-          "PACK_MULTIS":  {"target": 200, "actual": 178, "pct": 0.890, "mode": 1},
-          "PACK_SINGLES": {"target": 185, "actual": 201, "pct": 1.086, "mode": 3},
+          "STOW":         {"target": 280, "actual_tph": 290, "op2_tph": 280, "pct_to_goal": 1.035, "mode": 3, "mode_name": "maintenance"},
+          "PICK":         {"target": 320, "actual_tph": 310, "op2_tph": 320, "pct_to_goal": 0.968, "mode": 2, "mode_name": "improvement"},
+          ...
       },
       "generated_at": "..."
     }
-
-    NOTE: "actual" is the Necro Base TPH from WK-1 (which IS the actual performance
-    of that week vs. the OP2 target stored in that same week's necro row).
-    The % to goal = actual / target for each path row.
     """
     fc = fc.strip().upper()
     now_year, now_week, _ = datetime.now().isocalendar()
@@ -421,7 +453,7 @@ def get_necro_targets_wk1(fc: str, force_refresh: bool = False) -> dict:
     if cache_file.exists() and not force_refresh:
         return json.loads(cache_file.read_text(encoding="utf-8"))
 
-    log.info("Fetching WK-1 = {wk1_year} W{wk1_week:02} for {fc}…")
+    log.info(f"Fetching WK-1 = {wk1_year} W{wk1_week:02} for {fc}…")
 
     base_cookie = get_cookie(aea=True)
     s = WinHTTPSession(base_cookie)
@@ -457,71 +489,151 @@ def get_necro_targets_wk1(fc: str, force_refresh: bool = False) -> dict:
 
     df_table = parse_prod_table(resp_html)
 
-    # ── Extract raw targets (same logic as current week) ──
+    # ── Extract OP2 targets using proper aggregation ──
     targets_wk1 = extract_targets_from_table(df_table)
 
-    # ── Also extract % to OP2 per path row for mode calculation ──
-    # We need "Comp TPH" (actual) and "Base TPH" (OP2 target) from the table
+    # ── Load overrides (if available) ──
+    overrides: Dict[str, float] = {}  # path_lower → override_tph
+    OVERRIDES_PATHS = [
+        Path(r"\\ant\dept-eu\BCN4\Public\ProjectArgos\overrides.csv"),
+        Path(r"\\ant\dept-eu\BCN4\Public\L-D  TRAININGS\Regional_view_productivity\overrides.csv"),
+    ]
+    for ov_path in OVERRIDES_PATHS:
+        try:
+            if ov_path.exists():
+                ov_df = pd.read_csv(ov_path)
+                ov_df.columns = [str(c).strip() for c in ov_df.columns]
+                ov_df["FC"] = ov_df["FC"].astype(str).str.strip().str.upper()
+                ov_df["Week"] = pd.to_numeric(ov_df["Week"], errors="coerce")
+                ov_df["Override_TPH"] = pd.to_numeric(ov_df["Override_TPH"], errors="coerce")
+                # Filter to this FC and week
+                mask = (ov_df["FC"] == fc) & (ov_df["Week"] == wk1_week)
+                for _, row in ov_df[mask].iterrows():
+                    path_key = str(row.get("Path", "")).strip().lower()
+                    override_val = row.get("Override_TPH")
+                    if path_key and pd.notna(override_val) and override_val > 0:
+                        overrides[path_key] = float(override_val)
+                if overrides:
+                    log.info(f"  Loaded {len(overrides)} override(s) for {fc} W{wk1_week}")
+                break
+        except Exception as e:
+            log.info(f"  Override load failed (non-fatal): {e}")
+            continue
+
+    # ── Compute % to OP2 per mode group using proper aggregation ──
+    # Same logic as extract_targets_from_table but computing Actual/OP2 ratio
+    # In our payload: Base = Actuals, Comp = OP2
     df = df_table.copy()
     df.columns = [re.sub(r"\s+", " ", str(c).strip()) for c in df.columns]
-    df["PATH_UP"] = df["Paths"].astype(str).str.strip().str.upper() if "Paths" in df.columns else ""
 
-    comp_tph_col = next((c for c in df.columns if "COMP" in c.upper() and "TPH" in c.upper()), None)
-    base_tph_col = next((c for c in df.columns if "BASE" in c.upper() and "TPH" in c.upper()), None)
+    path_col = "Paths"
+    df[path_col] = df[path_col].astype(str).str.strip()
 
-    def _pct_to_goal_for_paths(path_starts: list[str]) -> float | None:
+    # Detect column names dynamically
+    base_vol_col = next((c for c in df.columns if "BASE" in c.upper() and "VOLUME" in c.upper()), None)
+    base_hrs_col = next((c for c in df.columns if "BASE" in c.upper() and "HOUR" in c.upper()), None)
+    comp_vol_col = next((c for c in df.columns if "COMP" in c.upper() and "VOLUME" in c.upper()), None)
+    comp_hrs_col = next((c for c in df.columns if "COMP" in c.upper() and "HOUR" in c.upper()), None)
+
+    for c in [base_vol_col, base_hrs_col, comp_vol_col, comp_hrs_col]:
+        if c and c in df.columns:
+            df[c] = df[c].apply(to_num)
+
+    SIZE_SUFFIXES = [" - Small", " - Medium", " - Large", " - Heavy/Bulky", " - Heavy Bulky"]
+    TOTAL_SUFFIXES = [" - Total"]
+
+    def _pct_to_goal_for_path(path_family: str) -> tuple[float | None, float, float]:
         """
-        % to OP2 goal = Comp TPH (Actuals) / Base TPH (OP2).
-        Weighted by Comp Volume across all matching path rows.
+        Compute % to OP2 for a path family using proper aggregation.
+        Applies override if available for this FC+Week+Path.
+        Returns (pct_ratio, actual_tph, op2_tph).
         """
-        rows = df[df["PATH_UP"].apply(
-            lambda p: any(p.startswith(ps.upper()) for ps in path_starts)
-        )]
-        if rows.empty:
-            return None
+        if not base_vol_col or not base_hrs_col or not comp_vol_col or not comp_hrs_col:
+            return None, 0, 0
 
-        # Weighted approach: sum(comp_vol) / sum(comp_hours) vs sum(base_vol) / sum(base_hours)
-        comp_vol_col  = next((c for c in df.columns if "COMP" in c.upper() and "VOLUME" in c.upper()), None)
-        comp_hrs_col  = next((c for c in df.columns if "COMP" in c.upper() and "HOUR"   in c.upper()), None)
-        base_vol_col  = next((c for c in df.columns if "BASE" in c.upper() and "VOLUME" in c.upper()), None)
-        base_hrs_col  = next((c for c in df.columns if "BASE" in c.upper() and "HOUR"   in c.upper()), None)
+        # 1) Try "- Total" row
+        for suffix in TOTAL_SUFFIXES:
+            total_row = df[df[path_col].str.lower() == f"{path_family.lower()}{suffix.lower()}"]
+            if not total_row.empty:
+                bv = total_row[base_vol_col].fillna(0).sum()
+                bh = total_row[base_hrs_col].fillna(0).sum()
+                cv = total_row[comp_vol_col].fillna(0).sum()
+                ch = total_row[comp_hrs_col].fillna(0).sum()
+                actual_tph = bv / bh if bh > 0 else 0
+                op2_tph = cv / ch if ch > 0 else 0
+                # Apply override if exists
+                ov = overrides.get(path_family.lower())
+                if ov:
+                    log.info(f"    Override applied for {path_family}: OP2 {op2_tph:.1f} → {ov:.1f}")
+                    op2_tph = ov
+                pct = (actual_tph / op2_tph) if op2_tph > 0 else None
+                return pct, actual_tph, op2_tph
 
-        if comp_vol_col and comp_hrs_col and base_vol_col and base_hrs_col:
-            try:
-                cv = rows[comp_vol_col].apply(to_num).fillna(0).sum()
-                ch = rows[comp_hrs_col].apply(to_num).fillna(0).sum()
-                bv = rows[base_vol_col].apply(to_num).fillna(0).sum()
-                bh = rows[base_hrs_col].apply(to_num).fillna(0).sum()
-                actual_tph = cv / ch if ch > 0 else None
-                target_tph = bv / bh if bh > 0 else None
-                if actual_tph and target_tph and target_tph > 0:
-                    return actual_tph / target_tph
-            except Exception:
-                pass
+        # 2) Sum size rows
+        size_rows = pd.DataFrame()
+        for suffix in SIZE_SUFFIXES:
+            match = df[df[path_col].str.lower() == f"{path_family.lower()}{suffix.lower()}"]
+            if not match.empty:
+                size_rows = pd.concat([size_rows, match])
 
-        # Fallback: simple Comp TPH / Base TPH ratio (unweighted average across rows)
-        if comp_tph_col and base_tph_col:
-            comp_vals = rows[comp_tph_col].apply(to_num)
-            base_vals = rows[base_tph_col].apply(to_num)
-            pairs = [(c, b) for c, b in zip(comp_vals, base_vals)
-                     if c is not None and b is not None and b > 0]
-            if pairs:
-                return sum(c / b for c, b in pairs) / len(pairs)
+        if not size_rows.empty:
+            bv = size_rows[base_vol_col].fillna(0).sum()
+            bh = size_rows[base_hrs_col].fillna(0).sum()
+            cv = size_rows[comp_vol_col].fillna(0).sum()
+            ch = size_rows[comp_hrs_col].fillna(0).sum()
+            actual_tph = bv / bh if bh > 0 else 0
+            op2_tph = cv / ch if ch > 0 else 0
+            # Apply override if exists
+            ov = overrides.get(path_family.lower())
+            if ov:
+                log.info(f"    Override applied for {path_family}: OP2 {op2_tph:.1f} → {ov:.1f}")
+                op2_tph = ov
+            pct = (actual_tph / op2_tph) if op2_tph > 0 else None
+            return pct, actual_tph, op2_tph
 
-        return None
+        # 3) Exact match (direct path)
+        exact = df[df[path_col].str.lower() == path_family.lower()]
+        if not exact.empty:
+            bv = exact[base_vol_col].fillna(0).sum()
+            bh = exact[base_hrs_col].fillna(0).sum()
+            cv = exact[comp_vol_col].fillna(0).sum()
+            ch = exact[comp_hrs_col].fillna(0).sum()
+            actual_tph = bv / bh if bh > 0 else 0
+            op2_tph = cv / ch if ch > 0 else 0
+            # Apply override if exists
+            ov = overrides.get(path_family.lower())
+            if ov:
+                log.info(f"    Override applied for {path_family}: OP2 {op2_tph:.1f} → {ov:.1f}")
+                op2_tph = ov
+            pct = (actual_tph / op2_tph) if op2_tph > 0 else None
+            return pct, actual_tph, op2_tph
 
-    # Path prefixes per mode group
-    GROUP_PATH_PREFIXES: dict[str, list[str]] = {
-        "STOW":         ["EACH TRANSFER IN"],
-        "DECANT":       ["TRANSFER IN DECANT"],
-        "PICK":         ["PICKING"],
-        "PACK_MULTIS":  ["PACK MULTIS"],
-        "PACK_SINGLES": ["CHUTINGS"],
+        return None, 0, 0
+
+    # Mode group → Necro path family name (matching aggregator canonical names)
+    GROUP_PATH_FAMILIES: dict[str, str] = {
+        "STOW":         "Each Transfer In",
+        "DECANT":       "Transfer In Decant",
+        "PICK":         "Pick",
+        "PACK_MULTIS":  "Pack Multis",
+        "PACK_AFE":     "Chutings",
+        "PACK_SINGLES": "Pack Singles",
     }
 
-    def _mode_from_pct(pct: float | None) -> int:
+    def _mode_from_pct(pct: float | None) -> str:
+        """Classify mode from % to OP2 ratio."""
         if pct is None:
-            return 1  # default to mode 1 (most conservative) if unknown
+            return "urgent"  # default to most conservative if unknown
+        if pct >= 1.00:
+            return "maintenance"
+        if pct >= 0.90:
+            return "improvement"
+        return "urgent"
+
+    def _mode_int_from_pct(pct: float | None) -> int:
+        """Mode as integer: 1=urgent, 2=improvement, 3=maintenance."""
+        if pct is None:
+            return 1
         if pct >= 1.00:
             return 3
         if pct >= 0.90:
@@ -529,22 +641,31 @@ def get_necro_targets_wk1(fc: str, force_refresh: bool = False) -> dict:
         return 1
 
     mode_groups: dict[str, dict] = {}
-    for group, prefixes in GROUP_PATH_PREFIXES.items():
-        pct = _pct_to_goal_for_paths(prefixes)
-        mode = _mode_from_pct(pct)
-        # get representative target
+    for group, path_family in GROUP_PATH_FAMILIES.items():
+        pct, actual_tph, op2_tph = _pct_to_goal_for_path(path_family)
+        mode_int = _mode_int_from_pct(pct)
+        mode_str = _mode_from_pct(pct)
+
+        # Get target from extracted targets
         necro_keys = MODE_GROUP_NECRO_KEYS.get(group, [])
         target_val = next(
             (targets_wk1[k] for k in necro_keys if k in targets_wk1 and targets_wk1[k] > 0),
             0
         )
+
         mode_groups[group] = {
             "target": target_val,
+            "actual_tph": round(actual_tph, 1) if actual_tph else 0,
+            "op2_tph": round(op2_tph, 1) if op2_tph else 0,
             "pct_to_goal": round(pct, 4) if pct is not None else None,
-            "mode": mode,
+            "pct_display": round(pct * 100, 1) if pct is not None else None,
+            "mode": mode_int,
+            "mode_name": mode_str,
         }
-        log.info(f"{group}: pct={pct:.1%} → Mode {mode}" if pct else
-                 f"{group}: no data → Mode 1 (fallback)")
+        if pct is not None:
+            log.info(f"  {group}: Actual={actual_tph:.0f} vs OP2={op2_tph:.0f} → {pct:.1%} → {mode_str.upper()} (Mode {mode_int})")
+        else:
+            log.info(f"  {group}: no data → URGENT (Mode 1, fallback)")
 
     out = {
         "fc": fc,

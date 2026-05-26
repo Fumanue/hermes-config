@@ -1,4 +1,4 @@
-﻿import contextlib
+import contextlib
 import json
 import platform
 import re
@@ -1251,24 +1251,32 @@ def api_bulk_upload(req: BulkUploadRequest):
 # ═════════════════════════════════════════════════════════
 # BETA FEATURE GATE — Admin-only check
 # ═════════════════════════════════════════════════════════
-# Hardcoded admin list — NOT editable from the deployed folder.
-# To update: change this list, rebuild, and redeploy.
-_HARDCODED_ADMINS = frozenset([
-    "fumanue", "mferruz", "poangelr", "larezaha",
-])
+# Admin list comes from config/argos/admins.json (synced from GitHub).
+# Only the repo owner (fumanue) can modify who has access.
+
+def _load_admin_list() -> set:
+    """Load admin list from admins.json (GitHub-controlled)."""
+    _admins_path = CONFIG_DIR / "admins.json"
+    if not _admins_path.exists():
+        return {"fumanue"}  # fallback if file missing
+    try:
+        cfg = json.loads(_admins_path.read_text(encoding="utf-8"))
+        return {a.lower() for a in cfg.get("admins", [])}
+    except Exception:
+        return {"fumanue"}
 
 
 def _is_admin(login: str = "") -> bool:
-    """Check if login is in the hardcoded admin set."""
+    """Check if login is in the admin list."""
     if not login:
         login = os.environ.get("USERNAME", "").strip().lower()
-    return login.lower() in _HARDCODED_ADMINS
+    return login.lower() in _load_admin_list()
 
 
 def _require_admin():
     """Raise 403 if current user is not in admin list. Used for beta features."""
     login = os.environ.get("USERNAME", "").strip().lower()
-    if login not in _HARDCODED_ADMINS:
+    if login not in _load_admin_list():
         raise HTTPException(status_code=403, detail="Beta feature — admin access required")
 
 

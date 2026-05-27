@@ -78,7 +78,7 @@
   --logo-from:#1e40af;--logo-to:#60a5fa;
 }
 [data-theme="kokiri"]{
-  /* Breath of the Wild — #fdffe0, #92c582, #86a5a9, #767676, #536f50 */
+  /* Kokiri Forest — soft greens and earth tones */
   --bg-body:#f8fce8;
   --bg-topbar:#eef5d8;
   --bg-card:#fcfef2;
@@ -111,6 +111,41 @@
   --coached-bg:rgba(146,197,130,0.08);
   --scroll-thumb:#a0b888;
   --logo-from:#536f50;--logo-to:#92c582;
+}
+[data-theme="violet"]{
+  /* Violet — soft lavender, light purple pastels */
+  --bg-body:#faf5ff;
+  --bg-topbar:#f3e8ff;
+  --bg-card:#fefcff;
+  --bg-panel:#f5eeff;
+  --bg-input:#fefcff;
+  --bg-modal:#fefcff;
+  --bg-table-head:#ede4f7;
+  --border:#dcc8f0;
+  --border-strong:#c4a8e0;
+  --text:#2d1b4e;
+  --text-secondary:#6b4f8a;
+  --text-muted:#8b7a9e;
+  --text-dim:#b8a8cc;
+  --accent:#7c3aed;
+  --accent2:#a78bfa;
+  --accent-light:rgba(124,58,237,0.06);
+  --accent-border:#a78bfa;
+  --accent-text:#5b21b6;
+  --blue:#8b5cf6;
+  --blue-light:rgba(139,92,246,0.10);
+  --green:#7c3aed;
+  --red:#dc2626;
+  --orange:#d97706;
+  --shadow:rgba(45,27,78,0.08);
+  --row-hover:rgba(167,139,250,0.06);
+  --gradient:linear-gradient(90deg,#7c3aed,#a78bfa,#c4b5fd,#a78bfa,#7c3aed);
+  --tab-active:linear-gradient(135deg,#7c3aed,#a78bfa);
+  --btn-pipeline:linear-gradient(135deg,#7c3aed,#8b5cf6);
+  --btn-primary:linear-gradient(135deg,#7c3aed,#a78bfa);
+  --coached-bg:rgba(167,139,250,0.06);
+  --scroll-thumb:#c4b5fd;
+  --logo-from:#7c3aed;--logo-to:#a78bfa;
 }
 [data-theme="midnight"]{
   /* Midnight — deep navy, electric cyan, clean contrast */
@@ -202,6 +237,11 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 [data-theme="kokiri"] .topbar::after{background:linear-gradient(90deg,#536f50,#92c582,#86a5a9,#92c582,#536f50)}
 [data-theme="kokiri"] .t-logo-kokiri svg polygon{fill:#536f50}
 [data-theme="kokiri"] .t-logo-kokiri svg rect{fill:#92c582}
+/* Kokiri Forest: leaf + bark decorations on cards */
+[data-theme="kokiri"] .kpi-tile::before{content:"🌿";position:absolute;top:3px;right:6px;font-size:9px;opacity:0.7}
+[data-theme="kokiri"] .kpi-tile.kprio::before{content:"⚡🌿"}
+[data-theme="kokiri"] .kpi-tile.kp3::before{content:"🍂"}
+[data-theme="kokiri"] .kpi-tile.kco::before{content:"🍀"}
 .t-nav{display:flex;gap:4px;align-items:center}
 .t-tab{padding:7px 16px;display:flex;align-items:center;font-size:12.5px;color:var(--text-secondary);cursor:pointer;font-weight:500;border-radius:18px;transition:all .2s}
 .t-tab:hover{color:var(--text);background:var(--accent-light)}
@@ -265,7 +305,7 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .theme-icon{font-size:12px;margin-left:4px}
 
 /* KPI */
-.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;padding:12px 20px;position:sticky;top:0;z-index:10;background:var(--bg-body)}
+.kpi-row{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;padding:12px 20px;position:sticky;top:0;z-index:10;background:var(--bg-body)}
 .kpi-tile{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;cursor:pointer;transition:all .22s;position:relative;overflow:hidden}
 .kpi-tile:hover{box-shadow:0 4px 16px var(--shadow);transform:translateY(-1px)}
 .kpi-tile .kpi-lbl{font-size:9.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:2px}
@@ -294,6 +334,9 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .kpi-tile.kco{border-top:3px solid var(--accent);border-left:none}
 .kpi-tile.kco .kpi-num{color:var(--accent)}
 .kpi-tile.kco .kpi-bar-fill{background:var(--accent)}
+.kpi-tile.kprio{border-top:3px solid #f59e0b;border-left:none}
+.kpi-tile.kprio .kpi-num{color:#f59e0b}
+.kpi-tile.kprio .kpi-bar-fill{background:#f59e0b}
 .kpi-tile.active-filter{background:var(--accent-light);border-color:var(--accent-border);box-shadow:0 4px 16px var(--shadow);transform:translateY(-2px)}
 .kpi-tile.active-filter .kpi-lbl{color:var(--accent-text);font-weight:800}
 /* Count-up animation */
@@ -375,6 +418,7 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .note-idle .note-dot{background:var(--accent)}.note-idle .note-label{color:var(--accent)}
 .note-oowa .note-dot{background:#ea580c}.note-oowa .note-label{color:#f97316}
 .note-mix-risk .note-dot{background:#e11d48}.note-mix-risk .note-label{color:#fb7185}
+.note-mix-warn .note-dot{background:#f59e0b}.note-mix-warn .note-label{color:#f59e0b}
 .note-mix-ok .note-dot{background:var(--green)}.note-mix-ok .note-label{color:var(--green)}
 .note-upsort .note-dot{background:#06b6d4}.note-upsort .note-label{color:#22d3ee}
 .note-gap .note-dot{background:var(--orange)}.note-gap .note-label{color:var(--orange)}
@@ -937,6 +981,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <button class="sp-opt" id="spThemeDark"     data-val="dark">🌙 Dark</button>
       <button class="sp-opt" id="spThemeKokiri"    data-val="kokiri">🌿 Kokiri</button>
       <button class="sp-opt" id="spThemeMidnight" data-val="midnight">⚡ Midnight</button>
+      <button class="sp-opt" id="spThemeViolet" data-val="violet">💜 Violet</button>
       <button class="sp-opt" id="spThemeCherry"   data-val="cherry">🌸 Cherry</button>
     </div>
   </div>
@@ -967,6 +1012,12 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 <!-- ═══ DASHBOARD ═══ -->
 <div class="tab-panel active" id="panel-dashboard">
   <div class="kpi-row">
+    <div class="kpi-tile kprio" data-f="priority">
+      <div class="kpi-lbl">⚡ Priority vs OP2</div>
+      <div class="kpi-num" id="nPrio">0</div>
+      <div class="kpi-bar-track"><div class="kpi-bar-fill" id="barPrio"></div></div>
+      <div class="kpi-sub">Sigma ≥ Mode</div>
+    </div>
     <div class="kpi-tile kp3" data-f="3">
       <div class="kpi-lbl" data-i18n="kpi_p3">Priority 3</div>
       <div class="kpi-num" id="n3">0</div>
@@ -1027,7 +1078,17 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     </select>
     <div class="sep"></div>
     <button class="toggle-btn" id="toggleCoached"><span id="coachToggleIcon">○</span> <span data-i18n="btn_hide_coached">Hide Coached</span></button>
-    <button class="toggle-btn" id="togglePriority" title="Show only Priority associates (Sigma ≥ Mode)"><span id="prioToggleIcon">○</span> ⚡ Priority <span id="prioCount" style="font-weight:700;color:var(--red)"></span></button>
+    <div class="sep"></div>
+    <select id="noteFilterSelect" style="padding:4px 8px;font-size:11px;border-radius:6px;border:1px solid var(--border-strong);background:var(--bg-input);color:var(--text);cursor:pointer">
+      <option value="">KPI: All</option>
+      <option value="GAP">⏳ Gap</option>
+      <option value="IDLE">🕒 Idle</option>
+      <option value="NSTA">📊 NSTA</option>
+      <option value="UPA">📦 UPA</option>
+      <option value="OOWA">🟣 OOWA</option>
+      <option value="MIX">🔀 Mix Share</option>
+      <option value="FAST START">🚀 Fast Start</option>
+    </select>
     <div class="sep"></div>
     <button class="act-btn act-secondary" id="btnUpload" data-i18n="btn_upload_coaching">↑ Upload Coaching</button>
     <button class="act-btn act-secondary" id="btnBulk" data-i18n="btn_bulk">↑↑ Bulk Upload</button>

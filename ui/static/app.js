@@ -302,6 +302,7 @@ const state={
   curve:"ALL",
   tenureFilter:"",
   priorityOnly:false,
+  noteFilter:"",
 };
 
 // ── Modals ─────────────────────────────────────────────────
@@ -751,8 +752,9 @@ function syncKpiActive(){
   document.querySelectorAll("[data-f]").forEach(t=>{
     const f=t.dataset.f;
     const active=
+      (f==="priority"&&state.priorityOnly)||
       (f==="coached"&&state.coachedOnly)||
-      (f==="all"&&["3","2","1","0"].every(p=>state.prio.has(p))&&!state.coachedOnly)||
+      (f==="all"&&["3","2","1","0"].every(p=>state.prio.has(p))&&!state.coachedOnly&&!state.priorityOnly)||
       state.prio.has(f);
     t.classList.toggle("active-filter",!!active);
   });
@@ -773,14 +775,23 @@ function initPriority(){
     tile.addEventListener("click",()=>{
       const f=tile.dataset.f;
       if(f==="all"){
-        state.coachedOnly=false; state.prio=new Set(["3","2","1","0"]);
+        state.coachedOnly=false; state.priorityOnly=false; state.prio=new Set(["3","2","1","0"]);
+         
       }else if(f==="coached"){
-        state.coachedOnly=true; state.prio=new Set(["3","2","1","0"]);
+        state.coachedOnly=true; state.priorityOnly=false; state.prio=new Set(["3","2","1","0"]);
         state.hideCoached=false;
         $("toggleCoached").classList.remove("active");
         $("coachToggleIcon").textContent="○";
-      }else{
+         
+      }else if(f==="priority"){
+        state.priorityOnly=!state.priorityOnly;
         state.coachedOnly=false;
+        state.prio=new Set(["3","2","1","0"]);
+        
+        
+      }else{
+        state.coachedOnly=false; state.priorityOnly=false;
+         
         if(state.prio.has(f)&&state.prio.size===1) return;
         if(state.prio.has(f)) state.prio.delete(f); else state.prio.add(f);
       }
@@ -811,6 +822,36 @@ function getFiltered(){
   if(state.hideCoached) rows=rows.filter(r=>!r.coached);
   // Priority mode filter (Sigma >= Mode)
   if(state.priorityOnly) rows=rows.filter(r=>r.is_priority);
+  // Note type filter
+  if(state.noteFilter){
+    const nf = state.noteFilter.toUpperCase();
+    rows = rows.filter(r => {
+      const notes = (r.notes||[]).join(" ").toUpperCase();
+      if(nf === "GAP") return /GAP/i.test(notes);
+      if(nf === "IDLE") return /IDLE|UNPRODUCTIVE/i.test(notes);
+      if(nf === "UPA") return /UPA/i.test(notes);
+      if(nf === "OOWA") return /OOWA|OWAA/i.test(notes);
+      if(nf === "NSTA") return /NSTA|TURNAWAY|UNITS PER|TOTE|FACE/i.test(notes);
+      if(nf === "FAST START") return /FAST\s*START|H[12]/i.test(notes);
+      if(nf === "MIX") return /MIX\s*SHARE|SMALL.*%/i.test(notes);
+      return notes.includes(nf);
+    });
+    // Sort by worst KPI value first (extract number from matching note)
+    rows.sort((a,b) => {
+      const _extractVal = (r) => {
+        const notes = (r.notes||[]).join(" ");
+        let m;
+        if(nf === "GAP") { m = notes.match(/Gap[:\s]*(\d+\.?\d*)%/i); return m ? parseFloat(m[1]) : 0; }
+        if(nf === "IDLE") { m = notes.match(/IDLE[:\s]*(\d+\.?\d*)%/i); return m ? parseFloat(m[1]) : 0; }
+        if(nf === "OOWA") { m = notes.match(/OOWA[:\s]*(\d+\.?\d*)/i); return m ? parseFloat(m[1]) : 0; }
+        if(nf === "UPA") { m = notes.match(/UPA[:\s]*(\d+\.?\d*)/i); return m ? -parseFloat(m[1]) : 0; } // lower UPA = worse
+        if(nf === "NSTA") { m = notes.match(/(\d+\.?\d*)\s*\(target/i); return m ? -parseFloat(m[1]) : 0; } // lower = worse
+        if(nf === "MIX") { m = notes.match(/Small\s+(\d+\.?\d*)%/i); return m ? -parseFloat(m[1]) : 0; } // lower small% = worse
+        return 0;
+      };
+      return _extractVal(b) - _extractVal(a); // descending (worst first)
+    });
+  }
   // Curve filter (NH / XT / VETERAN)
   if(state.curve && state.curve !== "ALL"){
     rows = rows.filter(r => String(r.curve||"").toUpperCase() === state.curve.toUpperCase());
@@ -913,7 +954,7 @@ function renderTable(){
       } else if (/Mix\s*Share/i.test(raw)) {
         const m = raw.match(/Small\s+(\d+(?:\.\d+)?)%/i);
         const small = m ? Number(m[1]) : NaN;
-        cls = Number.isFinite(small) && small < 55 ? "note-row note-mix-risk" : "note-row note-mix-ok";
+        cls = "note-row " + (Number.isFinite(small) ? (small < 55 ? "note-mix-risk" : small < 65 ? "note-mix-warn" : "note-mix-ok") : "note-mix-ok");
         label = "Mix Share";
         text = raw.replace(/^Mix\s*Share\s*:?\s*/i, "").trim();
       } else if (/Upsort|Upsorting/i.test(raw)) {
@@ -933,8 +974,7 @@ function renderTable(){
         label = "Idle";
         text = raw.replace(/^.*?IDLE\s*:?\s*/i, "").trim();
       } else if (/Bin\s*Filter|Multiple\s*Event|Pick.*Short|Error\s*Indicator|Scan.*Sequence/i.test(raw)) {
-        cls = "note-row note-quality";
-        label = "Quality";
+        return ""; // Skip quality notes in Performance view
         const m = raw.match(/^(.+?)\s*:\s*(\d+)/);
         text = m ? `${m[1].trim()} (${m[2]})` : raw;
       }
@@ -1061,7 +1101,7 @@ function updateKpis(){
   _set("n1ld",c1ld); _set("n1ops",c1ops);
   // Priority count (Sigma >= Mode)
   const prioCount = rows.filter(r => r.is_priority).length;
-  _set("prioCount", prioCount > 0 ? prioCount : "");
+  _setKpi("nPrio","barPrio",prioCount);
 }
 
 function renderAll(){
@@ -2379,10 +2419,8 @@ $("toggleCoached").addEventListener("click",()=>{
   $("coachToggleIcon").textContent=state.hideCoached?"●":"○";
   renderAll();
 });
-$("togglePriority").addEventListener("click",()=>{
-  state.priorityOnly=!state.priorityOnly;
-  $("togglePriority").classList.toggle("active",state.priorityOnly);
-  $("prioToggleIcon").textContent=state.priorityOnly?"●":"○";
+$("noteFilterSelect") && $("noteFilterSelect").addEventListener("change",e=>{
+  state.noteFilter = e.target.value;
   renderAll();
 });
 document.querySelectorAll(".main-table thead th[data-k]").forEach(th=>{
@@ -2443,7 +2481,7 @@ if(_spBtn && _spPanel){
   });
 
   // Theme buttons
-  const _themeButtons = ["spThemeLight","spThemeDark","spThemeKokiri","spThemeMidnight","spThemeCherry"].map($).filter(Boolean);
+  const _themeButtons = ["spThemeLight","spThemeDark","spThemeKokiri","spThemeMidnight","spThemeViolet","spThemeCherry"].map($).filter(Boolean);
   function _syncThemeButtons(){
     const cur = document.documentElement.getAttribute("data-theme") || "light";
     _themeButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.val === cur));

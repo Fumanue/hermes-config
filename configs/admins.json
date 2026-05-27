@@ -1,5 +1,5 @@
 {
-  "super_admin": ["poangelr", "fumanue"],
+  "super_admin": ["fumanue"],
   "admins": ["mferruz", "poangelr", "larezaha", "baidiego", "arandig", "rieralbe", "mmaradey", "ymurimon", "uinmacul", "banghizl", "navjesuw", "callegma"],
   "permissions": {
     "multi_site_request": true,

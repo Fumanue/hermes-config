@@ -1261,7 +1261,9 @@ def _load_admin_list() -> set:
         return {"fumanue"}  # fallback if file missing
     try:
         cfg = json.loads(_admins_path.read_text(encoding="utf-8"))
-        return {a.lower() for a in cfg.get("admins", [])}
+        admins = {a.lower() for a in cfg.get("admins", [])}
+        admins.update(a.lower() for a in cfg.get("super_admin", []))
+        return admins
     except Exception:
         return {"fumanue"}
 
@@ -1514,12 +1516,6 @@ def api_quality_run_multi(req: QualityMultiRunRequest):
     """Run quality pipeline for multiple sites (admin only). Merges results."""
     _require_admin()
     login = os.environ.get("USERNAME", "").strip().lower()
-    _admins_path = CONFIG_DIR / "admins.json"
-    _admins_cfg = json.loads(_admins_path.read_text(encoding="utf-8")) if _admins_path.exists() else {}
-    admin_list = [a.lower() for a in _admins_cfg.get("admins", [])]
-
-    if login not in admin_list:
-        raise HTTPException(status_code=403, detail="Multi-site request requires admin privileges")
 
     sites = [s.strip().upper() for s in req.sites if s.strip()]
     if not sites:

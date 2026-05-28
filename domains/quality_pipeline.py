@@ -856,6 +856,14 @@ def build_quality_dashboard(source_df: pd.DataFrame, fc: str, week_start: dateti
 def run(fc: str = "BCN4", force_download: bool = True) -> Path:
     fc = (fc or "BCN4").strip().upper()
     week_start, week_end = current_sunday_to_now()
+
+    # ─── Clean old Quality CSVs before generating new ones ──────────────
+    for old_csv in OUTPUT_DIR.glob("Quality_Coaching*.csv"):
+        try:
+            old_csv.unlink()
+        except Exception:
+            pass
+
     log.info("=" * 70)
     log.info("QUALITY COACHING PIPELINE — {fc}")
     log.info("Window: {week_start} → {week_end} (max 7 days)")
@@ -933,15 +941,33 @@ def run(fc: str = "BCN4", force_download: bool = True) -> Path:
     return out_project
 
 
-def load_output(present_only: bool = False) -> pd.DataFrame:
-    fp = OUTPUT_DIR / QUALITY_OUTPUT_NAME
-    if not fp.exists():
-        doc_fp = DOCUMENTS_QUALITY_DIR / QUALITY_OUTPUT_NAME
-        if doc_fp.exists():
-            fp = doc_fp
-        else:
+def load_output(fc: str = "", present_only: bool = False) -> pd.DataFrame:
+    """Load ALL Quality_Coaching_*.csv files from output dir and merge them."""
+    frames = []
+    # Load all per-site files
+    for fp in sorted(OUTPUT_DIR.glob("Quality_Coaching_*.csv")):
+        try:
+            df = pd.read_csv(fp)
+            if not df.empty:
+                frames.append(df)
+        except Exception:
+            pass
+    # Fallback: try generic file if no per-site files
+    if not frames:
+        fp = OUTPUT_DIR / QUALITY_OUTPUT_NAME
+        if not fp.exists():
+            doc_fp = DOCUMENTS_QUALITY_DIR / QUALITY_OUTPUT_NAME
+            if doc_fp.exists():
+                fp = doc_fp
+            else:
+                return pd.DataFrame()
+        try:
+            frames.append(pd.read_csv(fp))
+        except Exception:
             return pd.DataFrame()
-    df = pd.read_csv(fp)
+    if not frames:
+        return pd.DataFrame()
+    df = pd.concat(frames, ignore_index=True)
     if present_only and "Present" in df.columns:
         df = df[df["Present"].astype(str).str.lower().isin(["true", "1", "yes"])]
     return df.reset_index(drop=True)

@@ -257,8 +257,14 @@ def _do_update() -> Dict[str, Any]:
 
     remote_version = remote_manifest.get("version", "0.0.0")
 
-    # Compare versions
-    if remote_version <= local_version:
+    # Compare versions (semantic: split by dots, compare as integers)
+    def _ver_tuple(v: str):
+        try:
+            return tuple(int(x) for x in v.split("."))
+        except Exception:
+            return (0, 0, 0)
+
+    if _ver_tuple(remote_version) <= _ver_tuple(local_version):
         return {
             "ok": True, "status": "up_to_date",
             "message": "Remote configs are up to date.",

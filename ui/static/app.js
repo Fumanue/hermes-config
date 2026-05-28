@@ -368,7 +368,7 @@ function _applyPermissions(perms){
 // Persisted in localStorage so a post-pipeline reload skips the auth fetch.
 let _authCache = (()=>{
   try{
-    const raw = localStorage.getItem("argos_auth_v2");
+    const raw = localStorage.getItem("argos_auth_v3");
     if(raw){ const p = JSON.parse(raw); if(p && p.date) return p; }
   }catch(ex){}
   return null;
@@ -411,7 +411,7 @@ async function loadUserInfo(){
   try{
     const d = await jget(`${API}/api/auth/me`);
     _authCache = { date: today, data: d };
-    try{ localStorage.setItem("argos_auth_v2", JSON.stringify(_authCache)); }catch(ex){}
+    try{ localStorage.setItem("argos_auth_v3", JSON.stringify(_authCache)); }catch(ex){}
     const u = d.user || {};
     const login = u.login         || "—";
     const title = u.job_title     || "";
@@ -1450,7 +1450,7 @@ $("btnQualityRun") && $("btnQualityRun").addEventListener("click",runQuality);
 
 // ── Multi-site Quality (admin only) ──────────────────────
 $("btnQualityMulti") && $("btnQualityMulti").addEventListener("click",()=>{
-  const SITES = ["BCN1","BCN4","MAD7","OVD1","RMU1","SVQ1"];
+  const SITES = ["BCN1","BCN4","MAD4","MAD6","MAD7","MAD9","OVD1","RMU1","SVQ1","VLC1"];
   // Create inline popover for site selection
   let pop = $("multiSitePopover");
   if(!pop){
@@ -1492,6 +1492,7 @@ $("btnQualityMulti") && $("btnQualityMulti").addEventListener("click",()=>{
           setTimeout(()=>{ log.style.display="none"; }, 3000);
         }
         // Load merged dashboard
+        _qualityMultiSites = sites.slice(); // remember for refresh
         const d = await jget(`${API}/api/quality/dashboard?sites=${encodeURIComponent(sites.join(","))}`);
         qualityRows = d.data || [];
         renderQuality();
@@ -1983,6 +1984,8 @@ async function bulkQualityUpload(){
   }
   await loadQuality();
 }
+
+let _qualityMultiSites = []; // remembers last multi-site selection
 
 async function loadQuality(){
   const body = $("qualityTbody");

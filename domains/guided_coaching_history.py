@@ -219,6 +219,7 @@ def fetch_guided_coaching_history(
     fc: str,
     force_refresh: bool = False,
     manual_reasons: Optional[List[str]] = None,
+    days_back: int = DAYS_FIXED,
 ) -> Dict[str, Any]:
     fc = (fc or "").strip().upper()
     cache_file = _cache_path(fc)
@@ -232,7 +233,7 @@ def fetch_guided_coaching_history(
     reasons = manual_reasons if manual_reasons else DEFAULT_MANUAL_REASONS
 
     now = datetime.now(timezone.utc)
-    start = now - timedelta(days=DAYS_FIXED)
+    start = now - timedelta(days=days_back)
 
     payload: Dict[str, Any] = {
         "building": {"code": fc},

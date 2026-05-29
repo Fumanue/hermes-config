@@ -269,55 +269,55 @@
   },
   "OVD1": {
     "Outbound": {
-      "Day": {
-        "shift_start": 360,
-        "shift_end": 840,
-        "H1_start": 360,
-        "H1_end": 600,
-        "H2_start": 600,
-        "H2_end": 840
+      "Early": {
+        "shift_start": 435,
+        "shift_end": 915,
+        "H1_start": 435,
+        "H1_end": 675,
+        "H2_start": 675,
+        "H2_end": 915
       },
-      "Evening": {
-        "shift_start": 840,
-        "shift_end": 1320,
-        "H1_start": 840,
-        "H1_end": 1140,
-        "H2_start": 1140,
-        "H2_end": 1320
+      "Late": {
+        "shift_start": 915,
+        "shift_end": 1410,
+        "H1_start": 915,
+        "H1_end": 1155,
+        "H2_start": 1155,
+        "H2_end": 1410
       },
       "Night": {
-        "shift_start": 1320,
-        "shift_end": 360,
-        "H1_start": 1320,
-        "H1_end": 180,
-        "H2_start": 180,
-        "H2_end": 360
+        "shift_start": 1410,
+        "shift_end": 420,
+        "H1_start": 1410,
+        "H1_end": 195,
+        "H2_start": 195,
+        "H2_end": 420
       }
     },
     "Inbound": {
-      "Day": {
-        "shift_start": 360,
-        "shift_end": 840,
-        "H1_start": 360,
-        "H1_end": 630,
-        "H2_start": 630,
-        "H2_end": 840
+      "Early": {
+        "shift_start": 435,
+        "shift_end": 915,
+        "H1_start": 435,
+        "H1_end": 675,
+        "H2_start": 675,
+        "H2_end": 915
       },
-      "Evening": {
-        "shift_start": 840,
-        "shift_end": 1320,
-        "H1_start": 840,
-        "H1_end": 1110,
-        "H2_start": 1110,
-        "H2_end": 1320
+      "Late": {
+        "shift_start": 915,
+        "shift_end": 1410,
+        "H1_start": 915,
+        "H1_end": 1155,
+        "H2_start": 1155,
+        "H2_end": 1410
       },
       "Night": {
-        "shift_start": 1320,
-        "shift_end": 360,
-        "H1_start": 1320,
-        "H1_end": 150,
-        "H2_start": 150,
-        "H2_end": 360
+        "shift_start": 1410,
+        "shift_end": 420,
+        "H1_start": 1410,
+        "H1_end": 195,
+        "H2_start": 195,
+        "H2_end": 420
       }
     },
     "default_department": "Outbound"

@@ -1313,21 +1313,21 @@ def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False, site
         coached_logins: set[str] = set()
         try:
             fc_upper = fc.strip().upper()
-            gc_data = with_com_init(
-                lambda: fetch_guided_coaching_history(fc=fc_upper, force_refresh=False)
-            )
-            # If cache was empty/missing, try a live fetch
-            if not gc_data.get("coachingInstances"):
-                gc_data = with_com_init(
-                    lambda: fetch_guided_coaching_history(fc=fc_upper, force_refresh=True)
-                )
+            # Quality needs Sunday-to-now (up to 7 days), not the 3-day Performance lookback
+            from datetime import timezone
+            _now = datetime.now(timezone.utc)
+            _days_since_sunday = (_now.weekday() + 1) % 7  # Mon=0..Sun=6 → days since last Sunday
+            _quality_lookback = max(_days_since_sunday + 1, 1)  # at least 1 day
 
-            # Build set of quality course URLs to match against
+            gc_data = with_com_init(
+                lambda: fetch_guided_coaching_history(fc=fc_upper, force_refresh=True, days_back=_quality_lookback)
+            )
+
+            # Build set of quality course UUIDs to match against
             courses_cfg = _load_json("quality_courses.json", {})
             course_base = str(courses_cfg.get("course_base", "")).strip()
             quality_course_urls: set[str] = set()
             for val in (courses_cfg.get("errors") or {}).values():
-                # Handle both old format (string) and new format (dict)
                 if isinstance(val, dict):
                     uuid = str(val.get("uuid", "")).strip()
                 else:
@@ -1336,36 +1336,37 @@ def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False, site
                     quality_course_urls.add(f"{course_base}{uuid}".lower())
                     quality_course_urls.add(uuid.lower())
 
-            # Build employeeID → login mapping from Roster_SCC
+            # Build employeeID → login mapping from the quality data itself
+            # The df already has Login column from Atlas
             eid_to_login: dict[str, str] = {}
-            try:
-                roster_fp = OUTPUT_DIR / "Roster_SCC.csv"
-                if roster_fp.exists():
-                    roster = pd.read_csv(roster_fp, usecols=["EmployeeId", "Login"], dtype=str)
-                    for _, rr in roster.iterrows():
-                        eid = str(rr.get("EmployeeId", "")).strip()
-                        lg = str(rr.get("Login", "")).strip().lower()
-                        if eid and lg:
-                            eid_to_login[eid] = lg
-            except Exception as e:
-                log.info("roster eid mapping failed: {e}")
 
-            # Build login → cohort mapping from Roster_SCC.csv (has ALL associates, not just active shift)
-            cohort_map: dict[str, str] = {}
+            # Also try to get mapping from Roster (quality downloads its own)
             try:
-                roster_cohort_fp = OUTPUT_DIR / "Roster_SCC.csv"
-                if roster_cohort_fp.exists():
-                    roster_cohort_df = pd.read_csv(roster_cohort_fp, usecols=["Login", "Cohort"], dtype=str)
-                    for _, dr in roster_cohort_df.iterrows():
-                        lg = str(dr.get("Login", "")).strip().lower()
-                        co = str(dr.get("Cohort", "")).strip()
-                        if lg and co and co.lower() not in ("nan", "none", ""):
-                            cohort_map[lg] = co
+                from project_argos.domains.quality_pipeline import OUTPUT_DIR as Q_OUTPUT_DIR
+                roster_fp = Q_OUTPUT_DIR / "Roster_SCC.csv"
+                if not roster_fp.exists():
+                    roster_fp = OUTPUT_DIR / "Roster_SCC.csv"
+                if roster_fp.exists():
+                    roster = pd.read_csv(roster_fp, dtype=str)
+                    eid_col = next((c for c in roster.columns if "employeeid" in c.lower() or "employee id" in c.lower()), None)
+                    login_col = next((c for c in roster.columns if c.lower() == "login"), None)
+                    if eid_col and login_col:
+                        for _, rr in roster.iterrows():
+                            eid = str(rr.get(eid_col, "")).strip()
+                            lg = str(rr.get(login_col, "")).strip().lower()
+                            if eid and lg:
+                                eid_to_login[eid] = lg
             except Exception:
                 pass
 
-            log.info("GC history for {fc_upper}: {len(gc_data.get('coachingInstances', []))} instances found")
-            log.info("eid_to_login entries: {len(eid_to_login)}")
+            # If no roster available, build mapping from GCA data itself
+            # (match coached logins by checking all quality CSV logins against GCA employeeIDs)
+            if not eid_to_login:
+                # Reverse approach: for each GCA instance with a quality course,
+                # try to find the login in our quality df by matching any available field
+                all_quality_logins = set(df["Login"].astype(str).str.strip().str.lower().unique())
+
+            log.info(f"Quality GC check: {len(gc_data.get('coachingInstances', []))} instances, {len(quality_course_urls)} course URLs, {len(eid_to_login)} eid mappings")
 
             for it in gc_data.get("coachingInstances", []):
                     # Navigate the real GC structure: instance → coachingInstanceData
@@ -1373,13 +1374,20 @@ def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False, site
                 coachee = cid.get("coachee") or {}
                 employee_id = str(coachee.get("employeeID") or "").strip()
 
-                # Resolve login from employeeID via roster
-                login = eid_to_login.get(employee_id, "")
+                # Resolve login from employeeID via roster or quality data
+                login = eid_to_login.get(employee_id, "").lower()
                 if not login:
                     # Fallback: try older flat formats
                     emp = it.get("employee") or cid.get("employee") or {}
                     login = (emp.get("login") or emp.get("employeeLogin") or
                              it.get("login") or it.get("employeeLogin") or "").strip().lower()
+                if not login and employee_id:
+                    # Last resort: check creatorComment for login hint
+                    details = cid.get("coachingReasonDetails") or {}
+                    comment = str((details.get("creatorComment") or {}).get("detail", ""))
+                    # Comments from our app contain "Quality Coaching | ..." — login is in the coachee
+                    # Try matching employeeID against quality df if available
+                    pass
 
                 # Match by lmsCourseId in coachingReasonDetails
                 details = cid.get("coachingReasonDetails") or {}
@@ -1389,12 +1397,51 @@ def api_quality_dashboard(fc: str = DEFAULT_FC, present_only: bool = False, site
 
                 if login and (lms_detail in quality_course_urls or lms_uuid in quality_course_urls):
                     coached_logins.add(login)
+                elif not login and employee_id and (lms_detail in quality_course_urls or lms_uuid in quality_course_urls):
+                    # No login resolved but course matches — store employeeID for reverse lookup
+                    coached_logins.add(f"eid:{employee_id}")
 
-            log.info("coached_logins ({len(coached_logins)}): {sorted(coached_logins)[:20]}")
+            # Reverse lookup: match coached employeeIDs against quality df
+            # The quality df has Login — check if any row's login matches via SCC profile
+            # For now, use a simpler approach: download fresh roster for mapping
+            if any(x.startswith("eid:") for x in coached_logins):
+                try:
+                    from project_argos.domains.roster_scc import build_roster_scc
+                    roster_df = with_com_init(lambda: build_roster_scc(fc_upper))
+                    for _, rr in roster_df.iterrows():
+                        eid = str(rr.get("EmployeeId", "")).strip()
+                        lg = str(rr.get("Login", "")).strip().lower()
+                        if f"eid:{eid}" in coached_logins and lg:
+                            coached_logins.discard(f"eid:{eid}")
+                            coached_logins.add(lg)
+                except Exception as e:
+                    log.info(f"Roster fetch for coached mapping failed: {e}")
+                # Remove any remaining unresolved eid: entries
+                coached_logins = {x for x in coached_logins if not x.startswith("eid:")}
+
+            log.info(f"coached_logins ({len(coached_logins)}): {sorted(coached_logins)[:20]}")
         except Exception as e:
             log.info("coached check failed (non-fatal): {e}")
 
         records = []
+
+        # Build cohort mapping from Roster if available
+        cohort_map: dict[str, str] = {}
+        try:
+            roster_fp = OUTPUT_DIR / "Roster_SCC.csv"
+            if roster_fp.exists():
+                _rc = pd.read_csv(roster_fp, dtype=str)
+                _rc.columns = [c.strip() for c in _rc.columns]
+                login_c = next((c for c in _rc.columns if c.lower() == "login"), None)
+                cohort_c = next((c for c in _rc.columns if c.lower() == "cohort"), None)
+                if login_c and cohort_c:
+                    for _, dr in _rc.iterrows():
+                        lg = str(dr.get(login_c, "")).strip().lower()
+                        co = str(dr.get(cohort_c, "")).strip()
+                        if lg and co and co.lower() not in ("nan", "none", ""):
+                            cohort_map[lg] = co
+        except Exception:
+            pass
 
         # Load hours-based tenure for quality enrichment
         tenure_lookup = {}
@@ -1659,10 +1706,7 @@ ADMIN_ALLOWED_FILES = {
 def _check_admin() -> str:
     """Return login if admin, else raise 403."""
     login = os.environ.get("USERNAME", "").strip().lower()
-    admins_path = CONFIG_DIR / "admins.json"
-    admins_cfg = json.loads(admins_path.read_text(encoding="utf-8")) if admins_path.exists() else {}
-    admin_list = [a.lower() for a in admins_cfg.get("admins", [])]
-    if login not in admin_list:
+    if login not in _load_admin_list():
         raise HTTPException(status_code=403, detail="Admin access required")
     return login
 

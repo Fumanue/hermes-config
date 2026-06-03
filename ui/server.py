@@ -41,6 +41,10 @@ log = get_logger(__name__)
 import uuid as _uuid
 _pipeline_jobs: dict = {}  # job_id → {"pct", "msg", "status": "running"|"done"|"error", "ok", "error"}
 
+import threading as _threading
+_pipeline_lock = _threading.Lock()
+_pipeline_running = False
+
 def _make_job() -> str:
     job_id = _uuid.uuid4().hex
     _pipeline_jobs[job_id] = {"pct": 0, "msg": "Iniciando…", "status": "running"}
@@ -1054,39 +1058,58 @@ def api_auth_me():
 
 @app.post("/api/pipeline/run")
 def api_run_pipeline(req: PipelineRequest):
-    # ── Site permission check ──────────────────────────────────
-    fc_upper = str(req.fc or "").strip().upper()
-    if fc_upper not in ALLOWED_SITES:
-        raise HTTPException(
-            status_code=403,
-            detail=(
-                "Este site no esta habilitado en esta aplicacion, "
-                "por favor comunicarse con el creador Fumanue@"
-            ),
-        )
-    # ──────────────────────────────────────────────────────────
-    shift          = req.shift or auto_detect_shift(fc_upper)
-    _log_usage(fc_upper, os.environ.get("USERNAME", "unknown"), "Performance")
-    start_dt, end_dt = compute_shift_range(shift, fc_upper)
-    buf = StringIO()
+    global _pipeline_running
+    # ── Prevent concurrent pipeline runs ──────────────────────
+    with _pipeline_lock:
+        if _pipeline_running:
+            raise HTTPException(status_code=429, detail="Pipeline ya en ejecución. Espera a que termine.")
+        _pipeline_running = True
     try:
-        def _inner():
-            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-                run_pipeline(req.fc, start_dt, end_dt, run_clean=True)
-        with_com_init(_inner)
-        return {"ok": True, "log": buf.getvalue()}
-    except Exception as e:
-        buf.write(f"\n❌ {type(e).__name__}: {e}\n")
-        return {"ok": False, "log": buf.getvalue(), "error": str(e)}
+        # ── Site permission check ──────────────────────────────────
+        fc_upper = str(req.fc or "").strip().upper()
+        if fc_upper not in ALLOWED_SITES:
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Este site no esta habilitado en esta aplicacion, "
+                    "por favor comunicarse con el creador Fumanue@"
+                ),
+            )
+        # ──────────────────────────────────────────────────────────
+        shift          = req.shift or auto_detect_shift(fc_upper)
+        _log_usage(fc_upper, os.environ.get("USERNAME", "unknown"), "Performance")
+        start_dt, end_dt = compute_shift_range(shift, fc_upper)
+        buf = StringIO()
+        try:
+            def _inner():
+                with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                    run_pipeline(req.fc, start_dt, end_dt, run_clean=True)
+            with_com_init(_inner)
+            return {"ok": True, "log": buf.getvalue()}
+        except Exception as e:
+            buf.write(f"\n❌ {type(e).__name__}: {e}\n")
+            return {"ok": False, "log": buf.getvalue(), "error": str(e)}
+    finally:
+        with _pipeline_lock:
+            _pipeline_running = False
 
 
 @app.get("/api/pipeline/stream")
 def api_pipeline_stream(fc: str = DEFAULT_FC, shift: str = ""):
     """Server-Sent Events — emite progreso en tiempo real durante el pipeline."""
     import queue, threading, json as _json
+    global _pipeline_running
+
+    # ── Prevent concurrent pipeline runs ──────────────────────
+    with _pipeline_lock:
+        if _pipeline_running:
+            raise HTTPException(status_code=429, detail="Pipeline ya en ejecución. Espera a que termine.")
+        _pipeline_running = True
 
     fc_upper = str(fc or "").strip().upper()
     if fc_upper not in ALLOWED_SITES:
+        with _pipeline_lock:
+            _pipeline_running = False
         raise HTTPException(status_code=403, detail="Site no habilitado")
 
     shift = shift or auto_detect_shift(fc_upper)
@@ -1098,6 +1121,7 @@ def api_pipeline_stream(fc: str = DEFAULT_FC, shift: str = ""):
         q.put({"pct": pct, "msg": msg})
 
     def _worker():
+        global _pipeline_running
         buf = StringIO()
         try:
             def _inner():
@@ -1115,6 +1139,9 @@ def api_pipeline_stream(fc: str = DEFAULT_FC, shift: str = ""):
                 log.debug("Could not write error log file: %s", e)
             buf.write(f"\n❌ {type(e).__name__}: {e}\n{full_tb}\n")
             q.put({"pct": 100, "msg": f"❌ Error: {e}", "ok": False, "log": buf.getvalue(), "error": str(e)})
+        finally:
+            with _pipeline_lock:
+                _pipeline_running = False
 
     threading.Thread(target=_worker, daemon=True).start()
 
@@ -1136,9 +1163,18 @@ def api_pipeline_stream(fc: str = DEFAULT_FC, shift: str = ""):
 def api_pipeline_start(fc: str = DEFAULT_FC, shift: str = ""):
     """Start pipeline in background, return job_id for polling."""
     import threading
+    global _pipeline_running
+
+    # ── Prevent concurrent pipeline runs ──────────────────────
+    with _pipeline_lock:
+        if _pipeline_running:
+            raise HTTPException(status_code=429, detail="Pipeline ya en ejecución. Espera a que termine.")
+        _pipeline_running = True
 
     fc_upper = str(fc or "").strip().upper()
     if fc_upper not in ALLOWED_SITES:
+        with _pipeline_lock:
+            _pipeline_running = False
         raise HTTPException(status_code=403, detail="Site no habilitado")
 
     shift = shift or auto_detect_shift(fc_upper)
@@ -1147,6 +1183,7 @@ def api_pipeline_start(fc: str = DEFAULT_FC, shift: str = ""):
     job_id = _make_job()
 
     def _worker():
+        global _pipeline_running
         buf = StringIO()
         try:
             def _progress(pct: int, msg: str):
@@ -1168,6 +1205,9 @@ def api_pipeline_start(fc: str = DEFAULT_FC, shift: str = ""):
             except Exception:
                 pass
             _pipeline_jobs[job_id].update({"pct": 100, "msg": f"❌ Error: {e}", "status": "error", "ok": False, "error": str(e)})
+        finally:
+            with _pipeline_lock:
+                _pipeline_running = False
 
     threading.Thread(target=_worker, daemon=True).start()
     return {"job_id": job_id}
@@ -1180,6 +1220,12 @@ def api_pipeline_status(job_id: str):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
+
+
+@app.get("/api/pipeline/running")
+def api_pipeline_running():
+    """Check if a pipeline is currently running."""
+    return {"running": _pipeline_running}
 
 
 @app.post("/api/coaching/upload")

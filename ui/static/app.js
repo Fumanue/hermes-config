@@ -2328,7 +2328,13 @@ $("btnPipeline").addEventListener("click", ()=>{
     if(startXhr.status !== 200){
       btn.disabled = false;
       btn.textContent = t("btn_run_pipeline");
-      if(sb){ sb.innerHTML = `<span style="color:#e53e3e">❌ Failed to start pipeline</span>`; setTimeout(()=>{ sb.innerHTML = origSb; }, 5000); }
+      var errDetail = "";
+      try{ errDetail = JSON.parse(startXhr.responseText).detail || ""; }catch(ex){}
+      if(startXhr.status === 429){
+        if(sb){ sb.innerHTML = `<span style="color:#e8711a;font-weight:700">⚠ Pipeline ya en ejecución</span>`; setTimeout(()=>{ sb.innerHTML = origSb; }, 5000); }
+      } else {
+        if(sb){ sb.innerHTML = `<span style="color:#e53e3e">❌ ${esc(errDetail || "Failed to start pipeline")}</span>`; setTimeout(()=>{ sb.innerHTML = origSb; }, 5000); }
+      }
       return;
     }
     var jobId;

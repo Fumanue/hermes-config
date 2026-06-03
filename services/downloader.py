@@ -27,6 +27,7 @@ import win32com.client
 from project_argos.config import get_paths
 from project_argos.core.config_store import load_json
 from project_argos.core.auth_midway import get_cookie
+from project_argos.core.cert_picker import set_client_cert
 from project_argos.domains.atlas_quality import fetch_and_save_atlas_quality
 from project_argos.core.logger import get_logger
 log = get_logger(__name__)
@@ -279,6 +280,7 @@ def winhttp_request(
         http.Open("GET", current_url, False)
         http.SetAutoLogonPolicy(0)
         http.SetTimeouts(30000, 30000, 30000, 60000)
+        set_client_cert(http)
         http.SetRequestHeader("Cookie", cookie_header)
         http.SetRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
         http.SetRequestHeader("Accept", "text/html,application/xhtml+xml,*/*" if accept_html else "*/*")
@@ -343,6 +345,7 @@ def winhttp_get_json(url: str, cookie: str, max_tries: int = 5) -> dict:
             http.Open("GET", current_url, False)
             http.SetAutoLogonPolicy(0)
             http.SetTimeouts(15000, 15000, 15000, 30000)
+            set_client_cert(http)
             http.SetRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
             http.SetRequestHeader("Accept", "application/json")
             http.SetRequestHeader("Cookie", cookie)
@@ -912,9 +915,9 @@ def print_result(result: DownloadResult, prefix: str = "  ") -> None:
     if result.success:
         count_str = f" ({result.count} rows)" if result.count else ""
         clean_str = " ✨" if result.cleaned else ""
-        log.info("{prefix}✓ {result.name}{count_str}{clean_str}")
+        log.info(f"{prefix}✓ {result.name}{count_str}{clean_str}")
     else:
-        log.info("{prefix}✗ {result.name}: {result.error}")
+        log.info(f"{prefix}✗ {result.name}: {result.error}")
 
 # ============================================================================
 # MAIN RUN (PARALLEL)
@@ -1084,8 +1087,8 @@ def run(fc: str, start_dt: datetime, end_dt: datetime) -> None:
 
     dt = time.time() - t0
     log.info("=" * 60)
-    log.info("✓ COMPLETE - ok={ok} fail={fail} (tasks={ok+fail})")
-    log.info("  Time: {dt:.1f}s | Output: {OUTPUT_DIR}")
+    log.info(f"✓ COMPLETE - ok={ok} fail={fail} (tasks={ok+fail})")
+    log.info(f"  Time: {dt:.1f}s | Output: {OUTPUT_DIR}")
     log.info("=" * 60)
 
 def _fast_starts_task(fc: str, date_str: str, cookie: str) -> DownloadResult:

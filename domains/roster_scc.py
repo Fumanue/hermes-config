@@ -10,6 +10,7 @@ import pandas as pd
 import win32com.client  # pip install pywin32
 
 from project_argos.core.auth_config import load_settings
+from project_argos.core.cert_picker import set_client_cert
 from project_argos.config import get_paths
 from project_argos.core.logger import get_logger
 log = get_logger(__name__)
@@ -151,10 +152,7 @@ def winhttp_get_json(url: str, cookie_header: str, referer: str) -> Any:
     http.Open("GET", url, False)
     http.SetAutoLogonPolicy(0)
     http.SetTimeouts(0, 0, 0, 0)
-
-    if CLIENT_CERT_THUMBPRINT:
-        http.SetClientCertificate(f"CURRENT_USER\\MY\\{CLIENT_CERT_THUMBPRINT}")
-
+    set_client_cert(http)
     _set_common_headers(http, cookie_header, referer)
 
     http.Send()
@@ -168,10 +166,7 @@ def winhttp_get_json(url: str, cookie_header: str, referer: str) -> Any:
         http.Open("GET", url, False)
         http.SetAutoLogonPolicy(0)
         http.SetTimeouts(0, 0, 0, 0)
-
-        if CLIENT_CERT_THUMBPRINT:
-            http.SetClientCertificate(f"CURRENT_USER\\MY\\{CLIENT_CERT_THUMBPRINT}")
-
+        set_client_cert(http)
         _set_common_headers(http, cookie_header, referer)
         http.Send()
         status = int(http.Status)

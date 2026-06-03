@@ -11,6 +11,7 @@ import win32com.client
 
 from project_argos.config import get_paths
 from project_argos.core.auth_midway import get_cookie
+from project_argos.core.cert_picker import set_client_cert
 from project_argos.core.logger import get_logger
 log = get_logger(__name__)
 
@@ -131,6 +132,7 @@ class GuidedCoachingHistoryClient:
         self._http.Open("GET", self.base_url + "/", False)
         self._http.SetAutoLogonPolicy(0)
         self._http.SetTimeouts(15000, 15000, 60000, 60000)
+        set_client_cert(self._http)
         self._http.SetRequestHeader("Cookie", self._cookie_header())
         self._http.SetRequestHeader("User-Agent", UA)
         self._http.SetRequestHeader("Accept", "text/html,application/xhtml+xml,*/*")
@@ -148,6 +150,7 @@ class GuidedCoachingHistoryClient:
             self._http.Open("POST", url, False)
             self._http.SetAutoLogonPolicy(0)
             self._http.SetTimeouts(15000, 15000, 60000, 60000)
+            set_client_cert(self._http)
             self._http.SetRequestHeader("Cookie", self._cookie_header())
             # ✅ match browser
             self._http.SetRequestHeader("Content-Type", "application/json;charset=utf-8")
@@ -238,8 +241,7 @@ def fetch_guided_coaching_history(
     payload: Dict[str, Any] = {
         "building": {"code": fc},
         "creationTimeRange": {"startTime": _iso_z(start), "endTime": _iso_z(now)},
-        # ✅ EXACT browser format
-        "statuses": "[\"COMPLETED\"]",
+        "statuses": ["COMPLETED"],
         "filters": [
             {
                 "_filterType": "attribute",

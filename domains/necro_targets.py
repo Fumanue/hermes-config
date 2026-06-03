@@ -19,6 +19,7 @@ import win32com.client
 
 from project_argos.config import get_paths
 from project_argos.core.auth_midway import get_cookie
+from project_argos.core.cert_picker import set_client_cert
 from project_argos.core.logger import get_logger
 log = get_logger(__name__)
 
@@ -109,11 +110,7 @@ class WinHTTPSession:
     ) -> tuple[int, str, str]:
         self.http.Open(method, url, False)
         self.http.SetAutoLogonPolicy(0)
-
-        # Optional cert by thumbprint (only if you set env var)
-        if CLIENT_CERT_THUMBPRINT:
-            self.http.SetClientCertificate(f"CURRENT_USER\\MY\\{CLIENT_CERT_THUMBPRINT}")
-
+        set_client_cert(self.http)
         self.http.SetTimeouts(*timeouts)
 
         if self.cookie_header:

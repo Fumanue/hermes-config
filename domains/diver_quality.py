@@ -14,6 +14,7 @@ import win32com.client
 
 from project_argos.config import get_paths
 from project_argos.core.auth_midway import get_cookie
+from project_argos.core.cert_picker import set_client_cert
 from project_argos.core.logger import get_logger
 log = get_logger(__name__)
 
@@ -71,13 +72,7 @@ def _build_params(
 
 
 def _set_cert(http) -> None:
-    """Set client certificate (same pattern as atlas_quality)."""
-    try:
-        user = os.environ.get("USERNAME", "").strip()
-        if user:
-            http.SetClientCertificate(f"CURRENT_USER\\MY\\{user}")
-    except Exception:
-        pass
+    set_client_cert(http)
 
 
 def _get_full_cookie() -> str:

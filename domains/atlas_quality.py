@@ -14,6 +14,7 @@ import win32com.client
 
 from project_argos.config import get_paths
 from project_argos.core.auth_midway import get_cookie
+from project_argos.core.cert_picker import set_client_cert
 from project_argos.core.logger import get_logger
 log = get_logger(__name__)
 
@@ -83,13 +84,7 @@ def build_payload(fc: str, department: str, start_dt: datetime, end_dt: datetime
 
 
 def _set_cert(http) -> None:
-    # Same behavior as working VBA macro. Non-fatal if cert is not available.
-    try:
-        user = os.environ.get("USERNAME", "").strip()
-        if user:
-            http.SetClientCertificate(f"CURRENT_USER\\MY\\{user}")
-    except Exception as e:
-        log.info("warning: SetClientCertificate failed: {e}")
+    set_client_cert(http)
 
 
 def fetch_atlas_quality_raw(

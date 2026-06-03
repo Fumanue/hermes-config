@@ -31,18 +31,28 @@ UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox
 # ✅ fijo como pediste
 DAYS_FIXED = 3
 
-# Coaching reasons accepted by the GC backend. Sending any value outside the
-# server's COACHING_REASON enum (e.g. MANUAL_PRODUCTIVITY_*) makes Tomcat 500
-# on deserialization. Mirrors the working list from Quality_Report_Build.
+# Manual coaching reasons. Both QUALITY_* and PRODUCTIVITY_* are required:
+# the Quality tab uses QUALITY_*, the Performance tab uses PRODUCTIVITY_*.
+# All values verified against the GC API (probe_gc_reasons.py) — every entry
+# returns HTTP 200. The earlier 500s came from `statuses` being sent as an
+# escaped string instead of a JSON array, not from these reasons.
 DEFAULT_MANUAL_REASONS = [
     "MANUAL_QUALITY_COACHING_FOR_STOW",
+    "MANUAL_PRODUCTIVITY_COACHING_FOR_STOW",
     "MANUAL_QUALITY_COACHING_FOR_PICK",
+    "MANUAL_PRODUCTIVITY_COACHING_FOR_PICK",
     "MANUAL_QUALITY_COACHING_FOR_PACK",
+    "MANUAL_PRODUCTIVITY_COACHING_FOR_PACK",
     "MANUAL_QUALITY_COACHING_FOR_REBIN",
+    "MANUAL_PRODUCTIVITY_COACHING_FOR_REBIN",
     "MANUAL_QUALITY_COACHING_FOR_INDUCT",
+    "MANUAL_PRODUCTIVITY_COACHING_FOR_INDUCT",
     "MANUAL_QUALITY_COACHING_FOR_RECEIVE",
-    "MANUAL_QUALITY_COACHING_FOR_SORT",
+    "MANUAL_PRODUCTIVITY_COACHING_FOR_RECEIVE",
     "MANUAL_QUALITY_COACHING_FOR_ICQA",
+    "MANUAL_PRODUCTIVITY_COACHING_FOR_ICQA",
+    "MANUAL_QUALITY_COACHING_FOR_SORT",
+    "MANUAL_PRODUCTIVITY_COACHING_FOR_SORT",
     "MANUAL_COACHING",
 ]
 

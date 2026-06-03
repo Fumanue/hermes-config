@@ -242,27 +242,17 @@
       },
       {
         "station_contains": "SINGLES_01",
-        "file": "FCLM_1002993.csv",
-        "function_contains": "Scan Verify Large",
-        "role_override": "SM2",
-        "process_id": "100054"
-      },
-      {
-        "station_contains": "SINGLES_01",
-        "file": "FCLM_1002993.csv",
-        "function_contains": "Scan Verify Small",
-        "role_override": "SMMIX",
-        "process_id": "100054"
-      },
-      {
-        "station_contains": "SINGLES_01",
+        "station_parity_mode": true,
+        "station_parity": "odd",
         "file": "FCLM_1002993.csv",
         "function_contains": "Scan Verify Medium",
         "role_override": "SM",
         "process_id": "100054"
       },
       {
-        "station_contains": "SINGLES_02",
+        "station_contains": "SINGLES_01",
+        "station_parity_mode": true,
+        "station_parity": "even",
         "file": "FCLM_1002993.csv",
         "function_contains": "Scan Verify Large",
         "role_override": "SM2",
@@ -270,16 +260,20 @@
       },
       {
         "station_contains": "SINGLES_02",
+        "station_parity_mode": true,
+        "station_parity": "odd",
         "file": "FCLM_1002993.csv",
-        "function_contains": "Scan Verify Small",
-        "role_override": "SMMIX",
+        "function_contains": "Scan Verify SIOC",
+        "role_override": "SIOC",
         "process_id": "100054"
       },
       {
         "station_contains": "SINGLES_02",
+        "station_parity_mode": true,
+        "station_parity": "even",
         "file": "FCLM_1002993.csv",
-        "function_contains": "Scan Verify Medium",
-        "role_override": "SM",
+        "function_contains": "Scan Verify Large",
+        "role_override": "SM2",
         "process_id": "100054"
       },
       {

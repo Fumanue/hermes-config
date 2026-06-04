@@ -114,7 +114,7 @@ function t(k){ return (I18N[_lang]||I18N.es)[k] || (I18N.es)[k] || k; }
    ============================================================ */
 
 const API = "";
-let currentFC = localStorage.getItem("Argos_default_fc") || "BCN4";
+let currentFC = localStorage.getItem("argos-default-fc") || "BCN4";
 let currentShift = "";
 
 // ── Process groups ─────────────────────────────────────────
@@ -532,13 +532,13 @@ $("shiftSelect") && $("shiftSelect").addEventListener("change",()=>{
 function _updateDefaultFcBtn(){
   const btn=$("btnDefaultFc");
   if(!btn) return;
-  const saved=localStorage.getItem("Argos_default_fc")||"BCN4";
+  const saved=localStorage.getItem("argos-default-fc")||"BCN4";
   btn.title = currentFC===saved ? "FC predeterminado" : "Establecer como predeterminado";
   btn.textContent = currentFC===saved ? "★" : "☆";
 }
 
 $("btnDefaultFc") && $("btnDefaultFc").addEventListener("click",()=>{
-  localStorage.setItem("Argos_default_fc", currentFC);
+  localStorage.setItem("argos-default-fc", currentFC);
   jpost(`${API}/api/prefs`, {default_fc: currentFC}).catch(()=>{});
   _updateDefaultFcBtn();
   showToast && showToast(`✅ ${currentFC} establecido como FC predeterminado`);
@@ -2177,11 +2177,11 @@ async function _initApp(){
   // Load persisted prefs from server (survives pywebview localStorage resets)
   let prefs = {default_fc:"BCN4", theme:"light", lang:"es"};
   try{ prefs = await jget(`${API}/api/prefs`); }catch(_){}
-  const saved = prefs.default_fc || localStorage.getItem("Argos_default_fc") || "BCN4";
+  const saved = prefs.default_fc || localStorage.getItem("argos-default-fc") || "BCN4";
   currentFC=saved;
-  localStorage.setItem("Argos_default_fc", saved);
-  if(prefs.theme) { document.documentElement.setAttribute("data-theme", prefs.theme); localStorage.setItem("Argos_theme", prefs.theme); }
-  if(prefs.lang) { _lang = prefs.lang; localStorage.setItem("Argos_lang", prefs.lang); }
+  localStorage.setItem("argos-default-fc", saved);
+  if(prefs.theme) { document.documentElement.setAttribute("data-theme", prefs.theme); localStorage.setItem("argos-theme", prefs.theme); }
+  if(prefs.lang) { _lang = prefs.lang; localStorage.setItem("argos-lang", prefs.lang); }
   const sel=$("fcSelect");
   if(sel){ const opt=sel.querySelector(`option[value="${saved}"]`); if(opt) sel.value=saved; }
   const sbFc=$("sbFc"); if(sbFc) sbFc.textContent=currentFC;
@@ -2518,6 +2518,7 @@ if(_spBtn && _spPanel){
     btn.addEventListener("click", () => {
       _lang = btn.dataset.val;
       localStorage.setItem("argos-lang", _lang);
+      jpost(`${API}/api/prefs`, {lang: _lang}).catch(()=>{});
       _syncLangButtons();
       _applyI18n();
     });
@@ -2526,9 +2527,10 @@ if(_spBtn && _spPanel){
   // Default FC
   const _spFc = $("spDefaultFc");
   if(_spFc){
-    _spFc.value = localStorage.getItem("Argos_default_fc") || "BCN4";
+    _spFc.value = localStorage.getItem("argos-default-fc") || "BCN4";
     _spFc.addEventListener("change", () => {
-      localStorage.setItem("Argos_default_fc", _spFc.value);
+      localStorage.setItem("argos-default-fc", _spFc.value);
+      jpost(`${API}/api/prefs`, {default_fc: _spFc.value}).catch(()=>{});
     });
   }
 }

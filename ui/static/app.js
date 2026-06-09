@@ -45,6 +45,96 @@ const I18N = {
     faq_feedback_lbl: "Feedback", faq_feedback_send: "Enviar Feedback", faq_feedback_ok: "✓ Enviado correctamente", faq_feedback_err: "Error al enviar",
     loading: "Cargando…", close: "Cerrar", cancel: "Cancelar",
     pipeline_done: "✓ Pipeline completado", lbl_threshold: "Umbral: asociados por encima del σ configurado aparecen aquí",
+    // Update banner / installer
+    upd_available: "Hay una versión nueva disponible:",
+    upd_yours: "tu versión:",
+    upd_apply: "Actualizar ahora",
+    upd_downloading: "Descargando Setup…",
+    upd_launching: "Lanzando instalador, la app se cerrará…",
+    upd_unknown: "Error desconocido.",
+    upd_failed: "No se pudo actualizar:",
+    upd_ask_fumanue: "pide el Setup a Fumanue@.",
+    upd_no_server: "No se pudo contactar el servidor — pide el Setup a Fumanue@.",
+    // Midway pill
+    mw_label: "Midway",
+    mw_checking: "Comprobando Midway…",
+    mw_active_in: "Midway activa (caduca en {x})",
+    mw_expiring_in: "Midway caduca pronto (en {x})",
+    mw_expired: "Midway expirada",
+    mw_expired_tip: "Tu sesión de Midway ha caducado. Se renovará automáticamente al pulsar Run Pipeline.",
+    mw_no_auth: "Midway no auth",
+    mw_no_auth_tip: "Midway aún no autenticada. Se solicitará automáticamente al pulsar Run Pipeline.",
+    mw_seconds_expired: "expirada",
+    // Offline banner
+    off_no_network: "Sin conexión a la red",
+    off_midway_expired: "Midway expirada",
+    off_msg: "la app funciona en modo lectura. Pipeline y uploads están deshabilitados temporalmente.",
+    // Auth / access
+    auth_verifying: "Verificando acceso",
+    auth_no_access: "Sin acceso",
+    auth_contact: "Contacta a Fumanue@",
+    auth_no_access_block: "No tienes acceso a esta aplicación.<br>Contacta a <b>Fumanue@</b> para solicitar acceso.",
+    auth_verify_error: "Error al verificar permisos.<br>Reinicia la app. Si persiste, contacta a <b>Fumanue@</b>.",
+    // FC default
+    fc_default_now: "FC predeterminado",
+    fc_set_default: "Establecer como predeterminado",
+    fc_default_set: "✅ {fc} establecido como FC predeterminado",
+    // Empty states
+    empty_no_records: "No hay registros que coincidan con el filtro",
+    empty_no_data_fc: "Sin datos para este FC",
+    empty_try_widen: "Prueba a ampliar prioridades, quitar el filtro de tenure o limpiar la búsqueda.",
+    empty_run_pipeline: "Lanza el pipeline desde la barra superior para descargar los datos del día.",
+    empty_no_visible_rows: "⚠️ No hay filas visibles",
+    empty_no_gca_title: "Sin datos GCA",
+    empty_no_gca_sub: "Lanza el GCA pipeline para refrescar.",
+    empty_no_pending_coachings: "No hay coachings pendientes",
+    empty_no_coachings_floor: "No hay coachings con estación en {floor}",
+    // CSV
+    csv_saved: "✅ CSV guardado ({n} filas):",
+    csv_quality_saved: "✅ Quality CSV guardado ({n} filas):",
+    csv_gca_saved: "✅ GCA CSV guardado ({n} filas):",
+    // Midway recovery toast
+    mw_no_internet: "Sin conexión a internet.",
+    mw_no_status: "No se pudo comprobar el estado de Midway.",
+    mw_state_missing: "Midway no está activa. Ejecuta Argos otra vez para autenticar.",
+    mw_state_expired: "Midway expirada. Reinicia Argos para reautenticar.",
+    mw_renew_btn: "🔑 Renovar Midway",
+    mw_touch_yubi: "Toca tu YubiKey…",
+    mw_waiting_fido2: "Esperando autenticación FIDO2…",
+    mw_renewed: "✓ Midway renovada. Pulsa Run Pipeline otra vez.",
+    mw_cant_pipeline: "No puedo lanzar el pipeline",
+    mw_renew_failed: "No se pudo renovar:",
+    mw_try_again: "intenta de nuevo o reinicia Argos",
+    // Pipeline
+    pipeline_error_prefix: "❌ Error:",
+    pipeline_failed: "pipeline failed",
+    // Map / coachings details
+    map_pin_hint: "📌 Shift+click o click derecho en una estación para fijar su detalle aquí",
+    map_estimated: "Estimado:",
+    map_walking: "min caminando",
+    map_coaching_min: "min coaching",
+    map_distance: "Distancia:",
+    map_coachings_in: "coachings en",
+    map_stations: "estaciones",
+    map_more_in_cat: "+ ver {n} más en esta categoría",
+    map_more_short: "más",
+    map_all_on_target: "Todas las estaciones activas están en o por encima del target.",
+    map_no_issues: "Sin incidencias",
+    // Common
+    common_assoc: "asociado",
+    common_assocs: "asociados",
+    common_yes: "Sí",
+    common_no: "No",
+    common_unknown: "(vacío)",
+    common_frozen_yes: "sí",
+    common_frozen_no: "no",
+    diag_collecting: "Recopilando…",
+    diag_copied_title: "Info copiada",
+    diag_copied_body: "Pega en Slack a Fumanue@",
+    diag_error_title: "Error recopilando",
+    map_radar_tip: "Mini-mapa: cada punto = una estación",
+    map_zoom_tip: "Zoom estaciones",
+    map_show_all_tip: "Mostrar todas las estaciones, incluso vacías",
   },
   en: {
     subtitle: "Your L&D / Operational One Stop Tool",
@@ -87,10 +177,107 @@ const I18N = {
     faq_feedback_lbl: "Feedback", faq_feedback_send: "Send Feedback", faq_feedback_ok: "✓ Sent successfully", faq_feedback_err: "Error sending",
     loading: "Loading…", close: "Close", cancel: "Cancel",
     pipeline_done: "✓ Pipeline completed", lbl_threshold: "Threshold: associates above configured σ appear here",
+    // Update banner / installer
+    upd_available: "A new version is available:",
+    upd_yours: "your version:",
+    upd_apply: "Update now",
+    upd_downloading: "Downloading Setup…",
+    upd_launching: "Launching installer, the app will close…",
+    upd_unknown: "Unknown error.",
+    upd_failed: "Could not update:",
+    upd_ask_fumanue: "ask Fumanue@ for the Setup.",
+    upd_no_server: "Could not reach the server — ask Fumanue@ for the Setup.",
+    // Midway pill
+    mw_label: "Midway",
+    mw_checking: "Checking Midway…",
+    mw_active_in: "Midway active (expires in {x})",
+    mw_expiring_in: "Midway expiring soon (in {x})",
+    mw_expired: "Midway expired",
+    mw_expired_tip: "Your Midway session has expired. It will renew automatically when you click Run Pipeline.",
+    mw_no_auth: "Midway no auth",
+    mw_no_auth_tip: "Midway not yet authenticated. It will be requested automatically when you click Run Pipeline.",
+    mw_seconds_expired: "expired",
+    // Offline banner
+    off_no_network: "No network connection",
+    off_midway_expired: "Midway expired",
+    off_msg: "the app is running in read-only mode. Pipeline and uploads are temporarily disabled.",
+    // Auth / access
+    auth_verifying: "Verifying access",
+    auth_no_access: "No access",
+    auth_contact: "Contact Fumanue@",
+    auth_no_access_block: "You do not have access to this application.<br>Contact <b>Fumanue@</b> to request access.",
+    auth_verify_error: "Error verifying permissions.<br>Restart the app. If it persists, contact <b>Fumanue@</b>.",
+    // FC default
+    fc_default_now: "Default FC",
+    fc_set_default: "Set as default",
+    fc_default_set: "✅ {fc} set as default FC",
+    // Empty states
+    empty_no_records: "No records match the filter",
+    empty_no_data_fc: "No data for this FC",
+    empty_try_widen: "Try widening priorities, removing the tenure filter, or clearing the search.",
+    empty_run_pipeline: "Run the pipeline from the top bar to download today's data.",
+    empty_no_visible_rows: "⚠️ No visible rows",
+    empty_no_gca_title: "No GCA data",
+    empty_no_gca_sub: "Run the GCA pipeline to refresh.",
+    empty_no_pending_coachings: "No pending coachings",
+    empty_no_coachings_floor: "No coachings with station on {floor}",
+    // CSV
+    csv_saved: "✅ CSV saved ({n} rows):",
+    csv_quality_saved: "✅ Quality CSV saved ({n} rows):",
+    csv_gca_saved: "✅ GCA CSV saved ({n} rows):",
+    // Midway recovery toast
+    mw_no_internet: "No internet connection.",
+    mw_no_status: "Could not check Midway status.",
+    mw_state_missing: "Midway is not active. Run Argos again to authenticate.",
+    mw_state_expired: "Midway expired. Restart Argos to re-authenticate.",
+    mw_renew_btn: "🔑 Renew Midway",
+    mw_touch_yubi: "Touch your YubiKey…",
+    mw_waiting_fido2: "Waiting for FIDO2 authentication…",
+    mw_renewed: "✓ Midway renewed. Click Run Pipeline again.",
+    mw_cant_pipeline: "Can't launch the pipeline",
+    mw_renew_failed: "Could not renew:",
+    mw_try_again: "try again or restart Argos",
+    // Pipeline
+    pipeline_error_prefix: "❌ Error:",
+    pipeline_failed: "pipeline failed",
+    // Map / coachings details
+    map_pin_hint: "📌 Shift+click or right-click a station to pin its detail here",
+    map_estimated: "Estimated:",
+    map_walking: "min walking",
+    map_coaching_min: "min coaching",
+    map_distance: "Distance:",
+    map_coachings_in: "coachings in",
+    map_stations: "stations",
+    map_more_in_cat: "+ see {n} more in this category",
+    map_more_short: "more",
+    map_all_on_target: "All active stations are at or above target.",
+    map_no_issues: "No issues",
+    // Common
+    common_assoc: "associate",
+    common_assocs: "associates",
+    common_yes: "Yes",
+    common_no: "No",
+    common_unknown: "(empty)",
+    common_frozen_yes: "yes",
+    common_frozen_no: "no",
+    diag_collecting: "Collecting…",
+    diag_copied_title: "Info copied",
+    diag_copied_body: "Paste in Slack to Fumanue@",
+    diag_error_title: "Error collecting",
+    map_radar_tip: "Mini-map: each dot = one station",
+    map_zoom_tip: "Zoom stations",
+    map_show_all_tip: "Show all stations, including empty ones",
   }
 };
 let _lang = localStorage.getItem("argos-lang") || "es";
 function t(k){ return (I18N[_lang]||I18N.es)[k] || (I18N.es)[k] || k; }
+function tf(k, params){
+  let s = t(k);
+  if(params){
+    for(const p in params){ s = s.split("{"+p+"}").join(String(params[p])); }
+  }
+  return s;
+}
 
 // ═══ THEME ═══
 // Apply saved theme immediately to avoid flash on load
@@ -163,6 +350,67 @@ function transcriptUrl(login){ return `https://guided-coaching-dub.corp.amazon.c
 function badgePhotoUrl(login){ return `https://badgephotos.amazon.com/?Region=Master&FullsizeImage=Yes&uid=${encodeURIComponent(String(login||"").trim())}`; }
 function ts(){ return new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"}); }
 const $=id=>document.getElementById(id);
+
+// ── Toast (small, ephemeral notifications) ─────────────────
+// Stacks bottom-right. Each toast auto-dismisses after `ms`. Type drives
+// the accent color: "ok" (green), "info" (accent), "warn" (orange),
+// "err" (red). Caller can also pass a plain object {title, body, type, ms}.
+function showToast(opts){
+  if(typeof opts === "string") opts = { body: opts };
+  const { title = "", body = "", type = "ok", ms = 3500 } = opts || {};
+  let host = document.getElementById("toastHost");
+  if(!host){
+    host = document.createElement("div");
+    host.id = "toastHost";
+    host.style.cssText = "position:fixed;right:20px;bottom:20px;z-index:9500;display:flex;flex-direction:column;gap:10px;pointer-events:none";
+    document.body.appendChild(host);
+  }
+  const colors = {
+    ok:   { bd: "#16a34a", bg: "rgba(22,163,74,.12)" },
+    info: { bd: "var(--accent)", bg: "var(--accent-light)" },
+    warn: { bd: "#f59e0b", bg: "rgba(245,158,11,.12)" },
+    err:  { bd: "#dc2626", bg: "rgba(220,38,38,.12)" },
+  };
+  const c = colors[type] || colors.ok;
+  const el = document.createElement("div");
+  el.style.cssText = `pointer-events:auto;background:var(--bg-card);color:var(--text);border-left:3px solid ${c.bd};border-radius:8px;padding:12px 16px;min-width:240px;max-width:420px;box-shadow:0 12px 32px -8px rgba(0,0,0,.28),0 0 0 1px var(--border);font-size:13px;line-height:1.45;transform:translateX(20px);opacity:0;transition:transform .25s cubic-bezier(.2,.7,.2,1),opacity .25s`;
+  el.innerHTML = (title ? `<div style="font-weight:600;margin-bottom:4px">${title}</div>` : "") +
+                 `<div style="color:var(--text-secondary)">${body}</div>`;
+  host.appendChild(el);
+  // Trigger transition on next frame
+  requestAnimationFrame(() => { el.style.transform = "translateX(0)"; el.style.opacity = "1"; });
+  const close = () => {
+    el.style.transform = "translateX(20px)";
+    el.style.opacity = "0";
+    setTimeout(() => el.remove(), 250);
+  };
+  el.addEventListener("click", close);
+  setTimeout(close, ms);
+}
+
+// Animate a numeric KPI from its previous value to `target` over ~12 frames.
+// Suffix is appended after the number (e.g. "%"). Idempotent — same value
+// twice is a no-op.
+function countUpKpi(id, target, suffix){
+  const el = $(id); if(!el) return;
+  suffix = suffix || "";
+  const prev = parseInt(String(el.textContent).replace(/[^\d-]/g,""),10) || 0;
+  const tgt  = Number(target) || 0;
+  if(prev === tgt){ el.textContent = tgt + suffix; return; }
+  const diff  = tgt - prev;
+  const steps = Math.min(Math.abs(diff), 14);
+  if(steps === 0){ el.textContent = tgt + suffix; return; }
+  let step = 0;
+  const iv = setInterval(() => {
+    step++;
+    if(step >= steps){
+      el.textContent = tgt + suffix;
+      clearInterval(iv);
+    } else {
+      el.textContent = Math.round(prev + diff * step / steps) + suffix;
+    }
+  }, 22);
+}
 
 // Debounce utility — delays fn execution until wait ms after last call
 function _debounce(fn, wait){
@@ -263,7 +511,10 @@ function norm(r){
   const photo_url     = String(r.photo_url??"").trim()
     ||(login?`https://badgephotos.amazon.com/?Region=Master&FullsizeImage=Yes&uid=${encodeURIComponent(login)}`:"");
 
-  return{login,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,notes,rate,pct,course_id,employee_id,transcript_url,photo_url,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority};
+  // Pre-compute the lowercased search blob ONCE per row so the search
+  // filter doesn't .toLowerCase() every cell on every keystroke.
+  const _search = (login+" "+role+" "+station+" "+dept+" "+cohort+" "+nhFlag).toLowerCase();
+  return{login,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,notes,rate,pct,course_id,employee_id,transcript_url,photo_url,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,_search};
 }
 
 // Build the notes string to upload (rate + pct + comments)
@@ -368,11 +619,198 @@ function _applyPermissions(perms){
 // Persisted in localStorage so a post-pipeline reload skips the auth fetch.
 let _authCache = (()=>{
   try{
-    const raw = localStorage.getItem("argos_auth_v3");
+    // v4: bumped to invalidate cached results from before team membership gate landed.
+    try{ localStorage.removeItem("argos_auth_v3"); }catch(ex){}
+    const raw = localStorage.getItem("argos_auth_v4");
     if(raw){ const p = JSON.parse(raw); if(p && p.date) return p; }
   }catch(ex){}
   return null;
 })();
+
+async function checkForUpdate(){
+  // Non-blocking: if the server can't reach GitHub or returns an error,
+  // we just hide the banner. Never throws to the user.
+  try{
+    const dismissed = (()=>{ try { return localStorage.getItem("argos_update_dismissed") || ""; } catch(_) { return ""; } })();
+    const v = await jget(`${API}/api/system/version`);
+    // Show the running version in the status bar regardless of whether an
+    // update is available — useful for support ("¿qué versión tienes?").
+    if(v && v.current){
+      const el = document.getElementById("sbVersion");
+      if(el) el.textContent = "v" + v.current;
+    }
+    if(!v || !v.update_available || !v.latest) return;
+    if(dismissed === v.latest) return;  // user already dismissed this version
+    const banner = document.createElement("div");
+    banner.id = "updateBanner";
+    banner.style.cssText = [
+      "position:fixed","top:0","left:0","right:0","z-index:9000",
+      "background:linear-gradient(90deg,#f59e0b,#d97706)",
+      "color:#1a1a1a","font-family:'Segoe UI',sans-serif","font-size:13px",
+      "font-weight:600","padding:8px 16px","display:flex",
+      "align-items:center","justify-content:center","gap:14px",
+      "box-shadow:0 2px 8px rgba(0,0,0,.4)",
+    ].join(";");
+    banner.innerHTML = `
+      <span>${t("upd_available")} <b>v${v.latest}</b> (${t("upd_yours")} v${v.current}).</span>
+      <button id="updateBannerApply" style="background:#1a1a1a;border:1px solid rgba(0,0,0,.4);color:#fef3c7;padding:5px 14px;border-radius:4px;cursor:pointer;font-weight:600">${t("upd_apply")}</button>
+      <span id="updateBannerStatus" style="opacity:.9;font-weight:500"></span>
+      <button id="updateBannerClose" style="background:rgba(0,0,0,.15);border:1px solid rgba(0,0,0,.25);color:#1a1a1a;padding:3px 10px;border-radius:4px;cursor:pointer;font-weight:600">&times;</button>
+    `;
+    document.body.appendChild(banner);
+    document.body.style.paddingTop = (banner.offsetHeight + (parseInt(getComputedStyle(document.body).paddingTop) || 0)) + "px";
+    document.getElementById("updateBannerClose").addEventListener("click", () => {
+      try { localStorage.setItem("argos_update_dismissed", v.latest); } catch(_) {}
+      banner.remove();
+      document.body.style.paddingTop = "";
+    });
+    document.getElementById("updateBannerApply").addEventListener("click", async () => {
+      const btn = document.getElementById("updateBannerApply");
+      const status = document.getElementById("updateBannerStatus");
+      btn.disabled = true;
+      btn.style.opacity = ".6";
+      btn.style.cursor = "default";
+      status.textContent = t("upd_downloading");
+      try{
+        const r = await fetch(`${API}/api/system/apply-update`, {method:"POST"});
+        const j = await r.json().catch(()=>({}));
+        if(j && j.ok){
+          status.textContent = t("upd_launching");
+        } else {
+          const msg = (j && j.error) ? j.error : t("upd_unknown");
+          status.textContent = `${t("upd_failed")} ${msg} — ${t("upd_ask_fumanue")}`;
+          btn.disabled = false;
+          btn.style.opacity = "1";
+          btn.style.cursor = "pointer";
+        }
+      } catch(ex){
+        status.textContent = t("upd_no_server");
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.style.cursor = "pointer";
+      }
+    });
+  }catch(ex){
+    // swallow — silent fallback
+  }
+}
+
+// ── Midway status pill + YubiKey toast ─────────────────────────
+// The pill polls /api/auth/midway-status every 10 minutes (read-only, never
+// triggers mwinit). When the user clicks Run Pipeline we switch the poll to
+// 1s so we can detect mwinit_active and show the YubiKey toast quickly.
+const MIDWAY_POLL_SLOW_MS = 10 * 60 * 1000;  // 10 min
+const MIDWAY_POLL_FAST_MS = 1000;
+let _midwayPollTimer = null;
+let _midwayPollMode  = "slow";
+
+function fmtSecondsLeft(s){
+  if(!s || s <= 0) return t("mw_seconds_expired");
+  if(s < 60)            return Math.round(s) + "s";
+  if(s < 60*60)         return Math.round(s/60) + " min";
+  if(s < 60*60*24)      return Math.round(s/3600) + "h";
+  return Math.round(s/86400) + "d";
+}
+
+function paintMidwayPill(d){
+  const pill  = $("midwayPill");
+  const label = $("midwayLabel");
+  if(!pill || !label) return;
+  if(!d){
+    pill.dataset.state = "loading";
+    label.textContent  = t("mw_label");
+    pill.title         = t("mw_checking");
+    return;
+  }
+  pill.dataset.state = d.state;
+  if(d.state === "ok"){
+    label.textContent = t("mw_label");
+    pill.title        = tf("mw_active_in", {x: fmtSecondsLeft(d.seconds_left)});
+  } else if(d.state === "expiring"){
+    label.textContent = t("mw_label") + " " + fmtSecondsLeft(d.seconds_left);
+    pill.title        = tf("mw_expiring_in", {x: fmtSecondsLeft(d.seconds_left)});
+  } else if(d.state === "expired"){
+    label.textContent = t("mw_expired");
+    pill.title        = t("mw_expired_tip");
+  } else {
+    label.textContent = t("mw_no_auth");
+    pill.title        = t("mw_no_auth_tip");
+  }
+}
+
+function showMwinitToast(){
+  const t = $("mwinitToast"); const o = $("mwinitOverlay");
+  if(t) t.classList.remove("hidden");
+  if(o) o.classList.remove("hidden");
+}
+function hideMwinitToast(){
+  const t = $("mwinitToast"); const o = $("mwinitOverlay");
+  if(t) t.classList.add("hidden");
+  if(o) o.classList.add("hidden");
+}
+
+async function pollMidwayOnce(){
+  try{
+    const d = await jget(`${API}/api/auth/midway-status`);
+    paintMidwayPill(d);
+    if(d && d.mwinit_active) showMwinitToast(); else hideMwinitToast();
+    updateOfflineBanner(d, true);
+    return d;
+  } catch(_){
+    // The local server is unreachable — almost certainly the app is starting
+    // up or shutting down. Don't paint offline banner here, the splash handles it.
+    updateOfflineBanner(null, false);
+    return null;
+  }
+}
+
+// Renders/hides a subtle banner at the bottom of the screen when Midway has
+// expired. The user keeps full read access to cached data; only network
+// pulls (pipeline / GC upload) will fail. Auto-recovers as soon as the next
+// poll sees a healthy cookie.
+function updateOfflineBanner(midway, serverOk){
+  const id = "offlineBanner";
+  let el = document.getElementById(id);
+  // Online if Midway is "ok" or "expiring". "missing" or "expired" = offline-ish.
+  const midwayBad = midway && (midway.state === "missing" || midway.state === "expired");
+  const browserOnline = navigator.onLine;
+  const offline = !browserOnline || midwayBad;
+  if(!offline){
+    if(el) el.remove();
+    return;
+  }
+  if(el) return;
+  el = document.createElement("div");
+  el.id = id;
+  el.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:8800;background:linear-gradient(90deg,#f59e0b,#d97706);color:#1a1a1a;font:600 12px 'Segoe UI',sans-serif;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:14px;box-shadow:0 -4px 16px rgba(0,0,0,.25)";
+  const reason = !browserOnline ? t("off_no_network") : t("off_midway_expired");
+  el.innerHTML = `<span>⚠ ${reason} — ${t("off_msg")}</span>`;
+  document.body.appendChild(el);
+}
+
+// React to browser online/offline events too.
+window.addEventListener("online",  () => updateOfflineBanner({state:"ok"}, true));
+window.addEventListener("offline", () => updateOfflineBanner({state:"missing"}, true));
+
+function startMidwayPoll(mode){
+  // mode: "slow" (10 min) or "fast" (1 s). Idempotent.
+  if(_midwayPollMode === mode && _midwayPollTimer) return;
+  if(_midwayPollTimer){ clearInterval(_midwayPollTimer); _midwayPollTimer = null; }
+  _midwayPollMode = mode;
+  const interval = mode === "fast" ? MIDWAY_POLL_FAST_MS : MIDWAY_POLL_SLOW_MS;
+  _midwayPollTimer = setInterval(pollMidwayOnce, interval);
+}
+
+// Switch to fast polling for `durationMs`, then back to slow. Used when the
+// user clicks Run Pipeline so we catch mwinit_active flips quickly.
+function midwayPollFast(durationMs){
+  startMidwayPoll("fast");
+  setTimeout(()=>{ startMidwayPoll("slow"); }, durationMs);
+}
+
+// Boot: paint immediately, start slow polling.
+pollMidwayOnce();
+startMidwayPoll("slow");
 
 async function loadUserInfo(){
   const dot  = $("userDot");
@@ -381,7 +819,7 @@ async function loadUserInfo(){
 
   dot.className    = "t-user-dot loading";
   name.textContent = "…";
-  role.textContent = "Verificando acceso";
+  role.textContent = t("auth_verifying");
 
   const today = new Date().toISOString().slice(0,10);
   if(_authCache && _authCache.date === today){
@@ -411,23 +849,15 @@ async function loadUserInfo(){
   try{
     const d = await jget(`${API}/api/auth/me`);
     _authCache = { date: today, data: d };
-    try{ localStorage.setItem("argos_auth_v3", JSON.stringify(_authCache)); }catch(ex){}
+    try{ localStorage.setItem("argos_auth_v4", JSON.stringify(_authCache)); }catch(ex){}
     const u = d.user || {};
-    const login = u.login         || "—";
-    const title = u.job_title     || "";
-    const level = u.job_level != null ? `L${u.job_level}` : "";
-    const site  = u.building_code || "";
+    const login = u.login || "—";
 
     name.textContent = login + "@";
     role.textContent = "";
     dot.className    = "t-user-dot";
     window._userLogin = login;
-    $("userPill").title = `${login}${title ? " | "+title : ""}${level ? " "+level : ""}${site ? " | "+site : ""}`;
-
-    // Warn in console if phonetool was unavailable (non-blocking)
-    if(d.permissions?.phonetool_error){
-      console.warn("[Auth] Phonetool unavailable:", d.permissions.phonetool_error);
-    }
+    $("userPill").title = login;
 
     // Apply tab/feature permissions from server
     if(d.permissions) _applyPermissions(d.permissions);
@@ -465,20 +895,16 @@ async function loadUserInfo(){
     const is403  = status === 403 || raw.includes("habilitado");
 
     dot.className    = "t-user-dot error";
-    name.textContent = "Sin acceso";
-    role.textContent = "Contacta a Fumanue@";
+    name.textContent = t("auth_no_access");
+    role.textContent = t("auth_contact");
 
     if(is401 || is403){
       // Hard block — explicit permission denial
-      _blockUI(
-        "No tienes acceso a esta aplicaci&oacute;n.<br>" +
-        "Contacta a <b>Fumanue@</b> para solicitar acceso."
-      );
+      _blockUI(t("auth_no_access_block"));
     } else {
       // Soft error (network / server issue) — show warning but don't block
       _blockUI(
-        "Error al verificar permisos.<br>" +
-        "Reinicia la app. Si persiste, contacta a <b>Fumanue@</b>.<br>" +
+        t("auth_verify_error") + "<br>" +
         `<span style="font-size:12px;color:#aaa">${raw.slice(0,120)}</span>`
       );
     }
@@ -533,7 +959,7 @@ function _updateDefaultFcBtn(){
   const btn=$("btnDefaultFc");
   if(!btn) return;
   const saved=localStorage.getItem("argos-default-fc")||"BCN4";
-  btn.title = currentFC===saved ? "FC predeterminado" : "Establecer como predeterminado";
+  btn.title = currentFC===saved ? t("fc_default_now") : t("fc_set_default");
   btn.textContent = currentFC===saved ? "★" : "☆";
 }
 
@@ -541,7 +967,7 @@ $("btnDefaultFc") && $("btnDefaultFc").addEventListener("click",()=>{
   localStorage.setItem("argos-default-fc", currentFC);
   jpost(`${API}/api/prefs`, {default_fc: currentFC}).catch(()=>{});
   _updateDefaultFcBtn();
-  showToast && showToast(`✅ ${currentFC} establecido como FC predeterminado`);
+  showToast && showToast(tf("fc_default_set", {fc: currentFC}));
 });
 
 async function loadShifts(){
@@ -874,7 +1300,13 @@ function getFiltered(){
   }
   if(state.q){
     const q=state.q.toLowerCase();
-    rows=rows.filter(r=>(r.login+" "+r.role+" "+r.station+" "+r.dept+" "+(r.cohort||"")+" "+(r.nhFlag||"")).toLowerCase().includes(q));
+    // Multi-token AND search: "stow 2327" matches a row containing both.
+    const tokens = q.split(/\s+/).filter(Boolean);
+    rows=rows.filter(r=>{
+      const blob = r._search || "";
+      for(let i=0;i<tokens.length;i++) if(!blob.includes(tokens[i])) return false;
+      return true;
+    });
   }
   const k=state.sortKey;
   if(k){
@@ -906,7 +1338,10 @@ function renderTable(){
   $("sbCount").textContent  =String(rows.length);
 
   if(!rows.length){
-    tb.innerHTML=`<tr><td colspan="11" style="text-align:center;padding:50px;color:#bbb;font-size:13px">No records match current filter</td></tr>`;
+    renderEmptyState(
+      state.all.length ? t("empty_no_records") : t("empty_no_data_fc"),
+      state.all.length ? t("empty_try_widen") : t("empty_run_pipeline")
+    );
     return;
   }
 
@@ -1126,7 +1561,7 @@ $("btnDownloadCSV").addEventListener("click",async()=>{
   btn.textContent = "Exporting…";
   try{
     const {rows} = getFiltered();
-    if(!rows.length){ _csvToast("⚠️ No hay filas visibles"); return; }
+    if(!rows.length){ _csvToast(t("empty_no_visible_rows")); return; }
     const payload = rows.map(r=>({
       "Login":    r.login,
       "Role":     r.role,
@@ -1152,7 +1587,7 @@ $("btnDownloadCSV").addEventListener("click",async()=>{
     if(savedPath){
       try{ window.open(`${API}/api/open-file?path=${encodeURIComponent(savedPath)}`); }catch(_){}
     }
-    _csvToast(`✅ CSV guardado (${rows.length} filas):\n${savedPath || "Coaching_csv/"}`);
+    _csvToast(`${tf("csv_saved", {n: rows.length})}\n${savedPath || "Coaching_csv/"}`);
   } catch(e){
     _csvToast(`❌ Error: ${e.message}`);
   } finally {
@@ -1724,11 +2159,11 @@ function renderQuality(){
   const coachedCount = rows.filter(r => { const v = qualityValue(r,["coached","Coached"],""); return String(v).toLowerCase()==="true" || String(v).toUpperCase()==="YES"; }).length;
   const pendingCount = total - coachedCount;
   const compliancePct = total > 0 ? Math.round((coachedCount / total) * 100) : 0;
-  if($("qkTotal")) $("qkTotal").textContent = total;
-  if($("qkPresent")) $("qkPresent").textContent = presentCount;
-  if($("qkCoached")) $("qkCoached").textContent = coachedCount;
-  if($("qkPending")) $("qkPending").textContent = pendingCount;
-  if($("qkCompliance")) $("qkCompliance").textContent = `${compliancePct}%`;
+  countUpKpi("qkTotal", total);
+  countUpKpi("qkPresent", presentCount);
+  countUpKpi("qkCoached", coachedCount);
+  countUpKpi("qkPending", pendingCount);
+  countUpKpi("qkCompliance", compliancePct, "%");
   if($("qkFcLabel")) $("qkFcLabel").textContent = currentFC;
 
   // Sorting
@@ -1988,14 +2423,18 @@ async function bulkQualityUpload(){
 let _qualityMultiSites = []; // remembers last multi-site selection
 
 async function loadQuality(){
-  const body = $("qualityTbody");
-  if(body) body.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:40px;color:#999">Loading quality data…</td></tr>`;
+  // Skeleton rows immediately so the panel never flashes blank
+  renderSkeletonRows(8, { tbodyId: "qualityTbody", cols: 14 });
   try{
     const d = await jget(`${API}/api/quality/dashboard?fc=${encodeURIComponent(currentFC)}`);
     qualityRows = d.data || [];
     renderQuality();
   }catch(e){
-    if(body) body.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:40px;color:#c0392b">Error loading quality: ${esc(e.message)}</td></tr>`;
+    renderEmptyState(
+      "No se pudo cargar Quality",
+      e.message,
+      { tbodyId: "qualityTbody", cols: 14 }
+    );
   }
 }
 
@@ -2128,7 +2567,7 @@ async function exportQualityCSV(){
     if(savedPath){
       try{ window.open(`${API}/api/open-file?path=${encodeURIComponent(savedPath)}`); }catch(_){}
     }
-    _csvToast(`✅ Quality CSV guardado (${rows.length} filas):\n${savedPath || "Coaching_csv/"}`);
+    _csvToast(`${tf("csv_quality_saved", {n: rows.length})}\n${savedPath || "Coaching_csv/"}`);
   }catch(e){
     _csvToast(`❌ Error: ${e.message}`);
   }
@@ -2191,8 +2630,52 @@ async function _initApp(){
   await loadShifts();
 }
 
+// Skeleton rows shown while an async load is awaiting the API. Pulsing
+// gray bars keep the layout stable so the user knows data is on its way.
+// Reusable across the dashboard, quality and GCA tables.
+function renderSkeletonRows(n, opts){
+  const o = opts || {};
+  const tbodyId = o.tbodyId || "tbody";
+  const cols    = o.cols    || 11;
+  const tb = $(tbodyId); if(!tb) return;
+  const widths = [80,55,40,90,30,70,60,45,50,35,80,65,55,75];
+  let html = "";
+  for(let r=0; r<n; r++){
+    html += "<tr class='sk-row'>";
+    for(let c=0; c<cols; c++){
+      const w = widths[c % widths.length] - (r%3)*5;
+      html += `<td><span class='sk-bar' style='display:block;height:10px;border-radius:5px;background:linear-gradient(90deg,var(--border) 0%,var(--border-strong) 50%,var(--border) 100%);background-size:200% 100%;animation:skShine 1.4s linear infinite;width:${w}%;opacity:.7'></span></td>`;
+    }
+    html += "</tr>";
+  }
+  tb.innerHTML = html;
+}
+
+// Empty state SVG + actionable hint. Reusable for any tbody.
+function renderEmptyState(message, hint, opts){
+  const o = opts || {};
+  const tbodyId = o.tbodyId || "tbody";
+  const cols    = o.cols    || 11;
+  const tb = $(tbodyId); if(!tb) return;
+  tb.innerHTML = `<tr><td colspan="${cols}" style="padding:48px 20px">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;color:var(--text-secondary)">
+      <svg width="56" height="56" viewBox="0 0 56 56" fill="none" aria-hidden="true">
+        <rect x="6" y="14" width="44" height="32" rx="4" stroke="var(--border-strong)" stroke-width="2"/>
+        <path d="M6 22h44" stroke="var(--border-strong)" stroke-width="2"/>
+        <circle cx="28" cy="34" r="6" stroke="var(--accent)" stroke-width="2.4"/>
+        <path d="M32.2 38.2L37 43" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"/>
+      </svg>
+      <div style="font-size:14px;font-weight:600;color:var(--text)">${esc(message)}</div>
+      ${hint ? `<div style="font-size:12px;max-width:380px;line-height:1.55">${esc(hint)}</div>` : ""}
+    </div>
+  </td></tr>`;
+}
+
 async function loadDashboard(){
   $("updatedAt").textContent=ts();
+  // Show skeleton rows immediately so users see something is happening
+  // (the dashboard endpoint can take 200-800ms after a pipeline run).
+  renderSkeletonRows(12);
   try{
     const d=await jget(`${API}/api/dashboard?fc=${encodeURIComponent(currentFC)}`);
     state.all=(d.data||[]).map(norm);
@@ -2200,7 +2683,7 @@ async function loadDashboard(){
     buildSubprocessOptions();
     renderAll();
   }catch(e){
-    $("tbody").innerHTML=`<tr><td colspan="11" style="text-align:center;padding:50px;color:#c0392b;font-size:12px">Error loading: ${esc(e.message)}</td></tr>`;
+    renderEmptyState("No se pudo cargar el dashboard", e.message);
   }
 }
 
@@ -2241,6 +2724,19 @@ $("ul-submit").addEventListener("click",async()=>{
     const res=await jpost(`${API}/api/coaching/upload`,{fc,login,course_id:courseId,notes});
     if(res.ok){
       $("ul-result").innerHTML=`<div class="upload-result ok">✓ ${esc(login)} uploaded successfully</div>`;
+      // Toast with a quick link to verify in Guided Coaching. Plays the role
+      // of a soft "undo" — the user can immediately confirm or rectify in GC
+      // (the GC API doesn't expose a true delete-by-id we can call).
+      const transcriptUrl = `https://guided-coaching-dub.corp.amazon.com/#/employee-transcript/${encodeURIComponent(login)}`;
+      showToast({
+        title: `Coaching subido a ${login}`,
+        body:  `<a href="${transcriptUrl}" target="_blank" style="color:var(--accent);text-decoration:underline">Verificar en Guided Coaching</a> si necesitas corregir.`,
+        type: "ok",
+        ms: 7000,
+      });
+      // Toast body is HTML for the link — escape only the dynamic login.
+      // (showToast injects body via innerHTML, which is fine here because
+      // we control the markup and `login` is already used in a URL-encoded slot.)
       await loadDashboard();
     }else{
       $("ul-result").innerHTML=`<div class="upload-result err">Error: ${esc(res.error||res.detail||"unknown")}</div>`;
@@ -2307,17 +2803,186 @@ $("bulk-submit").addEventListener("click",async()=>{
 });
 
 // ── Pipeline ───────────────────────────────────────────────
-$("btnPipeline").addEventListener("click", ()=>{
+// Pre-flight check: verifies Midway is alive BEFORE starting a pipeline that
+// can take 4+ minutes. Returns a reason string if blocked, "" if all green.
+async function pipelinePreflight(){
+  if(!navigator.onLine) return t("mw_no_internet");
+  try{
+    const d = await jget(`${API}/api/auth/midway-status`);
+    if(!d) return t("mw_no_status");
+    if(d.state === "missing")  return t("mw_state_missing");
+    if(d.state === "expired")  return t("mw_state_expired");
+    // "expiring" (< 5 min left) is allowed — the lock-protected mwinit will refresh inline.
+    return "";
+  }catch(_){
+    return "";  // server check failed, but don't block — rare race during boot
+  }
+}
+
+// Custom toast with an inline "Renovar Midway" button. Different from the
+// generic showToast because we need the action to live inside the toast and
+// outlive the auto-dismiss while mwinit (~10-20s) is running.
+function showMidwayRefreshToast(reason){
+  let host = document.getElementById("toastHost");
+  if(!host){
+    host = document.createElement("div");
+    host.id = "toastHost";
+    host.style.cssText = "position:fixed;right:20px;bottom:20px;z-index:9500;display:flex;flex-direction:column;gap:10px;pointer-events:none";
+    document.body.appendChild(host);
+  }
+  const el = document.createElement("div");
+  el.style.cssText = "pointer-events:auto;background:var(--bg-card);color:var(--text);border-left:3px solid #f59e0b;border-radius:8px;padding:12px 16px;min-width:280px;max-width:440px;box-shadow:0 12px 32px -8px rgba(0,0,0,.28),0 0 0 1px var(--border);font-size:13px;line-height:1.45;transform:translateX(20px);opacity:0;transition:transform .25s cubic-bezier(.2,.7,.2,1),opacity .25s";
+  el.innerHTML = `
+    <div style="font-weight:600;margin-bottom:4px">${t("mw_cant_pipeline")}</div>
+    <div style="color:var(--text-secondary);margin-bottom:10px">${esc(reason)}</div>
+    <div style="display:flex;gap:8px">
+      <button class="mr-go" style="flex:1;padding:6px 10px;border-radius:6px;border:1px solid #f59e0b;background:#f59e0b;color:#1a1a1a;font:600 12px 'Segoe UI',sans-serif;cursor:pointer">${t("mw_renew_btn")}</button>
+      <button class="mr-no" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font:600 12px 'Segoe UI',sans-serif;cursor:pointer">${t("close")}</button>
+    </div>
+    <div class="mr-status" style="margin-top:8px;color:var(--text-muted);font-size:11.5px;display:none"></div>`;
+  host.appendChild(el);
+  requestAnimationFrame(() => { el.style.transform = "translateX(0)"; el.style.opacity = "1"; });
+
+  function close(){
+    el.style.transform = "translateX(20px)";
+    el.style.opacity = "0";
+    setTimeout(() => el.remove(), 250);
+  }
+  el.querySelector(".mr-no").addEventListener("click", close);
+  el.querySelector(".mr-go").addEventListener("click", async () => {
+    const go = el.querySelector(".mr-go");
+    const status = el.querySelector(".mr-status");
+    go.disabled = true;
+    go.style.opacity = ".6";
+    go.style.cursor  = "default";
+    go.textContent   = t("mw_touch_yubi");
+    status.style.display = "block";
+    status.textContent = t("mw_waiting_fido2");
+    // Speed up the midway pill while mwinit runs.
+    midwayPollFast(60 * 1000);
+    try{
+      const r = await jpost(`${API}/api/auth/midway-refresh`, {});
+      if(r && r.ok && r.state === "ok"){
+        status.style.color = "#16a34a";
+        status.textContent = t("mw_renewed");
+        go.style.display = "none";
+        // Close after a short pause so the user can read it.
+        setTimeout(close, 4500);
+      } else {
+        status.style.color = "#dc2626";
+        status.textContent = `${t("mw_renew_failed")} ${r?.error || t("mw_try_again")}`;
+        go.disabled = false;
+        go.style.opacity = "1";
+        go.style.cursor  = "pointer";
+        go.textContent   = t("mw_renew_btn");
+      }
+    }catch(e){
+      status.style.color = "#dc2626";
+      status.textContent = "Error: " + (e?.message || e);
+      go.disabled = false;
+      go.style.opacity = "1";
+      go.style.cursor  = "pointer";
+      go.textContent   = t("mw_renew_btn");
+    }
+  });
+}
+
+// Maps an overall pct (5-99) to the 3 visual stages defined in the wizard
+// markup above. Backend phases:
+//   download:  5 → 70%
+//   clean:    70 → 80%
+//   dashboard:80 → 99%
+function renderPipelineStages(pct, finished){
+  // [stageEl, dotEl, fillBeforeEl, fromPct, toPct]
+  const segs = document.querySelectorAll("#pipeSegWrap .pipe-seg");
+  const fills = document.querySelectorAll("#pipeSegWrap .pipe-seg-line-fill");
+  if(!segs.length) return;
+  const ranges = [[5,70],[70,80],[80,99]];
+  const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#7c3aed";
+  segs.forEach((seg, i) => {
+    const dot = seg.querySelector(".pipe-seg-dot");
+    const [from, to] = ranges[i];
+    const isDone   = pct >= to || (finished && pct >= 95);
+    const isActive = !isDone && pct >= from;
+    if(isDone){
+      seg.style.color = accent;
+      if(dot){
+        dot.style.borderColor = accent;
+        dot.style.background  = accent;
+        dot.innerHTML = '<svg width="8" height="8" viewBox="0 0 8 8" style="display:block"><polyline points="1.2,4.4 3.4,6.4 6.8,2.0" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      }
+    } else if(isActive){
+      seg.style.color = accent;
+      if(dot){
+        dot.style.borderColor = accent;
+        dot.style.background  = "var(--bg-card)";
+        dot.style.boxShadow   = "0 0 0 4px " + accent + "33";
+        dot.innerHTML = '';
+      }
+    } else {
+      seg.style.color = "var(--text-secondary)";
+      if(dot){
+        dot.style.borderColor = "var(--border-strong)";
+        dot.style.background  = "var(--bg-card)";
+        dot.style.boxShadow   = "none";
+        dot.innerHTML = '';
+      }
+    }
+    // Connector line fill: % filled inside this segment.
+    if(i < fills.length){
+      let fillPct = 0;
+      if(pct >= to) fillPct = 100;
+      else if(pct > from) fillPct = ((pct - from) / (to - from)) * 100;
+      fills[i].style.width = Math.min(100, Math.max(0, fillPct)) + "%";
+    }
+  });
+}
+
+$("btnPipeline").addEventListener("click", async ()=>{
   const btn = $("btnPipeline");
   const sb = document.querySelector("#panel-dashboard .statusbar .sb-l");
   const origSb = sb ? sb.innerHTML : "";
+
+  // Pre-flight: don't burn 4 minutes on a pipeline that will fail at the
+  // first auth call. If Midway is the blocker, offer an inline "Renovar"
+  // button that fires mwinit and asks the user to retry once it's fresh.
+  const blocker = await pipelinePreflight();
+  if(blocker){
+    const isMidway = /midway/i.test(blocker);
+    if(isMidway){
+      showMidwayRefreshToast(blocker);
+    } else {
+      showToast({ title: "No puedo lanzar el pipeline", body: blocker, type: "warn", ms: 6000 });
+    }
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = "⏳ Running…";
-  if(sb) sb.innerHTML = `<span style="display:flex;align-items:center;gap:8px;width:100%">
-    <span style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden">
-      <span id="perfPipeBar" style="display:block;width:0%;height:100%;background:var(--accent);transition:width .3s"></span>
+  const pipeStartedAt = performance.now();
+  // Switch midway-status polling to 1s for the first 90s so we can show the
+  // 'Touch your YubiKey' toast the moment mwinit fires inside the pipeline.
+  midwayPollFast(90 * 1000);
+  if(sb) sb.innerHTML = `<span id="pipeSegWrap" style="display:flex;align-items:center;gap:10px;width:100%;font-size:10.5px;font-weight:600">
+    <span class="pipe-seg" data-stage="download" style="display:flex;align-items:center;gap:6px;color:var(--text-secondary)">
+      <span class="pipe-seg-dot" style="width:14px;height:14px;border-radius:50%;border:2px solid var(--border-strong);background:var(--bg-card);display:inline-flex;align-items:center;justify-content:center;transition:all .3s"></span>
+      <span>Descarga</span>
     </span>
-    <span id="perfPipeMsg" style="font-size:10px;color:var(--accent);font-weight:600;white-space:nowrap">Iniciando…</span>
+    <span class="pipe-seg-line" style="flex:1;height:2px;background:var(--border-strong);border-radius:1px;position:relative;overflow:hidden">
+      <span class="pipe-seg-line-fill" style="position:absolute;inset:0;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s"></span>
+    </span>
+    <span class="pipe-seg" data-stage="clean" style="display:flex;align-items:center;gap:6px;color:var(--text-secondary)">
+      <span class="pipe-seg-dot" style="width:14px;height:14px;border-radius:50%;border:2px solid var(--border-strong);background:var(--bg-card);display:inline-flex;align-items:center;justify-content:center;transition:all .3s"></span>
+      <span>Limpieza</span>
+    </span>
+    <span class="pipe-seg-line" style="flex:1;height:2px;background:var(--border-strong);border-radius:1px;position:relative;overflow:hidden">
+      <span class="pipe-seg-line-fill" style="position:absolute;inset:0;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s"></span>
+    </span>
+    <span class="pipe-seg" data-stage="dashboard" style="display:flex;align-items:center;gap:6px;color:var(--text-secondary)">
+      <span class="pipe-seg-dot" style="width:14px;height:14px;border-radius:50%;border:2px solid var(--border-strong);background:var(--bg-card);display:inline-flex;align-items:center;justify-content:center;transition:all .3s"></span>
+      <span>Dashboard</span>
+    </span>
+    <span id="perfPipeMsg" style="margin-left:auto;color:var(--accent);font-weight:600;white-space:nowrap;min-width:90px;text-align:right">Iniciando…</span>
   </span>`;
 
   // Start pipeline via POST → get job_id, then poll status with XHR.
@@ -2354,9 +3019,8 @@ $("btnPipeline").addEventListener("click", ()=>{
         var d;
         try{ d = JSON.parse(pollXhr.responseText); } catch(ex){ return; }
         var p = Math.min(d.pct || 0, 100);
-        var bar = $("perfPipeBar");
         var msg = $("perfPipeMsg");
-        if(bar) bar.style.width = p + "%";
+        renderPipelineStages(p, d.status === "done" || d.status === "error");
         if(msg && d.msg) msg.textContent = d.msg;
         if(d.status === "done" || d.status === "error"){
           clearInterval(pollTimer);
@@ -2365,7 +3029,12 @@ $("btnPipeline").addEventListener("click", ()=>{
           if(d.ok !== false){
             if(sb) sb.innerHTML = `<span style="color:var(--green);font-weight:700">✓ Pipeline completado</span>`;
             setTimeout(()=>{ if(sb) sb.innerHTML = origSb; }, 3000);
-            // Persist active filters so they survive the reload
+            // Persist active filters + a marker so the post-reload toast can
+            // celebrate the finish (the reload wipes in-memory state).
+            const elapsedMs = performance.now() - pipeStartedAt;
+            const mins = Math.floor(elapsedMs / 60000);
+            const secs = Math.round((elapsedMs % 60000) / 1000);
+            const elapsedTxt = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
             try{
               localStorage.setItem("argos_filter_restore", JSON.stringify({
                 prio: Array.from(state.prio),
@@ -2375,13 +3044,18 @@ $("btnPipeline").addEventListener("click", ()=>{
                 hideCoached: state.hideCoached,
                 maxRows: state.maxRows
               }));
+              localStorage.setItem("argos_pipeline_done", JSON.stringify({
+                at: Date.now(),
+                elapsed: elapsedTxt,
+                fc: currentFC,
+              }));
             }catch(ex){}
             // window.location.reload() is the only reliable way to repaint in pywebview
             // after a pipeline. Auth cache is persisted in localStorage so the reload
             // is instant — loadUserInfo() reads the cache and skips the fetch entirely.
             window.location.reload();
           } else {
-            if(sb) sb.innerHTML = `<span style="color:#e53e3e;font-weight:700">❌ Error: ${esc(String(d.error||"pipeline failed"))}</span>`;
+            if(sb) sb.innerHTML = `<span style="color:#e53e3e;font-weight:700">${t("pipeline_error_prefix")} ${esc(String(d.error||t("pipeline_failed")))}</span>`;
             setTimeout(()=>{ if(sb) sb.innerHTML = origSb; }, 8000);
           }
         }
@@ -2441,12 +3115,190 @@ document.querySelectorAll(".main-table thead th[data-k]").forEach(th=>{
   });
 });
 
+// ── Keyboard shortcuts ─────────────────────────────────────
+// Power-user accelerators. We skip when the user is typing into a real
+// input/textarea so single-key shortcuts don't fire mid-word.
+(function(){
+  function inEditableField(t){
+    if(!t) return false;
+    const tag = (t.tagName || "").toUpperCase();
+    if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+    if(t.isContentEditable) return true;
+    return false;
+  }
+  function closeAnyOpenModal(){
+    const open = document.querySelector(".modal-overlay.show");
+    if(open){ open.classList.remove("show"); return true; }
+    const sp = $("settingsPopover");
+    if(sp && sp.style.display === "block"){ sp.style.display = "none"; return true; }
+    return false;
+  }
+  document.addEventListener("keydown", (e) => {
+    // Esc: close modal / settings popover (works even inside inputs).
+    if(e.key === "Escape"){
+      if(closeAnyOpenModal()) e.preventDefault();
+      return;
+    }
+    // Ctrl+R: run pipeline (override browser refresh).
+    if((e.ctrlKey || e.metaKey) && (e.key === "r" || e.key === "R")){
+      const btn = $("btnPipeline");
+      if(btn && !btn.disabled){
+        e.preventDefault();
+        btn.click();
+      }
+      return;
+    }
+    // Ctrl+F: focus search.
+    if((e.ctrlKey || e.metaKey) && (e.key === "f" || e.key === "F")){
+      const inp = $("searchInput");
+      if(inp){
+        e.preventDefault();
+        inp.focus();
+        inp.select();
+      }
+      return;
+    }
+    // Single-key shortcuts only when not typing into a field.
+    if(inEditableField(e.target)) return;
+    // 1-4: toggle priority filters (1=P3, 2=P2, 3=P1, 4=OK).
+    if(["1","2","3","4"].includes(e.key)){
+      const map = { "1": "3", "2": "2", "3": "1", "4": "0" };
+      const p = map[e.key];
+      if(state.prio.has(p)) state.prio.delete(p); else state.prio.add(p);
+      // Make sure at least one priority is active.
+      if(state.prio.size === 0) state.prio.add(p);
+      if(typeof renderAll === "function") renderAll();
+      e.preventDefault();
+      return;
+    }
+    // ? : show shortcut help toast.
+    if(e.key === "?"){
+      showToast({
+        title: "Atajos de teclado",
+        body: "Ctrl+R: pipeline · Ctrl+F: buscar · 1-4: P3/P2/P1/OK · Esc: cerrar",
+        type: "info",
+        ms: 6000,
+      });
+      e.preventDefault();
+    }
+  });
+})();
+
+// ── Resizable + persisted table columns ────────────────────
+// Adds a drag handle to the right edge of each <th>. Column widths are
+// keyed by `data-k` (or table position fallback) and persisted in
+// localStorage. Currently wired for the dashboard table; reuse the same
+// markup for other tables by adding to TABLES_TO_INSTRUMENT.
+(function(){
+  // .main-table covers dashboard, qualityTable and gcaTable (all use the
+  // same base class).
+  const TABLES_TO_INSTRUMENT = [".main-table"];
+  const STORAGE_KEY = "argos_col_widths_v1";
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") || {}; } catch(_){}
+
+  function colKey(table, th, idx){
+    const tk = th.dataset.k || th.textContent.trim().slice(0,16) || ("col"+idx);
+    const tableId = table.id || (table.classList.contains("main-table") ? "main" : "tbl");
+    return `${tableId}|${tk}|${idx}`;
+  }
+
+  function persistWidth(key, w){
+    saved[key] = w;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch(_){}
+  }
+
+  function instrument(table){
+    const ths = table.querySelectorAll("thead th");
+    ths.forEach((th, idx) => {
+      // Restore saved width
+      const k = colKey(table, th, idx);
+      if(saved[k] && Number(saved[k]) > 30) th.style.width = saved[k] + "px";
+      // Skip last column resizer (right edge of table)
+      if(idx === ths.length - 1) return;
+      if(th.querySelector(".col-resizer")) return;
+      const r = document.createElement("span");
+      r.className = "col-resizer";
+      r.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const startX = e.clientX;
+        const startW = th.getBoundingClientRect().width;
+        r.classList.add("dragging");
+        document.body.classList.add("col-resizing");
+        function onMove(ev){
+          const delta = ev.clientX - startX;
+          const w = Math.max(40, Math.round(startW + delta));
+          th.style.width = w + "px";
+        }
+        function onUp(){
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+          r.classList.remove("dragging");
+          document.body.classList.remove("col-resizing");
+          const finalW = Math.round(th.getBoundingClientRect().width);
+          persistWidth(k, finalW);
+        }
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      });
+      th.appendChild(r);
+    });
+  }
+
+  // Defer to ensure all tables exist
+  setTimeout(() => {
+    TABLES_TO_INSTRUMENT.forEach(sel => {
+      document.querySelectorAll(sel).forEach(instrument);
+    });
+  }, 0);
+})();
+
+// ── Sticky toolbar shadow ──────────────────────────────────
+// When the filter bar sticks to the top (user scrolled past it), drop a
+// shadow so it visually separates from the content below. We use a
+// sentinel sibling element + IntersectionObserver — cheaper than a scroll
+// listener.
+(function(){
+  const tb = document.querySelector(".toolbar-sticky");
+  if(!tb || !("IntersectionObserver" in window)) return;
+  const sentinel = document.createElement("div");
+  sentinel.style.cssText = "height:1px;margin-bottom:-1px";
+  tb.parentElement.insertBefore(sentinel, tb);
+  const io = new IntersectionObserver((entries) => {
+    tb.classList.toggle("is-pinned", !entries[0].isIntersecting);
+  }, { threshold: [1] });
+  io.observe(sentinel);
+})();
+
 // ── Init ───────────────────────────────────────────────────
 loadUserInfo();
+checkForUpdate();
 initPriority();
 syncKpiActive();
 // Default: Process multi-select shows ALL selected (treated as ALL internally)
 initProcessMs();
+
+// Celebrate post-pipeline reload (reads marker dropped before reload).
+// We delay it so renderTable() has populated state.all (record count).
+(function(){
+  try{
+    var raw = localStorage.getItem("argos_pipeline_done");
+    if(!raw) return;
+    localStorage.removeItem("argos_pipeline_done");
+    var info = JSON.parse(raw);
+    if(!info || (Date.now() - (info.at||0)) > 30000) return;
+    setTimeout(function(){
+      var n = (state && state.all) ? state.all.length : 0;
+      showToast({
+        title: "Pipeline completado",
+        body: `${info.fc || ""} · ${info.elapsed || "?"}` + (n ? ` · ${n.toLocaleString("es-ES")} registros` : ""),
+        type: "ok",
+        ms: 4500,
+      });
+    }, 500);
+  }catch(ex){}
+})();
 
 // Restore filters saved before post-pipeline reload
 (function(){
@@ -2499,7 +3351,10 @@ if(_spBtn && _spPanel){
   _themeButtons.forEach(btn => {
     btn.addEventListener("click", () => {
       const val = btn.dataset.val;
+      // Briefly tag <html> so CSS can fade backgrounds/colors during the swap.
+      document.documentElement.classList.add("theme-transitioning");
       document.documentElement.setAttribute("data-theme", val);
+      setTimeout(() => document.documentElement.classList.remove("theme-transitioning"), 420);
       localStorage.setItem("argos-theme", val);
       jpost(`${API}/api/prefs`, {theme: val}).catch(()=>{});
       _syncThemeButtons();
@@ -2524,6 +3379,69 @@ if(_spBtn && _spPanel){
     });
   });
 
+  // Density (comfortable / compact)
+  const _densityButtons = ["spDensityComfortable","spDensityCompact"].map($).filter(Boolean);
+  function _applyDensity(d){
+    if(d === "compact") document.documentElement.setAttribute("data-density","compact");
+    else document.documentElement.removeAttribute("data-density");
+  }
+  function _syncDensityButtons(){
+    const cur = document.documentElement.getAttribute("data-density") || "comfortable";
+    _densityButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.val === cur));
+  }
+  _applyDensity(localStorage.getItem("argos-density") || "comfortable");
+  _syncDensityButtons();
+  _densityButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const v = btn.dataset.val;
+      _applyDensity(v);
+      try { localStorage.setItem("argos-density", v); } catch(_){}
+      _syncDensityButtons();
+    });
+  });
+
+  // Diagnostics → clipboard
+  const _spDiag = $("spDiagCopy");
+  if(_spDiag){
+    _spDiag.addEventListener("click", async () => {
+      const orig = _spDiag.textContent;
+      _spDiag.textContent = t("diag_collecting");
+      _spDiag.disabled = true;
+      try{
+        const d = await jget(`${API}/api/system/diag`);
+        const block = [
+          "=== Project Argos – Soporte ===",
+          `Versión:   ${d.version || "?"}`,
+          `Login:     ${d.login || "?"}`,
+          `OS:        ${d.os || "?"}`,
+          `Frozen:    ${d.frozen ? "sí" : "no"}`,
+          `Install:   ${d.install || "?"}`,
+          `Data dir:  ${d.data_dir || "?"}`,
+          `Pre-auth:  ${d.preauth || "?"}`,
+          `Midway:    ${d.midway ? d.midway.state + " (" + (d.midway.seconds_left || 0) + "s left)" : "?"}`,
+          `Dashboard: ${d.dashboard_csv ? (d.dashboard_csv.exists ? "ok ("+ (d.dashboard_csv.size||0) +" bytes, mtime="+ (d.dashboard_csv.mtime||0) +")" : "missing") : "?"}`,
+          "",
+          "--- argos.log (últimas 60 líneas) ---",
+          d.log_tail || "(vacío)",
+        ].join("\n");
+        try{ await navigator.clipboard.writeText(block); }
+        catch(_){
+          // Fallback: textarea hack for restrictive environments
+          const ta = document.createElement("textarea");
+          ta.value = block; ta.style.position="fixed"; ta.style.left="-9999px";
+          document.body.appendChild(ta); ta.select();
+          document.execCommand("copy"); ta.remove();
+        }
+        showToast({ title: t("diag_copied_title"), body: t("diag_copied_body"), type: "ok" });
+      }catch(e){
+        showToast({ title: t("diag_error_title"), body: String(e.message||e), type: "err" });
+      }finally{
+        _spDiag.textContent = orig;
+        _spDiag.disabled = false;
+      }
+    });
+  }
+
   // Default FC
   const _spFc = $("spDefaultFc");
   if(_spFc){
@@ -2540,6 +3458,16 @@ function _applyI18n(){
     const k = el.getAttribute("data-i18n");
     const v = t(k);
     if(v) el.textContent = v;
+  });
+  document.querySelectorAll("[data-i18n-title]").forEach(el => {
+    const k = el.getAttribute("data-i18n-title");
+    const v = t(k);
+    if(v) el.title = v;
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+    const k = el.getAttribute("data-i18n-placeholder");
+    const v = t(k);
+    if(v) el.placeholder = v;
   });
   document.querySelectorAll("[data-i18n-html]").forEach(el => {
     const k = el.getAttribute("data-i18n-html");
@@ -3238,18 +4166,34 @@ document.addEventListener("click",(e)=>{
   });
 
   // Highlight filter buttons
-  document.querySelectorAll(".map-hl-btn").forEach(function(btn){
+  document.querySelectorAll(".map-pill[data-hl]").forEach(function(btn){
     btn.addEventListener("click", function(){
       var hl = btn.dataset.hl;
       perfMapHighlight = (perfMapHighlight === hl) ? "" : hl;
-      document.querySelectorAll(".map-hl-btn").forEach(function(b){
-        var active = b.dataset.hl === perfMapHighlight;
-        b.style.opacity = active ? "1" : "0.45";
-        b.style.fontWeight = active ? "900" : "700";
+      document.querySelectorAll(".map-pill[data-hl]").forEach(function(b){
+        b.classList.toggle("active", b.dataset.hl === perfMapHighlight);
       });
       if(perfMapVisible) renderPerfMap();
     });
   });
+
+  // Zoom slider: scale the floor wrapper visually
+  (function(){
+    var slider = $("mapZoom"), valEl = $("mapZoomVal"), wrap = $("perfFloorWrap");
+    if(!slider || !wrap) return;
+    var saved = parseInt(localStorage.getItem("argos_map_zoom") || "100", 10);
+    if(saved >= 80 && saved <= 160){ slider.value = String(saved); }
+    function apply(){
+      var v = parseInt(slider.value || "100", 10);
+      wrap.style.transform = v === 100 ? "" : ("scale(" + (v/100) + ")");
+      // Compensate height so other content doesn't get pushed when zooming.
+      wrap.style.width = v === 100 ? "" : (10000/v + "%");
+      if(valEl) valEl.textContent = v + "%";
+      try{ localStorage.setItem("argos_map_zoom", String(v)); }catch(_){}
+    }
+    slider.addEventListener("input", apply);
+    apply();
+  })();
 
   // Process filter buttons
   var perfMapProc = "ALL";
@@ -3296,7 +4240,7 @@ document.addEventListener("click",(e)=>{
         window._gcaPendingMap = pMap;
         if(perfMapVisible) renderPerfMap();
         // Update counter badge
-        var cc = $("mapCntGca"); if(cc) cc.innerHTML = "GCA: <b>"+pSet.size+"</b>";
+        var cc = $("mapCntGca"); if(cc) cc.textContent = pSet.size;
       }catch(ex){}
     };
     xhr.onerror = function(){ mapRefreshGcaBtn.textContent = "⟳ GCA"; mapRefreshGcaBtn.disabled = false; };
@@ -3497,10 +4441,10 @@ document.addEventListener("click",(e)=>{
       else if(sd.state === "ontarget" || sd.state === "normal") cntOk++;
       if(sd.rows.some(function(r){ return gcaPending.has((r.login||"").toLowerCase()); })) cntGca++;
     });
-    var cg=$("mapCntGap"); if(cg) cg.innerHTML='Gap: <b>'+cntGap+'</b>';
-    var ci=$("mapCntIdle"); if(ci) ci.innerHTML='Idle: <b>'+cntIdle+'</b>';
-    var cc=$("mapCntGca"); if(cc) cc.innerHTML='GCA: <b>'+cntGca+'</b>';
-    var co=$("mapCntOk"); if(co) co.innerHTML='OK: <b>'+(cntOk+cntBelow)+'</b>';
+    var cg=$("mapCntGap"); if(cg) cg.textContent = cntGap;
+    var ci=$("mapCntIdle"); if(ci) ci.textContent = cntIdle;
+    var cc=$("mapCntGca"); if(cc) cc.textContent = cntGca;
+    var co=$("mapCntOk"); if(co) co.textContent = (cntOk + cntBelow);
 
     // Expose highlight + proc filter + gcaPending to renderers
     window._perfMapHighlight = perfMapHighlight;
@@ -3511,13 +4455,17 @@ document.addEventListener("click",(e)=>{
     if(!activeFloorDef) return;
     var containerId = "perfFloor_" + activeFloorDef.id;
 
-    if(_mapView === "list"){
+    if(_mapView === "board"){
+      renderPerfBoardView(containerId, stationData);
+    } else if(_mapView === "list"){
       renderPerfListView(containerId, stationData);
     } else if(activeFloorDef.type === "ar_ring"){
       renderPerfARFloor(containerId, activeFloorDef, stationData);
     } else {
       renderPerfP1Floor(containerId, stationData);
     }
+    // Always update the mini-radar regardless of view
+    renderMapRadar(stationData);
   }
 
   // Expose for re-render after pipeline and for GCA tab to share layout
@@ -3595,16 +4543,24 @@ document.addEventListener("click",(e)=>{
       var key = floorId + '_' + stNum;
       var data = stationData[key];
       var cls = stateClass(data);
+      // Physical zone is the source of truth for the label. We only override
+      // it with role info when the role is consistent with the zone (e.g.
+      // PICK in a NU station). Never let a P2R_PICK associate make a non-P2R
+      // physical station look like P2R — that's the bug we had on 3259.
       var type = getTypeLabel(stNum);
-      // Show subprocess for occupied stations
+      var rel  = stNum - _floorBase;
+      var inP2RZone = rel >= 50 && rel < 200;
       if(data && data.rows && data.rows.length > 0){
         var role = String(data.rows[0].role||'').toUpperCase();
-        if(role.indexOf('PICK')===0) type='PICK';
-        else if(role==='STOW') type='STOW';
-        else if(role==='QUANTITY_STOW') type='QS';
-        else if(role.indexOf('ICQA')>=0) type='SBC';
-        else if(role.indexOf('P2R')>=0) type='P2R';
-        else if(role==='DECANT') type='DEC';
+        if(role === 'PICK_AR' || role === 'PICK')      type='PICK';
+        else if(role === 'STOW')                       type='STOW';
+        else if(role === 'QUANTITY_STOW')              type='QS';
+        else if(role.indexOf('ICQA') >= 0)             type='SBC';
+        else if(role === 'DECANT')                     type='DEC';
+        else if(role === 'P2R_PICK' && inP2RZone)      type='P2R';
+        else if(role === 'P2R_PICK')                   type='PICK'; // P2R-trained associate working a non-P2R station
+        else if(role === 'P2R_PACK' && inP2RZone)      type='P2R';
+        else if(role === 'P2R_PACK')                   type='PACK';
       }
       var numStr;
       var relNum = stNum - _floorBase;
@@ -3756,22 +4712,12 @@ document.addEventListener("click",(e)=>{
     renderRow(leftCol, leftDiv);
 
     var centerDiv = document.createElement('div');
-    centerDiv.className = 'sm-center';
-    var totalStations = topRow.length + leftCol.length + bottomRow.length + rightCol.length;
-    var activeCount = 0; var dangerCount = 0;
-    [topRow,leftCol,bottomRow,rightCol].forEach(function(arr){
-      arr.forEach(function(n){
-        var sn = assignedSlots[String(n)] || n;
-        if(stationData[floorId+'_'+sn]) activeCount++;
-        if(stationData[floorId+'_'+sn] && stationData[floorId+'_'+sn].state==='gap') dangerCount++;
-      });
+    centerDiv.className = 'sm-center fc-center';
+    centerDiv.id = 'fcCenter_' + floorId;
+    renderFloorCommandCenter(centerDiv, floorId, stationData, {
+      topRow: topRow, leftCol: leftCol, bottomRow: bottomRow, rightCol: rightCol,
+      assignedSlots: assignedSlots,
     });
-    centerDiv.innerHTML = '<div style="text-align:center;padding:12px">' +
-      '<div style="font-size:16px;font-weight:800;margin-bottom:8px">'+floorId.toUpperCase()+'</div>' +
-      '<div style="font-size:28px;font-weight:700;color:#22c55e">'+activeCount+'</div>' +
-      '<div style="font-size:10px;color:#6b7280">of '+totalStations+' stations</div>' +
-      '<div style="margin-top:8px;font-size:10px;color:#6b7280">'+dangerCount+' Gap</div>' +
-    '</div>';
 
     var rightDiv = document.createElement('div');
     rightDiv.className = 'sm-col sm-right';
@@ -3906,21 +4852,31 @@ document.addEventListener("click",(e)=>{
 
 
   // ── Map view toggle ────────────────────────────────────────
-  var _mapView = "grid"; // "grid" | "list"
-  var _mapViewGridBtn = document.getElementById("mapViewGrid");
-  var _mapViewListBtn = document.getElementById("mapViewList");
-  if(_mapViewGridBtn) _mapViewGridBtn.addEventListener("click", function(){
-    _mapView = "grid";
-    _mapViewGridBtn.classList.add("active");
-    _mapViewListBtn && _mapViewListBtn.classList.remove("active");
+  // "board" → incidents-only card list (default; the most actionable)
+  // "grid"  → physical floor map
+  // "list"  → grouped table
+  var _mapView = (function(){
+    try{ return localStorage.getItem("argos_map_view") || "board"; }catch(_){ return "board"; }
+  })();
+  var _mapViewBoardBtn = document.getElementById("mapViewBoard");
+  var _mapViewGridBtn  = document.getElementById("mapViewGrid");
+  var _mapViewListBtn  = document.getElementById("mapViewList");
+  function _syncMapViewBtns(){
+    [_mapViewBoardBtn, _mapViewGridBtn, _mapViewListBtn].forEach(function(b){ if(b) b.classList.remove("active"); });
+    if(_mapView === "board" && _mapViewBoardBtn) _mapViewBoardBtn.classList.add("active");
+    else if(_mapView === "grid" && _mapViewGridBtn) _mapViewGridBtn.classList.add("active");
+    else if(_mapView === "list" && _mapViewListBtn) _mapViewListBtn.classList.add("active");
+  }
+  function _setMapView(v){
+    _mapView = v;
+    try{ localStorage.setItem("argos_map_view", v); }catch(_){}
+    _syncMapViewBtns();
     if(perfMapVisible) renderPerfMap();
-  });
-  if(_mapViewListBtn) _mapViewListBtn.addEventListener("click", function(){
-    _mapView = "list";
-    _mapViewListBtn.classList.add("active");
-    _mapViewGridBtn && _mapViewGridBtn.classList.remove("active");
-    if(perfMapVisible) renderPerfMap();
-  });
+  }
+  _syncMapViewBtns();
+  if(_mapViewBoardBtn) _mapViewBoardBtn.addEventListener("click", function(){ _setMapView("board"); });
+  if(_mapViewGridBtn)  _mapViewGridBtn.addEventListener("click",  function(){ _setMapView("grid");  });
+  if(_mapViewListBtn)  _mapViewListBtn.addEventListener("click",  function(){ _setMapView("list");  });
 
   // ── List view renderer ─────────────────────────────────────
   function renderPerfListView(containerId, stationData){
@@ -4052,6 +5008,402 @@ document.addEventListener("click",(e)=>{
     }
   }
 
+  // ── Incidents Board view: priority-sorted cards, problems first ────
+  // Default view because 90% of the coach's time is "where do I go next?".
+  // OK stations are summarised, not displayed.
+  function renderPerfBoardView(containerId, stationData){
+    var el = document.getElementById(containerId);
+    if(!el) return;
+
+    var gcaPending = window._gcaPendingLogins || new Set();
+    var proc = window._perfMapProc || "ALL";
+    var hl   = window._perfMapHighlight || "";
+    var procMap = {PICK:["PICK_AR","P2R_PICK"],STOW:["STOW","QUANTITY_STOW"],QS:["QUANTITY_STOW"],
+                   PACK:["SM","SM1","SMMIX","SM2","AFE_PACK","P2R_PACK","SNS1","SNS2","SINGLES","WS_SLAM","WS_VDF"],DEC:["DECANT"]};
+
+    // Flatten all rows with their station state
+    var items = [];
+    var okCount = 0, totalCount = 0;
+    Object.keys(stationData).forEach(function(k){
+      var sd = stationData[k];
+      sd.rows.forEach(function(r){
+        totalCount++;
+        var role = String(r.role||"").toUpperCase();
+        if(proc !== "ALL"){
+          var allowed = procMap[proc] || [];
+          if(allowed.indexOf(role) === -1) return;
+        }
+        var st = sd.state || "normal";
+        var hasGca = gcaPending.has((r.login||"").toLowerCase());
+        // OK cards aren't shown in board view; just counted.
+        if((st === "ontarget" || st === "normal") && !hasGca){ okCount++; return; }
+        items.push({ r: r, state: st, hasGca: hasGca, stationKey: k });
+      });
+    });
+
+    // Filter by active highlight (gap/idle/gca pill click)
+    if(hl){
+      items = items.filter(function(it){
+        if(hl === "gap")  return it.state === "gap" || it.state === "below";
+        if(hl === "idle") return it.state === "idle";
+        if(hl === "gca")  return it.hasGca;
+        return true;
+      });
+    }
+
+    // Priority order: gap > idle > faststart > below > gca-only > rest, then by % asc
+    var order = { gap:0, below:1, idle:2, faststart:3, normal:4, ontarget:5 };
+    items.sort(function(a,b){
+      // GCA-only floats above plain "normal"
+      var sa = order[a.state] != null ? order[a.state] : 4;
+      var sb = order[b.state] != null ? order[b.state] : 4;
+      if(a.hasGca && !b.hasGca) sa = Math.min(sa, 3.5);
+      if(b.hasGca && !a.hasGca) sb = Math.min(sb, 3.5);
+      if(sa !== sb) return sa - sb;
+      return (Number(a.r.pct)||0) - (Number(b.r.pct)||0); // worst pct first
+    });
+
+    el.innerHTML = "";
+    var wrap = document.createElement("div");
+    wrap.className = "ib-wrap";
+
+    if(!items.length){
+      wrap.innerHTML =
+        '<div class="ib-empty">'
+        +'<div class="ib-empty-icon">✓</div>'
+        +'<div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">'+t("map_no_issues")+'</div>'
+        +'<div>'+t("map_all_on_target")+'</div>'
+        +'</div>';
+      el.appendChild(wrap);
+      return;
+    }
+
+    // Group items by primary state for visual sectioning
+    var sections = [
+      { key: "gap",   label: "Gap / Bajo target", color: "#dc2626", items: [] },
+      { key: "idle",  label: "Idle",              color: "#ca8a04", items: [] },
+      { key: "fs",    label: "Fast Start",        color: "#7c3aed", items: [] },
+      { key: "gca",   label: "GCA pendiente",     color: "#f59e0b", items: [] },
+    ];
+    items.forEach(function(it){
+      if(it.state === "gap" || it.state === "below") sections[0].items.push(it);
+      else if(it.state === "idle") sections[1].items.push(it);
+      else if(it.state === "faststart") sections[2].items.push(it);
+      else if(it.hasGca) sections[3].items.push(it);
+      else sections[0].items.push(it); // fallback to first section
+    });
+
+    // Render: summary banner + each non-empty section
+    var summary = document.createElement("div");
+    summary.className = "ib-summary";
+    summary.innerHTML =
+      '<span><b>'+items.length+'</b> incidencias activas</span>'
+      +'<span>·</span>'
+      +'<span><b>'+okCount+'</b> en target</span>'
+      +'<span>·</span>'
+      +'<span style="color:var(--text-muted)">'+totalCount+' total</span>';
+    wrap.appendChild(summary);
+
+    sections.forEach(function(sec){
+      if(!sec.items.length) return;
+      var section = document.createElement("div");
+      section.className = "ib-section";
+      var title = document.createElement("div");
+      title.className = "ib-section-title";
+      title.innerHTML =
+        '<span class="ib-st-dot" style="background:'+sec.color+'"></span>'
+        +'<span>'+sec.label+'</span>'
+        +'<span class="ib-st-count">'+sec.items.length+'</span>';
+      section.appendChild(title);
+
+      var grid = document.createElement("div");
+      grid.className = "ib-grid";
+      // Cap at 24 cards per section to avoid overwhelming; show "+N more"
+      var shown = sec.items.slice(0, 24);
+      var hidden = sec.items.length - shown.length;
+      shown.forEach(function(it){ grid.appendChild(buildIncidentCard(it)); });
+      section.appendChild(grid);
+      if(hidden > 0){
+        var more = document.createElement("button");
+        more.className = "ib-show-more";
+        more.textContent = tf("map_more_in_cat", {n: hidden});
+        more.addEventListener("click", function(){
+          sec.items.slice(24).forEach(function(it){ grid.appendChild(buildIncidentCard(it)); });
+          more.remove();
+        });
+        section.appendChild(more);
+      }
+      wrap.appendChild(section);
+    });
+
+    el.appendChild(wrap);
+  }
+
+  function buildIncidentCard(it){
+    var r = it.r;
+    var pc = Math.round(Number(r.pct) || 0);
+    var pctCls = pc >= 100 ? "ok" : pc >= 80 ? "warn" : "bad";
+    var card = document.createElement("div");
+    card.className = "ib-card " + (it.state || "");
+    var photo = r.photo_url
+      ? '<img class="ib-photo" src="'+esc(r.photo_url)+'" onerror="this.outerHTML=\'<div class=&quot;ib-photo-ph&quot;>'+esc((r.login||"?").charAt(0).toUpperCase())+'</div>\'">'
+      : '<div class="ib-photo-ph">'+esc((r.login||"?").charAt(0).toUpperCase())+'</div>';
+    var tags = "";
+    if(it.state === "gap" || it.state === "below") tags += '<span class="ib-tag tag-gap">Gap</span>';
+    if(it.state === "idle") tags += '<span class="ib-tag tag-idle">Idle</span>';
+    if(it.state === "faststart") tags += '<span class="ib-tag tag-fs">FS</span>';
+    if(it.hasGca) tags += '<span class="ib-tag tag-gca">GCA</span>';
+    if(r.coached) tags += '<span class="ib-tag tag-coached">✓ Coached</span>';
+    card.innerHTML =
+      photo
+      +'<div class="ib-info">'
+        +'<div class="ib-info-row1">'
+          +'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(r.login||"—")+'</span>'
+          +'<span class="ib-station">'+esc(r.station||"—")+'</span>'
+        +'</div>'
+        +'<div class="ib-info-row2">'
+          +'<span class="ib-role">'+esc(r.role||"—")+'</span>'
+          +'<span class="ib-rate">'+(Number.isFinite(r.rate) ? Math.round(r.rate)+' uph' : '—')+'</span>'
+          +tags
+        +'</div>'
+      +'</div>'
+      +'<span class="ib-pct '+pctCls+'">'+pc+'%</span>'
+      +'<button class="ib-coach-btn" data-upload-login="'+esc(r.login||"")+'">Coach</button>';
+    // Click anywhere on card → focus this associate (open upload prefilled)
+    card.addEventListener("click", function(e){
+      if(e.target.tagName === "BUTTON") return;
+      if(r.login) openUploadPrefill(r.login);
+    });
+    var coachBtn = card.querySelector(".ib-coach-btn");
+    coachBtn.addEventListener("click", function(e){
+      e.stopPropagation();
+      if(r.login) openUploadPrefill(r.login);
+    });
+    return card;
+  }
+
+  // ── Floor Command Center: rich content in the empty middle of AR ring ──
+  // Shows: floor summary stats, per-process KPIs, and a pinnable station
+  // detail card. Click any station in the floor to pin it here.
+  var _pinnedStation = null;  // { floorId, key }
+
+  function renderFloorCommandCenter(centerEl, floorId, stationData, layoutInfo){
+    var totalStations = (layoutInfo.topRow.length + layoutInfo.leftCol.length
+                       + layoutInfo.bottomRow.length + layoutInfo.rightCol.length);
+    var activeCount = 0, gapCount = 0, idleCount = 0, fsCount = 0, okCount = 0, gcaCount = 0;
+    var procStats = {};  // proc → {uph:[], pct:[], gap:0, n:0}
+    var gcaPending = window._gcaPendingLogins || new Set();
+
+    function classifyProc(role){
+      role = String(role||"").toUpperCase();
+      if(role.indexOf("PICK") === 0 || role === "P2R_PICK") return "PICK";
+      if(role === "STOW") return "STOW";
+      if(role === "QUANTITY_STOW") return "QS";
+      if(role === "DECANT") return "DECANT";
+      if(role.indexOf("ICQA") >= 0) return "ICQA";
+      if(role === "SM" || role === "SM1" || role === "SMMIX" || role === "SM2"
+         || role === "AFE_PACK" || role === "P2R_PACK" || role === "SNS1" || role === "SNS2"
+         || role === "SINGLES" || role === "WS_SLAM" || role === "WS_VDF") return "PACK";
+      return "OTHER";
+    }
+
+    Object.keys(stationData).forEach(function(k){
+      if(k.indexOf(floorId + "_") !== 0) return;
+      var sd = stationData[k];
+      if(!sd.rows.length) return;
+      activeCount++;
+      var st = sd.state || "normal";
+      if(st === "gap" || st === "below") gapCount++;
+      else if(st === "idle") idleCount++;
+      else if(st === "faststart") fsCount++;
+      else if(st === "ontarget" || st === "normal") okCount++;
+      sd.rows.forEach(function(r){
+        var p = classifyProc(r.role);
+        if(!procStats[p]) procStats[p] = { n:0, uphSum:0, uphN:0, pctSum:0, pctN:0, gap:0 };
+        procStats[p].n++;
+        if(Number.isFinite(r.rate)){ procStats[p].uphSum += r.rate; procStats[p].uphN++; }
+        if(Number.isFinite(r.pct)){  procStats[p].pctSum += r.pct;  procStats[p].pctN++; }
+        if(st === "gap" || st === "below") procStats[p].gap++;
+        if(gcaPending.has((r.login||"").toLowerCase())) gcaCount++;
+      });
+    });
+
+    var pinnedHtml = renderPinnedStationHtml(floorId, stationData);
+    var html = ""
+      + '<div class="fcc">'
+      + '<div class="fcc-header">'
+        + '<div class="fcc-title">'+esc(floorId.toUpperCase())+' · Floor Summary</div>'
+        + '<div class="fcc-title-sub">' + activeCount + ' / ' + totalStations + ' stations active</div>'
+      + '</div>'
+      + '<div class="fcc-summary">'
+        + '<div class="fcc-stat gap"><div class="fcc-stat-val">'+gapCount+'</div><div class="fcc-stat-lbl">Gap</div></div>'
+        + '<div class="fcc-stat idle"><div class="fcc-stat-val">'+idleCount+'</div><div class="fcc-stat-lbl">Idle</div></div>'
+        + '<div class="fcc-stat fs"><div class="fcc-stat-val">'+fsCount+'</div><div class="fcc-stat-lbl">Fast Start</div></div>'
+        + '<div class="fcc-stat ok"><div class="fcc-stat-val">'+okCount+'</div><div class="fcc-stat-lbl">On Target</div></div>'
+      + '</div>';
+
+    // Per-process KPIs (only show procs with at least 1 associate)
+    var procOrder = ["PICK","STOW","QS","PACK","DECANT","ICQA"];
+    var procsHtml = "";
+    procOrder.forEach(function(p){
+      var s = procStats[p]; if(!s || !s.n) return;
+      var avgUph = s.uphN ? Math.round(s.uphSum / s.uphN) : 0;
+      var avgPct = s.pctN ? Math.round(s.pctSum / s.pctN) : 0;
+      var pctCls = avgPct >= 100 ? "ok" : avgPct >= 80 ? "warn" : "bad";
+      procsHtml +=
+        '<div class="fcc-proc">'
+        + '<div class="fcc-proc-name">'+p+'</div>'
+        + '<div class="fcc-proc-row">'
+          + '<span class="fcc-proc-uph">'+avgUph+'<span style="font-size:9.5px;color:var(--text-muted);font-weight:600"> uph</span></span>'
+          + '<span class="fcc-proc-pct '+pctCls+'">'+avgPct+'%</span>'
+        + '</div>'
+        + '<div class="fcc-proc-foot">'
+          + '<span>'+s.n+' assoc.</span>'
+          + (s.gap ? '<span style="color:#dc2626;font-weight:700">'+s.gap+' gap</span>' : '<span>·</span>')
+        + '</div>'
+        + '</div>';
+    });
+    if(procsHtml) html += '<div class="fcc-procs">' + procsHtml + '</div>';
+
+    html += pinnedHtml + '</div>';
+    centerEl.innerHTML = html;
+
+    // Wire pin clear + per-row coach
+    var clearBtn = centerEl.querySelector(".fcc-pin-clear");
+    if(clearBtn) clearBtn.addEventListener("click", function(e){
+      e.stopPropagation();
+      _pinnedStation = null;
+      if(perfMapVisible) renderPerfMap();
+    });
+    centerEl.querySelectorAll(".pr-coach").forEach(function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        var login = btn.dataset.login;
+        if(login) openUploadPrefill(login);
+      });
+    });
+  }
+
+  function renderPinnedStationHtml(floorId, stationData){
+    if(!_pinnedStation || _pinnedStation.floorId !== floorId){
+      return '<div class="fcc-pin empty">'+t("map_pin_hint")+'</div>';
+    }
+    var sd = stationData[_pinnedStation.key];
+    if(!sd){
+      // Pinned station no longer in current data (filter changed); auto-clear.
+      _pinnedStation = null;
+      return '<div class="fcc-pin empty">'+t("map_pin_hint")+'</div>';
+    }
+    var stNum = (_pinnedStation.key.split("_")[1]) || "?";
+    var rows = sd.rows || [];
+    var avgPct = 0, n=0;
+    rows.forEach(function(r){ if(Number.isFinite(r.pct)){ avgPct += r.pct; n++; } });
+    avgPct = n ? Math.round(avgPct/n) : 0;
+    var pctCls = avgPct >= 100 ? "ok" : avgPct >= 80 ? "warn" : "bad";
+    var rolesSet = {};
+    rows.forEach(function(r){ if(r.role) rolesSet[String(r.role).toUpperCase()] = true; });
+    var roles = Object.keys(rolesSet).slice(0, 3).join(" · ");
+
+    var rowsHtml = rows.slice(0,4).map(function(r){
+      var pc = Math.round(Number(r.pct)||0);
+      var cls = pc >= 100 ? "ok" : pc >= 80 ? "warn" : "bad";
+      var photo = r.photo_url
+        ? '<img class="pr-photo" src="'+esc(r.photo_url)+'" onerror="this.outerHTML=\'<div class=&quot;pr-photo-ph&quot;>'+esc((r.login||"?").charAt(0).toUpperCase())+'</div>\'">'
+        : '<div class="pr-photo-ph">'+esc((r.login||"?").charAt(0).toUpperCase())+'</div>';
+      return '<div class="fcc-pin-row">'
+        + photo
+        + '<span class="pr-login">'+esc(r.login||"—")+'</span>'
+        + '<span class="pr-rate">'+(Number.isFinite(r.rate) ? Math.round(r.rate)+' uph' : '—')+'</span>'
+        + '<span class="pr-pct '+cls+'">'+pc+'%</span>'
+        + '<button class="pr-coach" data-login="'+esc(r.login||"")+'">Coach</button>'
+        + '</div>';
+    }).join("");
+    var more = rows.length > 4 ? '<div style="text-align:center;font-size:10.5px;color:var(--text-muted);padding-top:2px">+'+(rows.length-4)+' '+t("map_more_short")+'</div>' : '';
+
+    return ''
+      + '<div class="fcc-pin has-data">'
+        + '<button class="fcc-pin-clear" title="Quitar pin">×</button>'
+        + '<div class="fcc-pin-head">'
+          + '<div class="fcc-pin-station">'+esc(stNum)+'</div>'
+          + '<div class="fcc-pin-meta"><b>'+rows.length+'</b> assoc. · avg <span style="color:var(--' + (pctCls==='ok'?'green':pctCls==='warn'?'orange':'red') + ')">' + avgPct + '%</span>'
+          + (roles ? ' · ' + esc(roles) : '')
+          + '</div>'
+        + '</div>'
+        + '<div class="fcc-pin-rows">' + rowsHtml + more + '</div>'
+      + '</div>';
+  }
+
+  // Pin a station into the Floor Command Center on right-click (or
+  // shift+click). Plain click still opens upload-prefill — we don't want
+  // to fight the existing UX. The hint in the empty pin slot says so.
+  function _pinStationFromEvent(ev){
+    var st = ev.target.closest && ev.target.closest(".sm-station");
+    if(!st) return false;
+    if(_mapView !== "grid") return false;
+    var floorContainer = st.closest("[id^='perfFloor_']");
+    if(!floorContainer) return false;
+    var floorId = floorContainer.id.replace(/^perfFloor_/, "");
+    var num = (st.querySelector(".sm-num") || {}).textContent;
+    if(!num) return false;
+    var key = floorId + "_" + num.trim();
+    _pinnedStation = { floorId: floorId, key: key };
+    if(window._renderPerfMap) window._renderPerfMap();
+    return true;
+  }
+  document.addEventListener("contextmenu", function(ev){
+    if(_pinStationFromEvent(ev)) ev.preventDefault();
+  });
+  document.addEventListener("click", function(ev){
+    if(ev.shiftKey && _pinStationFromEvent(ev)){ ev.preventDefault(); ev.stopPropagation(); }
+  }, true);
+
+  // ── Mini-radar: scaled-down dot map of the FC, one dot per station ──
+  // Renders into #mapRadarSvg every time the map re-renders. Worst-state
+  // wins per station; click on a region filters the board.
+  function renderMapRadar(stationData){
+    var svg = document.getElementById("mapRadarSvg");
+    if(!svg) return;
+    // Compute station list with state. Layout: 13 cols × 7 rows max.
+    var stations = Object.keys(stationData).map(function(k){
+      var sd = stationData[k];
+      // Extract numeric station id
+      var parts = k.split("_");
+      var num = parseInt(parts[1],10);
+      return { num: isNaN(num) ? 0 : num, state: sd.state || "normal", hasRows: sd.rows.length > 0 };
+    }).filter(function(s){ return s.hasRows; });
+    stations.sort(function(a,b){ return a.num - b.num; });
+
+    var COLS = 13, ROWS = 4;
+    var W = 78, H = 44, padX = 4, padY = 4;
+    var dotW = (W - padX*2) / COLS, dotH = (H - padY*2) / ROWS;
+    var cap = COLS * ROWS;
+    var slice = stations.slice(0, cap);
+
+    var stateColor = {
+      gap:      "#dc2626",
+      below:    "#dc2626",
+      idle:     "#ca8a04",
+      faststart:"#7c3aed",
+      normal:   "#3b82f6",
+      ontarget: "#16a34a",
+    };
+
+    var svgNs = "http://www.w3.org/2000/svg";
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    slice.forEach(function(s, i){
+      var col = i % COLS, row = Math.floor(i / COLS);
+      var cx = padX + col * dotW + dotW/2;
+      var cy = padY + row * dotH + dotH/2;
+      var c = document.createElementNS(svgNs, "circle");
+      c.setAttribute("cx", cx);
+      c.setAttribute("cy", cy);
+      c.setAttribute("r", "2");
+      c.setAttribute("fill", stateColor[s.state] || "#94a3b8");
+      c.setAttribute("opacity", s.state === "ontarget" ? "0.55" : "0.92");
+      svg.appendChild(c);
+    });
+  }
+
   function showPerfTooltip(e, stNum, data){
     clearTimeout(window._ttHideTimer);
     var tt=document.getElementById('gcaMapTooltip');
@@ -4128,9 +5480,16 @@ document.addEventListener("click",(e)=>{
 
   // ── Load cached data on tab switch ──
   async function loadGcaDashboard(){
+    // Skeleton + skeleton row count guess from previous data, fallback 8
+    const prev = (gcaData && gcaData.items) ? Math.min(gcaData.items.length, 8) : 8;
+    renderSkeletonRows(prev, { tbodyId: "gcaTbody", cols: 8 });
     try{
       const d = await jget(`${API}/api/gca/dashboard?fc=${encodeURIComponent(currentFC)}`);
-      if(d.ok === false){ return; }
+      if(d.ok === false){
+        renderEmptyState(t("empty_no_gca_title"), t("empty_no_gca_sub"),
+                          { tbodyId: "gcaTbody", cols: 8 });
+        return;
+      }
       gcaData = d;
       // Expose pending logins for Performance map cross-reference
       var pSet = new Set();
@@ -4141,7 +5500,11 @@ document.addEventListener("click",(e)=>{
       (d.items||[]).forEach(function(it){ if(it.status==="PENDING"){ var lg=(it.login||"").toLowerCase(); if(!pMap[lg]) pMap[lg]={id:it.id||"",insight:it.insight||"",comment:it.comment||""}; }});
       window._gcaPendingMap = pMap;
       renderGca();
-    }catch(e){ console.warn("loadGcaDashboard",e); }
+    }catch(e){
+      renderEmptyState("No se pudo cargar GCA", e.message,
+                        { tbodyId: "gcaTbody", cols: 8 });
+      console.warn("loadGcaDashboard",e);
+    }
   }
   window._loadGcaDashboard = loadGcaDashboard;
 
@@ -4506,7 +5869,7 @@ document.addEventListener("click",(e)=>{
 
     const tbody = $g("gcaTbody");
     if(!items.length){
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);font-size:12px">No pending coachings${gcaOwnerFilter?" for "+gcaOwnerFilter:""}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);font-size:12px">${t("empty_no_pending_coachings")}${gcaOwnerFilter?" · "+gcaOwnerFilter:""}</td></tr>`;
     } else {
       tbody.innerHTML = items.slice(0, 100).map(it=>{
         const gcaUrl = `https://guided-coaching-dub.corp.amazon.com/#/view-coaching-instance/${it.id}`;
@@ -4536,6 +5899,58 @@ document.addEventListener("click",(e)=>{
     // Re-render floor map if visible
     if(floorMapVisible) renderFloorMap();
   }
+
+  // ── CSV download button ──
+  $g("btnGcaCsv") && $g("btnGcaCsv").addEventListener("click", async ()=>{
+    const btn = $g("btnGcaCsv");
+    if (!gcaData || !Array.isArray(gcaData.items) || !gcaData.items.length){
+      _csvToast("WARN No GCA data loaded. Run the pipeline first.");
+      return;
+    }
+    btn.disabled = true;
+    const orig = btn.textContent;
+    btn.textContent = "Exporting…";
+    try {
+      // Filter by current owner selection if any (matches what's visible in the table).
+      const items = gcaOwnerFilter
+        ? gcaData.items.filter(it => it.owner === gcaOwnerFilter)
+        : gcaData.items.slice();
+      const rows = items.map(it => ({
+        "Login":      it.login || "",
+        "EmployeeId": it.employee_id || "",
+        "Name":       it.name || "",
+        "Status":     it.status || "",
+        "Owner":      it.owner || "",
+        "Insight":    it.insight || "",
+        "Category":   it.cat || "",
+        "Reason":     it.reason || "",
+        "Course":     it.course_title || "",
+        "Scenario":   it.scenario || "",
+        "Comment":    it.comment || "",
+        "Presence":   it.presence || "",
+        "Station":    it.station || "",
+        "ProcessPath":it.process_path || "",
+        "Created":    it.created || "",
+        "GCA_Link":   it.id ? `https://guided-coaching-dub.corp.amazon.com/#/view-coaching-instance/${it.id}` : "",
+      }));
+      const res = await fetch(`${API}/api/export/csv`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({fc: currentFC, rows: rows, prefix: "GCA_Compliance"}),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const savedPath = res.headers.get("X-Saved-Path");
+      if (savedPath){
+        try { window.open(`${API}/api/open-file?path=${encodeURIComponent(savedPath)}`); } catch(_) {}
+      }
+      _csvToast(`${tf("csv_gca_saved", {n: rows.length})}\n${savedPath || "Coaching_csv/"}`);
+    } catch(e) {
+      _csvToast(`FAIL ${e.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = orig;
+    }
+  });
 
   // ── Pipeline button ──
   $g("btnGcaPipeline") && $g("btnGcaPipeline").addEventListener("click",()=>{
@@ -4670,7 +6085,7 @@ document.addEventListener("click",(e)=>{
     for(var fl in byFloor){ if(byFloor[fl].length > bestCount){ bestCount = byFloor[fl].length; bestFloor = fl; } }
 
     var pathItems = byFloor[bestFloor];
-    if(!pathItems.length){ alert("No hay coachings con estacion en "+bestFloor.toUpperCase()); return; }
+    if(!pathItems.length){ alert(tf("empty_no_coachings_floor", {floor: bestFloor.toUpperCase()})); return; }
 
     if(bestFloor==="p2"||bestFloor==="p3"){
       pathItems.forEach(function(e){ e.pIdx = perimeterIndex(e.num, bestFloor); });
@@ -4715,7 +6130,7 @@ document.addEventListener("click",(e)=>{
     groups.forEach(function(g){totalCoachings+=g.entries.length;});
     var walkMin = Math.round(totalDist/1.2/60);
     var coachMin = totalCoachings*2;
-    h += '<div class="path-summary">Estimado: <b>~'+(walkMin+coachMin)+' min</b> ('+walkMin+'min caminando + '+coachMin+'min coaching)<br>Distancia: ~'+totalDist+'m · '+totalCoachings+' coachings en '+groups.length+' estaciones</div>';
+    h += '<div class="path-summary">'+t("map_estimated")+' <b>~'+(walkMin+coachMin)+' min</b> ('+walkMin+t("map_walking")+' + '+coachMin+t("map_coaching_min")+')<br>'+t("map_distance")+' ~'+totalDist+'m · '+totalCoachings+' '+t("map_coachings_in")+' '+groups.length+' '+t("map_stations")+'</div>';
     listEl.innerHTML = h;
 
     var mapEl = $g("gcaPathMap");

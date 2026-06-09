@@ -78,39 +78,40 @@
   --logo-from:#1e40af;--logo-to:#60a5fa;
 }
 [data-theme="kokiri"]{
-  /* Kokiri Forest — soft greens and earth tones */
-  --bg-body:#f8fce8;
-  --bg-topbar:#eef5d8;
-  --bg-card:#fcfef2;
-  --bg-panel:#f0f6e0;
-  --bg-input:#fcfef2;
-  --bg-modal:#fcfef2;
-  --bg-table-head:#e8f0d0;
-  --border:#c8d8a8;
-  --border-strong:#a0b888;
-  --text:#2a3a24;
-  --text-secondary:#536f50;
-  --text-muted:#767676;
-  --text-dim:#a0b0a0;
-  --accent:#536f50;
-  --accent2:#92c582;
-  --accent-light:rgba(83,111,80,0.08);
-  --accent-border:#536f50;
-  --accent-text:#3a5038;
-  --blue:#86a5a9;
-  --blue-light:rgba(134,165,169,0.12);
-  --green:#92c582;
-  --red:#b85450;
-  --orange:#a08840;
-  --shadow:rgba(42,58,36,0.10);
-  --row-hover:rgba(146,197,130,0.08);
-  --gradient:linear-gradient(90deg,#536f50,#92c582,#86a5a9,#536f50);
-  --tab-active:linear-gradient(135deg,#536f50,#92c582);
-  --btn-pipeline:linear-gradient(135deg,#536f50,#6a9060);
-  --btn-primary:linear-gradient(135deg,#536f50,#92c582);
-  --coached-bg:rgba(146,197,130,0.08);
-  --scroll-thumb:#a0b888;
-  --logo-from:#536f50;--logo-to:#92c582;
+  /* Kokiri Forest — light woodland: parchment cards on a soft moss
+     backdrop with bark browns and sunlight-gold accents. Reads bright. */
+  --bg-body:#e7efd2;            /* light moss canvas */
+  --bg-topbar:#f3f7e0;
+  --bg-card:#fcfdf3;
+  --bg-panel:#eef4d8;
+  --bg-input:#fcfdf3;
+  --bg-modal:#fcfdf3;
+  --bg-table-head:#e3ecc6;
+  --border:#cbd9a3;
+  --border-strong:#9a7e4f;       /* warm bark line */
+  --text:#27331c;
+  --text-secondary:#4d6a3c;
+  --text-muted:#7d8c6a;
+  --text-dim:#a9b48d;
+  --accent:#4a7a3f;              /* moss green */
+  --accent2:#c89248;             /* sunlight gold */
+  --accent-light:rgba(74,122,63,0.10);
+  --accent-border:#4a7a3f;
+  --accent-text:#2f5128;
+  --blue:#7d9c64;
+  --blue-light:rgba(125,156,100,0.14);
+  --green:#5d9b4a;
+  --red:#b84a3a;
+  --orange:#c08240;              /* warm bark/amber */
+  --shadow:rgba(80,70,30,0.16);
+  --row-hover:rgba(200,146,72,0.10);
+  --gradient:linear-gradient(90deg,#4a7a3f,#7d9c64,#c89248,#9a7e4f,#4a7a3f);
+  --tab-active:linear-gradient(135deg,#4a7a3f,#5d9b4a);
+  --btn-pipeline:linear-gradient(135deg,#4a7a3f,#7d9c64);
+  --btn-primary:linear-gradient(135deg,#4a7a3f,#c89248);
+  --coached-bg:rgba(200,146,72,0.10);
+  --scroll-thumb:#9a7e4f;
+  --logo-from:#4a7a3f;--logo-to:#c89248;
 }
 [data-theme="violet"]{
   /* Violet — soft lavender, light purple pastels */
@@ -222,6 +223,16 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:14px}
 body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-body);color:var(--text);-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+/* Smooth theme switching: when [data-theme] changes, fade backgrounds and
+   colors instead of an abrupt flip. Animation only kicks in on theme change
+   thanks to the `transitioning` class toggled by JS. */
+html.theme-transitioning,
+html.theme-transitioning body,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after{
+  transition: background-color .35s ease, background-image .35s ease, color .35s ease, border-color .35s ease, box-shadow .35s ease !important;
+}
 
 /* TOPBAR */
 .topbar{background:var(--bg-topbar);display:flex;flex-wrap:wrap;align-items:center;padding:6px 16px 4px;flex-shrink:0;position:relative;border-bottom:1px solid var(--border);gap:0}
@@ -271,6 +282,26 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .t-user-name{font-weight:600;color:var(--text)}
 .t-user-sep{width:1px;height:12px;background:var(--border-strong);margin:0 3px}
 .t-user-role{color:var(--text-muted);font-size:10.5px}
+/* Midway status pill — green=ok / amber=expiring / red=expired or missing */
+.t-midway{display:flex;align-items:center;gap:5px;padding:4px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;font-size:11px;color:var(--text);white-space:nowrap;cursor:default}
+.t-midway-dot{width:7px;height:7px;border-radius:50%;background:var(--text-muted);flex-shrink:0;transition:background .2s}
+.t-midway[data-state="ok"] .t-midway-dot{background:var(--green);box-shadow:0 0 6px rgba(34,197,94,.5)}
+.t-midway[data-state="expiring"] .t-midway-dot{background:var(--orange);animation:pulse 2s infinite}
+.t-midway[data-state="expired"] .t-midway-dot,
+.t-midway[data-state="missing"] .t-midway-dot{background:var(--red);animation:pulse 1.2s infinite}
+.t-midway-label{font-weight:600;font-size:10.5px;letter-spacing:.02em}
+.t-midway[data-state="ok"] .t-midway-label{color:var(--green)}
+.t-midway[data-state="expiring"] .t-midway-label{color:var(--orange)}
+.t-midway[data-state="expired"] .t-midway-label,
+.t-midway[data-state="missing"] .t-midway-label{color:var(--red)}
+/* Mwinit toast: full-screen-ish modal that tells the user to touch their YubiKey */
+.mwinit-toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-card);border:2px solid var(--accent);border-radius:18px;padding:36px 44px;box-shadow:0 20px 60px rgba(0,0,0,0.4);z-index:10000;text-align:center;min-width:380px;max-width:520px}
+.mwinit-toast.hidden{display:none}
+.mwinit-icon{font-size:56px;margin-bottom:12px;animation:pulse 1.4s infinite}
+.mwinit-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:8px}
+.mwinit-desc{font-size:13.5px;color:var(--text-secondary);line-height:1.6}
+.mwinit-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999}
+.mwinit-overlay.hidden{display:none}
 .t-fc-wrap{display:flex;align-items:center;gap:5px}
 .t-fc-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase}
 .t-fc-sel{border:1px solid var(--border-strong);border-radius:12px;padding:5px 10px;font-size:11.5px;color:var(--text);background:var(--bg-input);cursor:pointer;outline:none;min-width:100px}
@@ -279,6 +310,18 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .t-live{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--green);font-weight:600;margin-left:8px}
 .ldot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+@keyframes skShine{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.sk-row td{padding:9px 8px !important}
+/* Compact density: shrinks table cell padding and font so users can see
+   ~30% more rows in the dashboard / quality / GCA tables. */
+[data-density="compact"] .main-table td,
+[data-density="compact"] .main-table th{padding:5px 6px !important;font-size:11px !important;line-height:1.25 !important}
+[data-density="compact"] .main-table .td-rate,
+[data-density="compact"] .main-table .td-pct{font-size:11px !important}
+[data-density="compact"] .kpi-tile{padding:8px 12px}
+[data-density="compact"] .kpi-num{font-size:18px}
+[data-density="compact"] .qkpi{padding:8px 8px}
+[data-density="compact"] .qkpi-num{font-size:18px}
 .t-created{font-size:10px;color:var(--text-muted);margin-left:8px;white-space:nowrap}
 .t-created b{color:var(--accent)}
 
@@ -294,6 +337,16 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .sp-opt{padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-secondary);font-size:11px;cursor:pointer;transition:all .2s}
 .sp-opt.active{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
 .sp-opt:hover:not(.active){border-color:var(--accent);color:var(--accent)}
+.theme-swatches{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;margin-top:4px}
+.theme-sw{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:5px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg-card);cursor:pointer;transition:transform .14s,border-color .14s,box-shadow .14s;position:relative}
+.theme-sw:hover{border-color:var(--accent);transform:translateY(-1px)}
+.theme-sw.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-light)}
+.theme-sw.active::after{content:"✓";position:absolute;top:3px;right:5px;font-size:9px;color:var(--accent);font-weight:700}
+.theme-sw-preview{display:block;height:30px;border-radius:5px;background:var(--p-bg);position:relative;overflow:hidden;border:1px solid rgba(0,0,0,.06)}
+.theme-sw-preview::before{content:"";position:absolute;left:4px;top:4px;right:4px;height:6px;border-radius:3px;background:var(--p-card)}
+.theme-sw-preview::after{content:"";position:absolute;left:4px;top:14px;bottom:4px;width:14px;border-radius:3px;background:linear-gradient(180deg,var(--p-acc),var(--p-acc2))}
+.theme-sw-label{font-size:10.5px;color:var(--text-secondary);font-weight:600;text-align:center;letter-spacing:.2px}
+.theme-sw.active .theme-sw-label{color:var(--accent)}
 .sp-select{padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);font-size:11px;cursor:pointer}
 /* THEME TOGGLE */
 .theme-toggle{width:36px;height:20px;border-radius:10px;background:var(--border-strong);border:none;cursor:pointer;position:relative;margin-left:8px;transition:background .3s}
@@ -345,6 +398,10 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 
 /* TOOLBAR */
 .toolbar{display:flex;align-items:center;gap:8px;padding:10px 20px;background:var(--bg-panel);border-top:1px solid var(--border);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.toolbar-sticky{position:sticky;top:0;z-index:80;backdrop-filter:saturate(150%) blur(8px)}
+/* When the toolbar sticks (after some scroll), drop a soft shadow so it
+   visually detaches from the table below it. */
+.toolbar-sticky.is-pinned{box-shadow:0 6px 16px -8px rgba(0,0,0,.18)}
 .tb-search{display:flex;align-items:center;gap:6px;background:var(--bg-input);border:1px solid var(--border-strong);border-radius:16px;padding:5px 12px;min-width:180px}
 .tb-search input{border:none;outline:none;font-size:11.5px;color:var(--text);background:transparent;width:100%;font-family:inherit}
 .tb-search input::placeholder{color:var(--text-dim)}
@@ -391,6 +448,12 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .table-wrap{flex:1;overflow-y:auto;overflow-x:auto}
 .main-table{width:100%;border-collapse:collapse;font-size:14px}
 .main-table thead{position:sticky;top:0;z-index:2}
+.main-table th{position:relative;user-select:none}
+.col-resizer{position:absolute;top:0;right:-2px;width:5px;height:100%;cursor:col-resize;z-index:5;opacity:0;transition:opacity .15s}
+.main-table th:hover .col-resizer{opacity:1;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+.col-resizer.dragging{opacity:1;background:var(--accent)}
+.col-resizing{cursor:col-resize !important}
+.col-resizing *{cursor:col-resize !important;user-select:none !important}
 .main-table th{background:var(--bg-table-head);padding:12px 12px;text-align:center;font-weight:600;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap}
 .main-table th:first-child{text-align:left}
 .main-table td{padding:9px 12px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--text)}
@@ -477,9 +540,16 @@ body{font-family:'Amazon Ember','Inter',-apple-system,BlinkMacSystemFont,'Segoe 
 .panel-title{font-size:16px;font-weight:700;color:var(--text);padding:16px 20px 8px}
 .panel-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
 .quality-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:0 20px 12px}
-.qkpi{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center}
-.qkpi-num{font-size:20px;font-weight:700;color:var(--text)}
-.qkpi-lbl{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.qkpi{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px 10px;text-align:center;position:relative;overflow:hidden;transition:transform .18s,box-shadow .18s,border-color .18s}
+.qkpi:hover{transform:translateY(-2px);box-shadow:0 10px 24px -10px var(--shadow);border-color:var(--accent-border)}
+.qkpi::before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;background:var(--accent);opacity:.55;transition:opacity .18s}
+.qkpi:hover::before{opacity:1}
+.qkpi-present::before{background:var(--green)}
+.qkpi-coached::before{background:var(--accent)}
+.qkpi-pending::before{background:var(--orange)}
+.qkpi-compliance::before{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.qkpi-num{font-size:22px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+.qkpi-lbl{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
 .qkpi-present .qkpi-num{color:var(--green)}
 .qkpi-coached .qkpi-num{color:var(--accent)}
 .qkpi-pending .qkpi-num{color:var(--orange)}
@@ -782,23 +852,150 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .fm-p1-station.idle{background:#eab308;border-color:#facc15}
 .fm-p1-station.faststart{background:#8b5cf6;border-color:#a78bfa}
 .fm-p1-station.normal{background:#22c55e;border-color:#4ade80;box-shadow:0 0 4px rgba(34,197,94,0.3)}
+/* ═══ Incidents Board (map view A) ═══ */
+.ib-wrap{padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+.ib-empty{padding:60px 20px;text-align:center;color:var(--text-secondary);font-size:13px}
+.ib-empty-icon{font-size:48px;margin-bottom:8px;opacity:0.6}
+.ib-section{display:flex;flex-direction:column;gap:8px}
+.ib-section-title{display:flex;align-items:center;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-secondary);padding:0 4px}
+.ib-section-title .ib-st-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.ib-section-title .ib-st-count{margin-left:auto;font-size:10px;color:var(--text-muted);background:var(--bg-panel);padding:2px 8px;border-radius:9px;font-variant-numeric:tabular-nums}
+.ib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.ib-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--bg-card);border:1.5px solid var(--border);cursor:pointer;transition:transform .14s,box-shadow .14s,border-color .14s;position:relative;overflow:hidden}
+.ib-card:hover{transform:translateY(-1px);box-shadow:0 8px 18px -8px var(--shadow);border-color:var(--accent-border)}
+.ib-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ib-accent,var(--border-strong))}
+.ib-card.gap      {--ib-accent:#dc2626}
+.ib-card.idle     {--ib-accent:#ca8a04}
+.ib-card.faststart{--ib-accent:#7c3aed}
+.ib-card.below    {--ib-accent:#dc2626}
+.ib-photo{width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--border)}
+.ib-photo-ph{width:38px;height:38px;border-radius:50%;flex-shrink:0;background:var(--bg-panel);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--text-muted);border:2px solid var(--border)}
+.ib-info{flex:1;min-width:0}
+.ib-info-row1{display:flex;align-items:baseline;gap:6px;font-size:12.5px;font-weight:600;color:var(--text)}
+.ib-info-row1 .ib-station{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-secondary);background:var(--bg-panel);padding:1px 6px;border-radius:4px;font-weight:600}
+.ib-info-row2{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);margin-top:3px}
+.ib-info-row2 .ib-role{font-weight:600;color:var(--text-secondary)}
+.ib-info-row2 .ib-rate{font-variant-numeric:tabular-nums}
+.ib-pct{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;flex-shrink:0;min-width:54px;text-align:right}
+.ib-pct.bad {color:#dc2626}
+.ib-pct.warn{color:#ca8a04}
+.ib-pct.ok  {color:#16a34a}
+.ib-tag{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+.ib-tag.tag-gap   {background:rgba(220,38,38,0.12); color:#991b1b}
+.ib-tag.tag-idle  {background:rgba(202,138,4,0.12); color:#854d0e}
+.ib-tag.tag-fs    {background:rgba(124,58,237,0.12);color:#5b21b6}
+.ib-tag.tag-gca   {background:rgba(245,158,11,0.15);color:#92400e}
+.ib-tag.tag-coached{background:rgba(22,163,74,0.10); color:#166534}
+.ib-coach-btn{margin-left:6px;padding:5px 10px;border-radius:6px;border:1.5px solid var(--accent);background:var(--accent);color:#fff;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;transition:all .14s}
+.ib-coach-btn:hover{transform:scale(1.05);box-shadow:0 4px 10px -2px var(--accent-light)}
+.ib-summary{display:flex;align-items:center;gap:14px;padding:8px 14px;background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;font-size:11px;color:var(--text-secondary)}
+.ib-summary b{color:var(--text);font-weight:700}
+.ib-show-more{padding:8px 14px;text-align:center;color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;border:1px dashed var(--border);border-radius:8px;background:transparent}
+.ib-show-more:hover{background:var(--accent-light)}
+
+/* Mini-radar (top-right of toolbar): scaled-down visual of the FC layout */
+.map-radar{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:14px;border:1.5px solid var(--border);background:var(--bg-card)}
+.map-radar svg{display:block}
+.map-radar-label{font-size:10px;color:var(--text-muted);font-weight:600}
+
+/* ═══ Floor Command Center (the empty middle of the AR ring) ═══ */
+.fc-center{flex:1;min-height:240px;padding:14px;display:flex;align-items:stretch;justify-content:center}
+.fcc{width:100%;max-width:680px;display:flex;flex-direction:column;gap:10px}
+.fcc-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.fcc-title{font-size:13px;font-weight:800;letter-spacing:.05em;color:var(--text);text-transform:uppercase}
+.fcc-title-sub{font-size:10px;color:var(--text-muted);font-weight:600}
+.fcc-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.fcc-stat{padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);text-align:center;position:relative;overflow:hidden}
+.fcc-stat::before{content:"";position:absolute;left:0;top:0;width:100%;height:2px;background:var(--fcc-color,var(--accent))}
+.fcc-stat-val{font-size:22px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.1}
+.fcc-stat-lbl{font-size:9.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.fcc-stat.gap   {--fcc-color:#dc2626} .fcc-stat.gap   .fcc-stat-val{color:#dc2626}
+.fcc-stat.idle  {--fcc-color:#ca8a04} .fcc-stat.idle  .fcc-stat-val{color:#ca8a04}
+.fcc-stat.fs    {--fcc-color:#7c3aed} .fcc-stat.fs    .fcc-stat-val{color:#7c3aed}
+.fcc-stat.ok    {--fcc-color:#16a34a} .fcc-stat.ok    .fcc-stat-val{color:#16a34a}
+
+.fcc-procs{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px}
+.fcc-proc{padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);position:relative;overflow:hidden}
+.fcc-proc::before{content:"";position:absolute;left:0;top:0;width:3px;height:100%;background:var(--accent)}
+.fcc-proc-name{font-size:10px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em}
+.fcc-proc-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:3px;gap:6px}
+.fcc-proc-uph{font-size:14px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+.fcc-proc-pct{font-size:10.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.fcc-proc-pct.bad {color:#dc2626} .fcc-proc-pct.warn{color:#ca8a04} .fcc-proc-pct.ok  {color:#16a34a}
+.fcc-proc-foot{font-size:9.5px;color:var(--text-muted);margin-top:2px;display:flex;justify-content:space-between;gap:6px}
+
+.fcc-pin{margin-top:auto;padding:10px 12px;border-radius:8px;border:1.5px dashed var(--border-strong);background:var(--bg-panel);min-height:96px;display:flex;flex-direction:column;gap:6px;position:relative}
+.fcc-pin.empty{border-style:dashed;align-items:center;justify-content:center;color:var(--text-muted);font-size:11.5px;text-align:center}
+.fcc-pin.has-data{border-style:solid;border-color:var(--accent);background:var(--bg-card)}
+.fcc-pin-clear{position:absolute;top:4px;right:6px;width:20px;height:20px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center}
+.fcc-pin-clear:hover{background:var(--bg-panel);color:var(--text)}
+.fcc-pin-head{display:flex;align-items:center;gap:8px}
+.fcc-pin-station{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800;color:var(--accent);background:var(--accent-light);padding:3px 8px;border-radius:6px}
+.fcc-pin-meta{font-size:11px;color:var(--text-secondary)}
+.fcc-pin-meta b{color:var(--text)}
+.fcc-pin-rows{display:flex;flex-direction:column;gap:4px;margin-top:4px;max-height:120px;overflow-y:auto}
+.fcc-pin-row{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;background:var(--bg-panel);font-size:11px}
+.fcc-pin-row .pr-photo{width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.fcc-pin-row .pr-photo-ph{width:24px;height:24px;border-radius:50%;background:var(--bg-card);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:var(--text-muted);flex-shrink:0}
+.fcc-pin-row .pr-login{font-weight:700;color:var(--text);font-size:11px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fcc-pin-row .pr-rate{font-size:11px;color:var(--text-secondary);font-variant-numeric:tabular-nums}
+.fcc-pin-row .pr-pct{font-weight:800;font-variant-numeric:tabular-nums;min-width:38px;text-align:right}
+.fcc-pin-row .pr-pct.bad{color:#dc2626}
+.fcc-pin-row .pr-pct.warn{color:#ca8a04}
+.fcc-pin-row .pr-pct.ok{color:#16a34a}
+.fcc-pin-row .pr-coach{margin-left:auto;padding:3px 8px;border-radius:5px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:10px;font-weight:700;cursor:pointer}
+.fcc-pin-row .pr-coach:hover{background:var(--accent);color:#fff}
+
+/* ═══ Map toolbar (status pills + filters) ═══ */
+.map-pill{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;transition:transform .14s,box-shadow .14s,opacity .14s}
+.map-pill:hover{transform:translateY(-1px);box-shadow:0 4px 10px -4px var(--shadow)}
+.map-pill .map-pill-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 2px rgba(255,255,255,0.6) inset}
+.map-pill .map-pill-num{background:rgba(0,0,0,0.05);padding:1px 7px;border-radius:9px;font-variant-numeric:tabular-nums;color:var(--text);min-width:22px;text-align:center}
+.map-pill-gap  .map-pill-dot{background:#dc2626}
+.map-pill-idle .map-pill-dot{background:#ca8a04}
+.map-pill-gca  .map-pill-dot{background:#f59e0b}
+.map-pill-ok   .map-pill-dot{background:#16a34a}
+.map-pill-gap.active  {border-color:#dc2626;color:#991b1b;background:rgba(220,38,38,0.10)}
+.map-pill-idle.active {border-color:#ca8a04;color:#854d0e;background:rgba(202,138,4,0.10)}
+.map-pill-gca.active  {border-color:#f59e0b;color:#92400e;background:rgba(245,158,11,0.10)}
+.map-pill-readonly{cursor:default;color:var(--text-secondary)}
+.map-pill-readonly:hover{transform:none;box-shadow:none}
+.map-proc-btn{font-size:10.5px;font-weight:600;padding:4px 11px;border-radius:14px;border:1.5px solid var(--border);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;transition:all .14s}
+.map-proc-btn:hover{border-color:var(--accent-border);color:var(--accent)}
+.map-proc-btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.map-mini-btn{font-size:10.5px;font-weight:600;padding:4px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;transition:all .14s}
+.map-mini-btn:hover{border-color:var(--accent-border);color:var(--accent)}
+.map-mini-toggle{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;color:var(--text-secondary);cursor:pointer;padding:4px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--bg-card)}
+.map-mini-toggle input{accent-color:var(--accent);margin:0}
+.map-zoom{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--bg-card)}
+.map-zoom input[type=range]{width:90px;accent-color:var(--accent);cursor:pointer}
+.map-legend{display:flex;flex-wrap:wrap;gap:14px;padding:6px 14px 8px;border-bottom:1px solid var(--border);font-size:10.5px;color:var(--text-secondary);font-weight:600}
+.map-legend span{display:inline-flex;align-items:center;gap:5px}
+.map-legend .lg-sw{display:inline-block;width:14px;height:14px;border-radius:3px;border:1.5px solid;flex-shrink:0}
+/* Zoom: scale the floor wrapper without affecting layout text */
+#perfFloorWrap{transform-origin:top left;transition:transform .15s}
+
 /* ═══ Station Map (AR floors) ═══ */
 .sm-grid{display:flex;flex-direction:column;gap:2px;align-items:center}
 .sm-row{display:flex;gap:2px;justify-content:center;flex-wrap:wrap;padding:4px 0}
 .sm-middle{display:flex;gap:8px;align-items:stretch;width:100%}
 .sm-col{display:flex;flex-direction:column;gap:1px;align-items:center;padding:2px 0}
 .sm-center{flex:1;display:flex;align-items:center;justify-content:center;min-height:80px}
-.sm-station{width:34px;height:42px;border-radius:4px;border:1.5px solid #d1d5db;background:#fff;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .15s;gap:2px}
-.sm-station:hover{transform:scale(1.2);z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.25)}
-.sm-station .sm-type{font-size:7px;font-weight:600;color:#6b7280;text-transform:uppercase;line-height:1}
-.sm-station .sm-num{font-size:10px;font-weight:700;color:#374151;line-height:1}
-.sm-station.sm-empty{border-color:#e5e7eb;background:#f9fafb;opacity:0.5}
-.sm-station.sm-empty .sm-type,.sm-station.sm-empty .sm-num{color:#9ca3af}
-.sm-station.sm-active{border-color:#3b82f6;background:#eff6ff}
-.sm-station.sm-ontarget{border-color:#22c55e;background:#f0fdf4}
-.sm-station.sm-danger{border-color:#ef4444;background:#fef2f2;box-shadow:0 0 6px rgba(239,68,68,0.3)}
-.sm-station.sm-idle{border-color:#eab308;background:#fefce8}
-.sm-station.sm-faststart{border-color:#8b5cf6;background:#f5f3ff}
+.sm-station{width:34px;height:42px;border-radius:5px;border:2px solid #d1d5db;background:var(--bg-card);display:inline-flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .15s;gap:2px;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+.sm-station:hover{transform:scale(1.25);z-index:10;box-shadow:0 6px 18px rgba(0,0,0,0.30)}
+.sm-station .sm-type{font-size:7px;font-weight:600;color:var(--text-muted);text-transform:uppercase;line-height:1}
+.sm-station .sm-num{font-size:10px;font-weight:700;color:var(--text);line-height:1}
+.sm-station.sm-empty{border-color:var(--border);background:var(--bg-panel);opacity:0.45;box-shadow:none}
+.sm-station.sm-empty .sm-type,.sm-station.sm-empty .sm-num{color:var(--text-dim)}
+.sm-station.sm-active   {border-color:#3b82f6;background:linear-gradient(180deg,#eff6ff 0%,#dbeafe 100%)}
+.sm-station.sm-ontarget {border-color:#16a34a;background:linear-gradient(180deg,#f0fdf4 0%,#dcfce7 100%)}
+.sm-station.sm-danger   {border-color:#dc2626;background:linear-gradient(180deg,#fef2f2 0%,#fee2e2 100%);box-shadow:0 0 0 1px rgba(220,38,38,0.20),0 4px 12px -4px rgba(220,38,38,0.45)}
+.sm-station.sm-idle     {border-color:#ca8a04;background:linear-gradient(180deg,#fefce8 0%,#fef9c3 100%);box-shadow:0 0 0 1px rgba(202,138,4,0.20),0 4px 10px -4px rgba(202,138,4,0.40)}
+.sm-station.sm-faststart{border-color:#7c3aed;background:linear-gradient(180deg,#faf5ff 0%,#ede9fe 100%);box-shadow:0 0 0 1px rgba(124,58,237,0.18)}
+.sm-station.sm-danger .sm-num{color:#991b1b}
+.sm-station.sm-idle .sm-num{color:#854d0e}
+.sm-station.sm-ontarget .sm-num{color:#166534}
+.sm-station.sm-faststart .sm-num{color:#5b21b6}
 .sm-badge{position:absolute;top:-9px;left:50%;transform:translateX(-50%);min-width:16px;height:13px;border-radius:3px;font-size:8px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1}
 .sm-badge.bg-green{background:#22c55e}
 .sm-badge.bg-red{background:#ef4444}
@@ -817,7 +1014,10 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .sm-types{display:flex;gap:12px;justify-content:center;font-size:10px;color:var(--text-secondary)}
 .sm-types b{color:var(--text)}
 
-.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px 18px;min-width:100px;text-align:center}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px 20px;min-width:110px;text-align:center;position:relative;overflow:hidden;transition:transform .18s,box-shadow .18s,border-color .18s}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px -10px var(--shadow);border-color:var(--accent-border)}
+.kpi-card::before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:.55;transition:opacity .18s}
+.kpi-card:hover::before{opacity:1}
 .kpi-card .kpi-val{font-size:22px;font-weight:700;color:var(--text)}
 .kpi-card .kpi-lbl{font-size:10px;color:var(--text-muted);margin-top:2px}
 .gca-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
@@ -919,6 +1119,10 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
   <div style="flex:1"></div>
   <div class="t-right">
+    <div class="t-midway" id="midwayPill" data-state="loading" title="Estado de Midway">
+      <span class="t-midway-dot"></span>
+      <span class="t-midway-label" id="midwayLabel">Midway</span>
+    </div>
     <div class="t-user" id="userPill" title="Checking user...">
       <span class="t-user-dot loading" id="userDot"></span>
       <span class="t-user-name" id="userName">Checking…</span>
@@ -976,13 +1180,31 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   <div class="sp-title">⚙️ Settings</div>
   <div class="sp-row">
     <span class="sp-label" data-i18n="lbl_theme">Tema</span>
-    <div class="sp-toggle-group" style="flex-wrap:wrap;gap:4px">
-      <button class="sp-opt" id="spThemeLight"    data-val="light">☀️ Light</button>
-      <button class="sp-opt" id="spThemeDark"     data-val="dark">🌙 Dark</button>
-      <button class="sp-opt" id="spThemeKokiri"    data-val="kokiri">🌿 Kokiri</button>
-      <button class="sp-opt" id="spThemeMidnight" data-val="midnight">⚡ Midnight</button>
-      <button class="sp-opt" id="spThemeViolet" data-val="violet">💜 Violet</button>
-      <button class="sp-opt" id="spThemeCherry"   data-val="cherry">🌸 Cherry</button>
+    <div class="theme-swatches" id="themeSwatches">
+      <button class="theme-sw" id="spThemeLight"    data-val="light"    title="Light"    aria-label="Light">
+        <span class="theme-sw-preview" style="--p-bg:#f8f9fc;--p-card:#fff;--p-acc:#7c3aed;--p-acc2:#ec4899"></span>
+        <span class="theme-sw-label">☀️ Light</span>
+      </button>
+      <button class="theme-sw" id="spThemeDark"     data-val="dark"     title="Dark"     aria-label="Dark">
+        <span class="theme-sw-preview" style="--p-bg:#2b3640;--p-card:#3a4d5a;--p-acc:#60a5fa;--p-acc2:#93c5fd"></span>
+        <span class="theme-sw-label">🌙 Dark</span>
+      </button>
+      <button class="theme-sw" id="spThemeKokiri"   data-val="kokiri"   title="Kokiri"   aria-label="Kokiri">
+        <span class="theme-sw-preview" style="--p-bg:#e7efd2;--p-card:#fcfdf3;--p-acc:#4a7a3f;--p-acc2:#c89248"></span>
+        <span class="theme-sw-label">🌳 Kokiri</span>
+      </button>
+      <button class="theme-sw" id="spThemeMidnight" data-val="midnight" title="Midnight" aria-label="Midnight">
+        <span class="theme-sw-preview" style="--p-bg:#0d1117;--p-card:#161b22;--p-acc:#2f81f7;--p-acc2:#58a6ff"></span>
+        <span class="theme-sw-label">⚡ Midnight</span>
+      </button>
+      <button class="theme-sw" id="spThemeViolet"   data-val="violet"   title="Violet"   aria-label="Violet">
+        <span class="theme-sw-preview" style="--p-bg:#faf5ff;--p-card:#fefcff;--p-acc:#7c3aed;--p-acc2:#a78bfa"></span>
+        <span class="theme-sw-label">💜 Violet</span>
+      </button>
+      <button class="theme-sw" id="spThemeCherry"   data-val="cherry"   title="Cherry"   aria-label="Cherry">
+        <span class="theme-sw-preview" style="--p-bg:#fff5f7;--p-card:#fff;--p-acc:#e11d48;--p-acc2:#f43f5e"></span>
+        <span class="theme-sw-label">🌸 Cherry</span>
+      </button>
     </div>
   </div>
   <div class="sp-row">
@@ -1006,6 +1228,16 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <option value="SVQ1">SVQ1</option>
       <option value="VLC1">VLC1</option>
     </select>
+  </div>
+  <div class="sp-row">
+    <span class="sp-label">Densidad</span>
+    <div class="sp-toggle-group">
+      <button class="sp-opt" id="spDensityComfortable" data-val="comfortable">Cómoda</button>
+      <button class="sp-opt" id="spDensityCompact" data-val="compact">Compacta</button>
+    </div>
+  </div>
+  <div class="sp-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
+    <button id="spDiagCopy" class="sp-opt" style="width:100%;padding:8px 10px;font-size:11.5px">📋 Copiar info de soporte</button>
   </div>
 </div>
 
@@ -1054,7 +1286,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <div class="kpi-sub" data-i18n="kpi_coached_sub">Este turno</div>
     </div>
   </div>
-  <div class="toolbar">
+  <div class="toolbar toolbar-sticky">
     <div class="tb-search"><span style="color:#ccc;font-size:13px">⌕</span><input id="searchInput" placeholder="Login, role, station…"></div>
     <div class="sep"></div>
     <span class="tb-label">SHOW</span>
@@ -1123,50 +1355,59 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
   <div class="statusbar">
     <span class="sb-l">Showing <b id="sbCount">0</b> records · filter: <b id="sbFilter">P3+P2+P1</b> · <span data-i18n="lbl_updated">Updated</span> <b id="updatedAt">—</b></span>
-    <span class="sb-r" style="display:flex;align-items:center;gap:12px"><span style="font-size:9.5px;font-weight:600;color:var(--text-secondary)">Design: EU13 L&D · Created: Fumanue@</span><span class="ldot"></span> <span data-i18n="lbl_live">Live</span> · <b id="sbFc">BCN4</b></span>
+    <span class="sb-r" style="display:flex;align-items:center;gap:12px"><span id="sbVersion" style="font-size:9.5px;font-weight:600;color:var(--text-secondary);opacity:.85">v—</span><span style="font-size:9.5px;font-weight:600;color:var(--text-secondary)">Design: EU13 L&D · Created: Fumanue@</span><span class="ldot"></span> <span data-i18n="lbl_live">Live</span> · <b id="sbFc">BCN4</b></span>
   </div>
 
 <!-- ═══ PERFORMANCE FLOOR MAP ═══ -->
 <div id="perfMapWrap" style="display:none;padding:12px 16px">
-  <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;overflow:visible">
+  <div style="background:linear-gradient(180deg,var(--bg-panel),var(--bg-card));border:1px solid var(--border);border-radius:14px;overflow:visible;box-shadow:0 12px 28px -16px var(--shadow)">
     <div style="display:flex;gap:4px;padding:10px 14px;border-bottom:1px solid var(--border);align-items:center;flex-wrap:wrap;row-gap:6px">
       <!-- Floor tabs injected dynamically by _buildFloorTabs() -->
       <div class="perf-floor-tabs" style="display:contents"></div>
-      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
-      <!-- Highlight filters -->
-      <button id="mapHlGap"  class="map-hl-btn" data-hl="gap"  title="Highlight Gap only" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1.5px solid #ef4444;background:transparent;color:#ef4444;cursor:pointer;font-weight:700">● Gap</button>
-      <button id="mapHlIdle" class="map-hl-btn" data-hl="idle" title="Highlight Idle only" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1.5px solid #eab308;background:transparent;color:#eab308;cursor:pointer;font-weight:700">● Idle</button>
-      <button id="mapHlGca"  class="map-hl-btn" data-hl="gca"  title="Highlight GCA Pending" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1.5px solid #f59e0b;background:transparent;color:#f59e0b;cursor:pointer;font-weight:700">● GCA</button>
-      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+      <div style="width:1px;height:22px;background:var(--border);margin:0 6px"></div>
+      <!-- Status pills with live counts. Click to highlight that state only. -->
+      <button id="mapHlGap"  class="map-pill map-pill-gap"  data-hl="gap"  title="Highlight stations with Gap"><span class="map-pill-dot"></span><span class="map-pill-lbl">Gap</span><span id="mapCntGap"  class="map-pill-num">0</span></button>
+      <button id="mapHlIdle" class="map-pill map-pill-idle" data-hl="idle" title="Highlight idle stations"><span class="map-pill-dot"></span><span class="map-pill-lbl">Idle</span><span id="mapCntIdle" class="map-pill-num">0</span></button>
+      <button id="mapHlGca"  class="map-pill map-pill-gca"  data-hl="gca"  title="Highlight stations with GCA pending"><span class="map-pill-dot"></span><span class="map-pill-lbl">GCA</span><span id="mapCntGca"  class="map-pill-num">0</span></button>
+      <span class="map-pill map-pill-ok map-pill-readonly" title="Stations performing on/above target"><span class="map-pill-dot"></span><span class="map-pill-lbl">OK</span><span id="mapCntOk" class="map-pill-num">0</span></span>
+      <div style="width:1px;height:22px;background:var(--border);margin:0 6px"></div>
       <!-- Process filters -->
-      <button class="map-proc-btn on" data-proc="ALL" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-strong);background:var(--accent-light);color:var(--accent-text);cursor:pointer;font-weight:700">All</button>
-      <button class="map-proc-btn" data-proc="PICK" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-strong);background:transparent;color:var(--text-secondary);cursor:pointer">Pick</button>
-      <button class="map-proc-btn" data-proc="STOW" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-strong);background:transparent;color:var(--text-secondary);cursor:pointer">Stow</button>
-      <button class="map-proc-btn" data-proc="QS"   style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-strong);background:transparent;color:var(--text-secondary);cursor:pointer">QS</button>
-      <button class="map-proc-btn" data-proc="PACK" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-strong);background:transparent;color:var(--text-secondary);cursor:pointer">Pack</button>
-      <button class="map-proc-btn" data-proc="DEC"  style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-strong);background:transparent;color:var(--text-secondary);cursor:pointer">Decant</button>
-      <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
-      <button id="mapRefreshGca" title="Refresh GCA pending badges" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-strong);background:transparent;color:var(--text-secondary);cursor:pointer">⟳ GCA</button>
+      <button class="map-proc-btn on" data-proc="ALL">All</button>
+      <button class="map-proc-btn" data-proc="PICK">Pick</button>
+      <button class="map-proc-btn" data-proc="STOW">Stow</button>
+      <button class="map-proc-btn" data-proc="QS">QS</button>
+      <button class="map-proc-btn" data-proc="PACK">Pack</button>
+      <button class="map-proc-btn" data-proc="DEC">Decant</button>
       <div style="flex:1"></div>
-      <!-- Live counters -->
-      <div id="mapCounters" style="display:flex;gap:8px;align-items:center;font-size:11px;font-weight:700;margin-right:8px">
-        <span id="mapCntGap"  style="color:#ef4444">Gap: <b>0</b></span>
-        <span id="mapCntIdle" style="color:#eab308">Idle: <b>0</b></span>
-        <span id="mapCntGca"  style="color:#f59e0b">GCA: <b>0</b></span>
-        <span id="mapCntOk"   style="color:#22c55e">OK: <b>0</b></span>
+      <!-- Mini-radar: tiny SVG showing FC station states. Click a region to filter. -->
+      <div class="map-radar" id="mapRadarWrap" title="Mini-map: each dot = one station" data-i18n-title="map_radar_tip">
+        <svg id="mapRadarSvg" width="78" height="44" viewBox="0 0 78 44"></svg>
+        <span class="map-radar-label">FC</span>
       </div>
-      <!-- Legend -->
-      <div style="display:flex;align-items:center;gap:8px;font-size:10px;color:var(--text-secondary)">
-        <span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:3px;background:#ef4444"></span>Gap</span>
-        <span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:3px;background:#8b5cf6"></span>Fast Start</span>
-        <span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:3px;background:#eab308"></span>Idle</span>
-        <span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:3px;background:#22c55e"></span>OK</span>
-        <label style="display:flex;align-items:center;gap:4px;margin-left:4px;cursor:pointer"><input type="checkbox" id="perfShowAll" style="accent-color:var(--accent)"> All</label>
-        <div class="map-view-toggle" style="margin-left:8px">
-          <button id="mapViewGrid" class="active" title="Grid view">⊞</button>
+      <!-- Right-side controls -->
+      <div style="display:flex;align-items:center;gap:8px">
+        <label class="map-zoom" title="Zoom stations" data-i18n-title="map_zoom_tip">
+          <span style="font-size:11px;color:var(--text-secondary);font-weight:600">↔</span>
+          <input id="mapZoom" type="range" min="80" max="160" value="100" step="5">
+          <span id="mapZoomVal" style="font-size:10px;color:var(--text-muted);font-variant-numeric:tabular-nums;min-width:32px;text-align:right">100%</span>
+        </label>
+        <button id="mapRefreshGca" class="map-mini-btn" title="Refresh GCA pending badges">⟳ GCA</button>
+        <label class="map-mini-toggle" title="Show all stations, including empty ones" data-i18n-title="map_show_all_tip"><input type="checkbox" id="perfShowAll"> All</label>
+        <div class="map-view-toggle">
+          <button id="mapViewBoard" class="active" title="Incidents Board (recommended)">⚡</button>
+          <button id="mapViewGrid" title="Grid view">⊞</button>
           <button id="mapViewList" title="List view">☰</button>
         </div>
       </div>
+    </div>
+    <!-- Compact legend below the toolbar -->
+    <div class="map-legend">
+      <span><span class="lg-sw" style="background:linear-gradient(180deg,#fef2f2 0%,#fee2e2 100%);border-color:#dc2626"></span>Gap</span>
+      <span><span class="lg-sw" style="background:linear-gradient(180deg,#fefce8 0%,#fef9c3 100%);border-color:#ca8a04"></span>Idle</span>
+      <span><span class="lg-sw" style="background:linear-gradient(180deg,#faf5ff 0%,#ede9fe 100%);border-color:#7c3aed"></span>Fast Start</span>
+      <span><span class="lg-sw" style="background:linear-gradient(180deg,#f0fdf4 0%,#dcfce7 100%);border-color:#16a34a"></span>On Target</span>
+      <span><span class="lg-sw" style="background:linear-gradient(180deg,#eff6ff 0%,#dbeafe 100%);border-color:#3b82f6"></span>Activa</span>
+      <span><span class="lg-sw" style="background:var(--bg-panel);border-color:var(--border);opacity:.6"></span>Vacía</span>
     </div>
     <!-- Floor containers injected dynamically by _buildFloorTabs() -->
     <div id="perfFloorWrap"></div>
@@ -1226,7 +1467,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <div class="qkpi qkpi-compliance"><div class="qkpi-num" id="qkCompliance">0%</div><div class="qkpi-lbl">Compliance</div></div>
   </div>
 
-  <div class="toolbar">
+  <div class="toolbar toolbar-sticky">
     <div class="tb-search">
       <span style="color:#ccc;font-size:13px">⌕</span>
       <input id="qualitySearchInput" placeholder="Login, error type…">
@@ -1421,9 +1662,16 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 <!-- ═══ GCA COMPLIANCE ═══ -->
 <div class="tab-panel" id="panel-gca">
   <!-- GCA Header -->
-  <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
-    <h2 style="margin:0;font-size:16px;font-weight:700;color:var(--text)">GCA Compliance</h2>
-    <span id="gcaSubtitle" style="font-size:11px;color:var(--text-muted)">Last 7 days</span>
+  <div class="panel-header" style="border-bottom:1px solid var(--border);flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:14px">
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#10b981,#34d399);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px -6px rgba(16,185,129,0.55)">
+        <span style="color:#fff;font-size:16px;font-weight:900">G</span>
+      </div>
+      <div>
+        <div class="panel-title" style="padding:0;font-size:16px">GCA Compliance</div>
+        <div class="panel-sub" id="gcaSubtitle" style="margin-top:2px">Last 7 days</div>
+      </div>
+    </div>
     <div style="flex:1"></div>
     <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary);cursor:pointer">
       <input type="checkbox" id="gcaPresenceToggle" checked style="accent-color:var(--accent)"> Presence filter
@@ -1432,13 +1680,16 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <input type="checkbox" id="gcaAutoRefresh" style="accent-color:var(--green)"> Auto (90m)
     </label>
     <button onclick="if(window._showCoachingPath)window._showCoachingPath()" class="act-btn" style="font-size:11px;padding:7px 14px;background:var(--bg-panel);border:1px solid var(--border)">🧭 Path</button>
+    <button class="act-btn act-secondary" id="btnGcaCsv" style="font-size:11px;padding:7px 14px">↓ CSV</button>
     <button class="act-btn act-primary" id="btnGcaPipeline" style="font-size:11px;padding:7px 14px">▶ Run GCA Pipeline</button>
   </div>
 
   <!-- GCA Progress bar -->
   <div id="gcaProgress" style="display:none;margin:0 16px 8px">
-    <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden"><div id="gcaProgBar" style="height:100%;width:0%;background:var(--accent);transition:width .3s;border-radius:2px"></div></div>
-    <div id="gcaProgMsg" style="font-size:10px;color:var(--text-muted);margin-top:4px"></div>
+    <div style="height:6px;background:var(--border);border-radius:99px;overflow:hidden;position:relative">
+      <div id="gcaProgBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s;border-radius:99px;box-shadow:0 0 12px var(--accent-light)"></div>
+    </div>
+    <div id="gcaProgMsg" style="font-size:10px;color:var(--text-muted);margin-top:4px;font-weight:600"></div>
   </div>
 
   <!-- ═══ GCA INLINE FLOOR MAP (pending only, collapsed by default) ═══ -->
@@ -1698,7 +1949,18 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 <!-- ═══ SHARED MAP TOOLTIP ═══ -->
 <div id="gcaMapTooltip" style="display:none;position:fixed;z-index:9999;background:#1a2736;border:1px solid #2a3a4a;border-radius:12px;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,0.5);max-width:500px;max-height:80vh;overflow-y:auto;font-size:14px;pointer-events:none;color:#e8ecf0"></div>
 
-<script src="/static/app.js?v=v150_priority_mode_20260526" defer></script>
+<!-- MWINIT TOAST: shown while Midway is asking the user to touch the YubiKey -->
+<div class="mwinit-overlay hidden" id="mwinitOverlay"></div>
+<div class="mwinit-toast hidden" id="mwinitToast" role="alertdialog" aria-live="assertive">
+  <div class="mwinit-icon">🔑</div>
+  <div class="mwinit-title" id="mwinitTitle">Toca tu YubiKey</div>
+  <div class="mwinit-desc" id="mwinitDesc">
+    Argos está renovando tu sesión de Midway.<br>
+    Pulsa la <b>YubiKey</b> cuando parpadee para continuar.
+  </div>
+</div>
+
+<script src="/static/app.js?v=v151_midway_pill_20260605" defer></script>
 </body>
 </html>
 

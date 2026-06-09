@@ -26,6 +26,7 @@
     "EUCF_QMCA_ARS_STOW_Low Confidence": {"insight": "Low Confidence", "cat": "IRDR", "owner": "ICQA"},
     "EUCF_QGCA_ARS_STOW_Multiple Events Defects": {"insight": "Nike Multiple Events", "cat": "IRDR", "owner": "ICQA"},
     "EUCF_QMCA_ALL_STOW_Wrong Quantity": {"insight": "QS DPMO", "cat": "IRDR", "owner": "ICQA"},
+    "EUCF_QMCA_ALL_Stow Not Scanned": {"insight": "Scan Out Of Sequence", "cat": "IRDR", "owner": "L&D"},
     "EUCF_QUALITY_GCAM_ARS/TS/TNS_PICK_Amnesty Prevention": {"insight": "APMT", "cat": "IRDR", "owner": "L&D"},
     "EUCF_QUALITY_GCAA_ARS/TS/TNS_STOW_Apollo Audit Bin Etiquette": {"insight": "Bin Filter Violation", "cat": "IRDR", "owner": "L&D"},
     "EUCF_QUALITY_GCAM_ARS/TS/TNS_PICK_Confirmed False Pick Shortage": {"insight": "False pick short", "cat": "IRDR", "owner": "L&D"},

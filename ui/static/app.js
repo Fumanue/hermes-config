@@ -303,6 +303,7 @@ function tf(k, params){
 const API = "";
 let currentFC = localStorage.getItem("argos-default-fc") || "BCN4";
 let currentShift = "";
+let manualTimeMode = false;
 
 // ── Process groups ─────────────────────────────────────────
 const PROCESS_GROUPS = {
@@ -947,6 +948,7 @@ $("fcSelect").addEventListener("change",()=>{
   _updateDefaultFcBtn();
   if(window._reloadMapLayout) window._reloadMapLayout(currentFC);
   loadShifts().then(()=>loadDashboard());
+
 });
 
 $("shiftSelect") && $("shiftSelect").addEventListener("change",()=>{
@@ -954,6 +956,30 @@ $("shiftSelect") && $("shiftSelect").addEventListener("change",()=>{
   _refreshInfoBarDates();
   loadDashboard();
 });
+
+// ── Manual time toggle ──────────────────────────────────
+(function(){
+  const btnMT  = $("btnManualTime");
+  const mtWrap = $("manualTimeWrap");
+  if(!btnMT) return;
+  const shiftWrap = $("shiftWrap");
+  btnMT.addEventListener("click", ()=>{
+    manualTimeMode = !manualTimeMode;
+    // Manual mode: hide shift selector, show time inputs in its place
+    if(mtWrap)     mtWrap.classList.toggle("on", manualTimeMode);
+    if(shiftWrap)  shiftWrap.style.display = manualTimeMode ? "none" : "flex";
+    btnMT.classList.toggle("manual-active", manualTimeMode);
+    btnMT.title = manualTimeMode ? "Modo manual activo — click para volver a turno" : "Modo manual de hora";
+    if(manualTimeMode){
+      const now = new Date();
+      const hh  = String(now.getHours()).padStart(2,"0");
+      const mm  = String(now.getMinutes()).padStart(2,"0");
+      const mS  = $("manualStart"), mE = $("manualEnd");
+      if(mS && !mS.value) mS.value = hh+":"+mm;
+      if(mE && !mE.value) mE.value = hh+":"+mm;
+    }
+  });
+})();
 
 function _updateDefaultFcBtn(){
   const btn=$("btnDefaultFc");
@@ -2988,7 +3014,11 @@ $("btnPipeline").addEventListener("click", async ()=>{
   // Start pipeline via POST → get job_id, then poll status with XHR.
   // Avoids EventSource which corrupts fetch() in pywebview EdgeChromium.
   var startXhr = new XMLHttpRequest();
-  startXhr.open("POST", API+"/api/pipeline/start?fc="+encodeURIComponent(currentFC)+"&shift="+encodeURIComponent(currentShift), true);
+  const _mStart = (manualTimeMode && $("manualStart")) ? $("manualStart").value : "";
+  const _mEnd   = (manualTimeMode && $("manualEnd"))   ? $("manualEnd").value   : "";
+  let _pipeUrl = API+"/api/pipeline/start?fc="+encodeURIComponent(currentFC)+"&shift="+encodeURIComponent(manualTimeMode ? "" : currentShift);
+  if(_mStart && _mEnd) _pipeUrl += "&manual_start="+encodeURIComponent(_mStart)+"&manual_end="+encodeURIComponent(_mEnd);
+  startXhr.open("POST", _pipeUrl, true);
   startXhr.onload = function(){
     if(startXhr.status !== 200){
       btn.disabled = false;
@@ -3945,7 +3975,136 @@ function _cfgInit(){
   _cfgLoadCourses();
   _cfgLoadShifts();
   _cfgLoadStations();
+  _cfgLoadGcaMapping();
 }
+
+// ══════════════════════════════════════════════════════════
+// GCA Mapping editor (legend + pending-to-map)
+// ══════════════════════════════════════════════════════════
+let _cfgGcaFull = null;          // whole gca_legend.json (preserve non-legend keys)
+let _cfgGcaLegend = {};          // title -> {insight, cat, owner}
+let _cfgGcaOwners = ["L&D","Team Lead IB","Team Lead OB","ICQA","Area Manager IB","Area Manager OB"];
+let _cfgGcaCats   = ["Concessions","Reactive","Productivity","IRDR","Shipping"];
+
+async function _cfgLoadGcaMapping(){
+  try{
+    const res = await jget(`${API}/api/admin/config/gca_legend.json`);
+    _cfgGcaFull = res.data || {};
+    _cfgGcaLegend = _cfgGcaFull.legend || {};
+    if(Array.isArray(_cfgGcaFull._owners) && _cfgGcaFull._owners.length) _cfgGcaOwners = _cfgGcaFull._owners;
+    if(Array.isArray(_cfgGcaFull._categories) && _cfgGcaFull._categories.length) _cfgGcaCats = _cfgGcaFull._categories;
+    _cfgRenderGcaLegend();
+  }catch(e){
+    const b=$("cfgGcaLegendBody"); if(b) b.innerHTML = `<div class="cfg-loading" style="color:#e53e3e">Error: ${esc(e.message)}</div>`;
+  }
+  _cfgLoadGcaUnmapped();
+}
+
+async function _cfgLoadGcaUnmapped(){
+  const body = $("cfgGcaUnmappedBody");
+  if(body) body.innerHTML = `<div class="cfg-loading">Loading…</div>`;
+  try{
+    const res = await jget(`${API}/api/admin/gca-unmapped?fc=${encodeURIComponent(currentFC)}`);
+    _cfgRenderGcaUnmapped(res.unmapped || [], res.note || "");
+  }catch(e){
+    if(body) body.innerHTML = `<div class="cfg-loading" style="color:#e53e3e">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+function _ownerOpts(sel){
+  return _cfgGcaOwners.map(o=>`<option value="${esc(o)}" ${o===sel?'selected':''}>${esc(o)}</option>`).join("");
+}
+function _catOpts(sel){
+  return _cfgGcaCats.map(c=>`<option value="${esc(c)}" ${c===sel?'selected':''}>${esc(c)}</option>`).join("");
+}
+
+function _cfgRenderGcaUnmapped(list, note){
+  const body = $("cfgGcaUnmappedBody");
+  if(!body) return;
+  if(!list.length){
+    body.innerHTML = `<div class="cfg-loading" style="color:var(--green)">✓ Todo mapeado${note?` — ${esc(note)}`:""}</div>`;
+    return;
+  }
+  let html = `<div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px">${list.length} título(s) sin mapear del último run en ${esc(currentFC)}. Rellena y pulsa ➕ para añadir al legend.</div>`;
+  html += `<table class="cfg-table"><thead><tr><th>Título (count)</th><th>Insight</th><th>Cat</th><th>Owner</th><th></th></tr></thead><tbody>`;
+  list.forEach((u,idx)=>{
+    html += `<tr data-um="${idx}">
+      <td style="max-width:280px"><div style="font-weight:700;font-size:11px;word-break:break-word">${esc(u.title)}</div><div style="font-size:10px;color:var(--text-secondary)">×${u.count}${u.scenario?` · ${esc(u.scenario)}`:""}</div></td>
+      <td><input type="text" class="cfg-um-insight" data-title="${esc(u.title)}" placeholder="insight" style="width:150px;font-size:11px"></td>
+      <td><select class="cfg-um-cat" data-title="${esc(u.title)}" style="font-size:11px">${_catOpts("Productivity")}</select></td>
+      <td><select class="cfg-um-owner" data-title="${esc(u.title)}" style="font-size:11px">${_ownerOpts("L&D")}</select></td>
+      <td><button class="act-btn act-primary cfg-um-add" data-title="${esc(u.title)}" style="font-size:11px;padding:3px 9px">➕</button></td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  body.innerHTML = html;
+  body.querySelectorAll(".cfg-um-add").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const title = btn.dataset.title;
+      const ins = body.querySelector(`.cfg-um-insight[data-title="${CSS.escape(title)}"]`).value.trim();
+      const cat = body.querySelector(`.cfg-um-cat[data-title="${CSS.escape(title)}"]`).value;
+      const own = body.querySelector(`.cfg-um-owner[data-title="${CSS.escape(title)}"]`).value;
+      if(!ins){ _cfgToast("✗ Pon un insight primero", true); return; }
+      _cfgGcaLegend[title] = {insight: ins, cat: cat, owner: own};
+      _cfgRenderGcaLegend();
+      btn.closest("tr").style.opacity = "0.4";
+      btn.disabled = true; btn.textContent = "✓";
+      _cfgToast("Añadido al legend (recuerda 💾 Save)");
+    });
+  });
+}
+
+function _cfgRenderGcaLegend(){
+  const body = $("cfgGcaLegendBody");
+  if(!body) return;
+  const titles = Object.keys(_cfgGcaLegend).sort();
+  let html = `<div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px">${titles.length} mapeo(s).</div>`;
+  html += `<table class="cfg-table"><thead><tr><th>Título</th><th>Insight</th><th>Cat</th><th>Owner</th><th></th></tr></thead><tbody>`;
+  titles.forEach(t=>{
+    const v = _cfgGcaLegend[t] || {};
+    html += `<tr>
+      <td style="max-width:260px;font-size:10.5px;word-break:break-word;font-weight:600">${esc(t)}</td>
+      <td><input type="text" class="cfg-leg-insight" data-title="${esc(t)}" value="${esc(v.insight||'')}" style="width:150px;font-size:11px"></td>
+      <td><select class="cfg-leg-cat" data-title="${esc(t)}" style="font-size:11px">${_catOpts(v.cat||'Productivity')}</select></td>
+      <td><select class="cfg-leg-owner" data-title="${esc(t)}" style="font-size:11px">${_ownerOpts(v.owner||'L&D')}</select></td>
+      <td><button class="cfg-del-btn cfg-leg-del" data-title="${esc(t)}" title="Eliminar">×</button></td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  body.innerHTML = html;
+  body.querySelectorAll(".cfg-leg-del").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      delete _cfgGcaLegend[btn.dataset.title];
+      _cfgRenderGcaLegend();
+    });
+  });
+}
+
+function _cfgCollectGcaLegend(){
+  // Pull current input values back into _cfgGcaLegend before saving
+  const body = $("cfgGcaLegendBody");
+  if(!body) return;
+  body.querySelectorAll(".cfg-leg-insight").forEach(inp=>{
+    const t = inp.dataset.title;
+    if(!_cfgGcaLegend[t]) return;
+    _cfgGcaLegend[t].insight = inp.value.trim();
+  });
+  body.querySelectorAll(".cfg-leg-cat").forEach(s=>{ if(_cfgGcaLegend[s.dataset.title]) _cfgGcaLegend[s.dataset.title].cat = s.value; });
+  body.querySelectorAll(".cfg-leg-owner").forEach(s=>{ if(_cfgGcaLegend[s.dataset.title]) _cfgGcaLegend[s.dataset.title].owner = s.value; });
+}
+
+$("cfgGcaRefreshUnmapped") && $("cfgGcaRefreshUnmapped").addEventListener("click", _cfgLoadGcaUnmapped);
+
+$("cfgSaveGcaMap") && $("cfgSaveGcaMap").addEventListener("click", async ()=>{
+  _cfgCollectGcaLegend();
+  if(!_cfgGcaFull) _cfgGcaFull = {};
+  _cfgGcaFull.legend = _cfgGcaLegend;
+  try{
+    await jpost(`${API}/api/admin/config/gca_legend.json`, {data: _cfgGcaFull});
+    _cfgToast("✓ GCA mapping guardado");
+    _cfgLoadGcaUnmapped();
+  }catch(e){ _cfgToast("✗ " + e.message, true); }
+});
 
 $("cfgFcFilter") && $("cfgFcFilter").addEventListener("change",()=>{
   if(_cfgTargetsData) _cfgRenderTargets();

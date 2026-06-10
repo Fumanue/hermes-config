@@ -329,6 +329,13 @@ html.theme-transitioning *::after{
 /* SETTINGS */
 .settings-btn{background:none;border:none;font-size:18px;cursor:pointer;padding:2px 4px;line-height:1;opacity:0.7;transition:opacity .2s}
 .settings-btn:hover{opacity:1}
+.settings-btn.manual-active{opacity:1;filter:drop-shadow(0 0 4px var(--accent));color:var(--accent)}
+.t-manual-wrap{display:none;align-items:center;gap:3px}
+.t-manual-wrap.on{display:inline-flex}
+.t-time-input{border:1px solid var(--border-strong);border-radius:12px;padding:4px 6px;font-size:11px;color:var(--text);background:var(--bg-input);cursor:pointer;outline:none;width:74px;font-variant-numeric:tabular-nums;font-family:'Segoe UI',sans-serif}
+.t-time-input::-webkit-calendar-picker-indicator{padding:0;margin:0;opacity:.6;cursor:pointer}
+.t-time-input::-webkit-calendar-picker-indicator:hover{opacity:1}
+.t-time-sep{color:var(--text-secondary);font-size:11px;font-weight:600}
 .settings-popover{position:fixed;top:60px;right:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:9999;min-width:220px}
 .sp-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px}
 .sp-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
@@ -1144,11 +1151,17 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
         <option value="VLC1">VLC1</option>
       </select>
     </div>
-    <div style="display:flex;align-items:center;gap:4px">
+    <div id="shiftWrap" style="display:flex;align-items:center;gap:4px">
       <select id="shiftSelect" class="t-fc-sel" style="min-width:110px">
         <option value="">Auto-detect</option>
       </select>
     </div>
+    <div id="manualTimeWrap" class="t-manual-wrap">
+      <input type="time" id="manualStart" class="t-time-input" title="Hora inicio" />
+      <span class="t-time-sep">→</span>
+      <input type="time" id="manualEnd" class="t-time-input" title="Hora fin" />
+    </div>
+    <button id="btnManualTime" class="settings-btn" title="Modo manual de hora">🕐</button>
     <button class="settings-btn" id="btnSettings" title="Settings">⚙️</button>
   </div>
   </div>
@@ -1791,6 +1804,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <button class="cfg-sidebar-tab" data-cfg-tab="courses"><span class="cfg-tab-icon">🎓</span>Courses</button>
       <button class="cfg-sidebar-tab" data-cfg-tab="shifts"><span class="cfg-tab-icon">🕐</span>Shifts</button>
       <button class="cfg-sidebar-tab" data-cfg-tab="stations"><span class="cfg-tab-icon">📍</span>Stations</button>
+      <button class="cfg-sidebar-tab" data-cfg-tab="gcamap"><span class="cfg-tab-icon">🗺️</span>GCA Mapping</button>
     </div>
 
     <!-- Content area -->
@@ -1863,6 +1877,28 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
             <button class="act-btn act-primary cfg-save" id="cfgSaveStations" style="font-size:11px;padding:4px 12px">💾 Save</button>
           </div>
           <div class="cfg-card-body" id="cfgStationsBody"><div class="cfg-loading">Loading…</div></div>
+        </div>
+      </div>
+
+      <!-- GCA MAPPING -->
+      <div class="cfg-section" id="cfg-section-gcamap">
+        <div class="cfg-section-title">GCA Mapping</div>
+        <div class="cfg-section-sub">Asocia el título de coaching → insight + owner. Los títulos sin mapear del último run de GCA aparecen arriba.</div>
+
+        <div class="cfg-card">
+          <div class="cfg-card-hdr" style="background:rgba(245,158,11,0.14)">
+            <span class="cfg-card-title">⚠ Pendientes por mapear</span>
+            <button class="act-btn act-secondary" id="cfgGcaRefreshUnmapped" style="font-size:11px;padding:4px 12px">↻ Refresh</button>
+          </div>
+          <div class="cfg-card-body" id="cfgGcaUnmappedBody"><div class="cfg-loading">Loading…</div></div>
+        </div>
+
+        <div class="cfg-card">
+          <div class="cfg-card-hdr hdr-courses">
+            <span class="cfg-card-title">Legend actual</span>
+            <button class="act-btn act-primary cfg-save" id="cfgSaveGcaMap" style="font-size:11px;padding:4px 12px">💾 Save</button>
+          </div>
+          <div class="cfg-card-body" id="cfgGcaLegendBody"><div class="cfg-loading">Loading…</div></div>
         </div>
       </div>
 

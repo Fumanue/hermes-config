@@ -219,6 +219,87 @@
   --logo-from:#d4386c;--logo-to:#e8709a;
 }
 
+[data-theme="aws"]{
+  /* AWS — light glass: frosted translucent cards over an airy light canvas
+     with subtle AWS blue + Smile Orange tints. Squid-ink text. */
+  --bg-body:#eef1f5;
+  --bg-topbar:rgba(255,255,255,0.66);
+  --bg-card:rgba(255,255,255,0.60);
+  --bg-panel:rgba(255,255,255,0.45);
+  --bg-input:rgba(255,255,255,0.78);
+  --bg-modal:rgba(255,255,255,0.85);
+  --bg-table-head:rgba(255,255,255,0.55);
+  --border:rgba(35,47,62,0.10);
+  --border-strong:rgba(35,47,62,0.18);
+  --text:#16191f;               /* squid ink */
+  --text-secondary:#5f6b7a;
+  --text-muted:#879596;
+  --text-dim:#aeb7c2;
+  --accent:#ff9900;             /* Smile Orange */
+  --accent2:#ec7211;
+  --accent-light:rgba(255,153,0,0.12);
+  --accent-border:#ffac31;
+  --accent-text:#b85d00;
+  --blue:#146eb4;               /* AWS blue */
+  --blue-light:rgba(20,110,180,0.08);
+  --green:#1d8102;
+  --red:#d13212;
+  --orange:#ec7211;
+  --shadow:rgba(35,47,62,0.10);
+  --row-hover:rgba(255,153,0,0.05);
+  --gradient:linear-gradient(90deg,#232f3e,#ec7211,#ff9900,#ffac31);
+  --tab-active:linear-gradient(135deg,#232f3e,#ec7211);
+  --btn-pipeline:linear-gradient(135deg,#232f3e,#ff9900);
+  --btn-primary:linear-gradient(135deg,#146eb4,#0972d3);
+  --coached-bg:rgba(255,153,0,0.04);
+  --scroll-thumb:rgba(35,47,62,0.20);
+  --logo-from:#232f3e;--logo-to:#ff9900;
+}
+
+/* AWS canvas — layered squid-ink gradient with a warm orange glow at corners.
+   This is what the translucent cards "see" through, giving the glass effect. */
+[data-theme="aws"] body{
+  background:
+    radial-gradient(1200px 800px at 18% -10%, rgba(20,110,180,0.12) 0%, transparent 55%),
+    radial-gradient(1100px 700px at 95% 110%, rgba(255,153,0,0.12) 0%, transparent 55%),
+    linear-gradient(180deg,#f5f7fa 0%,#e9edf2 100%);
+  background-attachment:fixed;
+}
+
+/* AWS glassmorphism — backdrop blur on every card-like surface so the
+   squid-ink + orange glow shows through. Scoped to the AWS theme only. */
+[data-theme="aws"] .topbar,
+[data-theme="aws"] .kpi-tile,
+[data-theme="aws"] .qkpi,
+[data-theme="aws"] .modal,
+[data-theme="aws"] .ms-panel,
+[data-theme="aws"] .settings-popover,
+[data-theme="aws"] .cfg-card,
+[data-theme="aws"] .cfg-sidebar,
+[data-theme="aws"] .cfg-card-hdr,
+[data-theme="aws"] .ib-card,
+[data-theme="aws"] .ib-summary,
+[data-theme="aws"] .map-radar,
+[data-theme="aws"] .qs-popover,
+[data-theme="aws"] .q-dropdown-panel,
+[data-theme="aws"] .targets-table-wrap,
+[data-theme="aws"] .gradient-legend,
+[data-theme="aws"] .faq-item,
+[data-theme="aws"] .faq-feedback-section,
+[data-theme="aws"] .tgt-section,
+[data-theme="aws"] .toolbar,
+[data-theme="aws"] .gca-floor-tab,
+[data-theme="aws"] .fcc-stat,
+[data-theme="aws"] .theme-sw,
+[data-theme="aws"] .t-user,
+[data-theme="aws"] .t-midway,
+[data-theme="aws"] .mwinit-toast,
+[data-theme="aws"] .map-list-zone{
+  backdrop-filter:blur(14px) saturate(150%);
+  -webkit-backdrop-filter:blur(14px) saturate(150%);
+}
+
+
 /* ═══ BASE ═══ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:14px}
@@ -906,7 +987,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .map-radar-label{font-size:10px;color:var(--text-muted);font-weight:600}
 
 /* ═══ Floor Command Center (the empty middle of the AR ring) ═══ */
-.fc-center{flex:1;min-height:240px;padding:14px;display:flex;align-items:stretch;justify-content:center}
+.fc-center{flex:1;min-height:240px;padding:14px;display:flex;align-items:stretch;justify-content:center;position:sticky;top:8px;align-self:flex-start}
 .fcc{width:100%;max-width:680px;display:flex;flex-direction:column;gap:10px}
 .fcc-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
 .fcc-title{font-size:13px;font-weight:800;letter-spacing:.05em;color:var(--text);text-transform:uppercase}
@@ -987,7 +1068,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .sm-row{display:flex;gap:2px;justify-content:center;flex-wrap:wrap;padding:4px 0}
 .sm-middle{display:flex;gap:8px;align-items:stretch;width:100%}
 .sm-col{display:flex;flex-direction:column;gap:1px;align-items:center;padding:2px 0}
-.sm-center{flex:1;display:flex;align-items:center;justify-content:center;min-height:80px}
+.sm-center{flex:1;display:flex;align-items:flex-start;justify-content:center;min-height:80px}
 .sm-station{width:34px;height:42px;border-radius:5px;border:2px solid #d1d5db;background:var(--bg-card);display:inline-flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .15s;gap:2px;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
 .sm-station:hover{transform:scale(1.25);z-index:10;box-shadow:0 6px 18px rgba(0,0,0,0.30)}
 .sm-station .sm-type{font-size:7px;font-weight:600;color:var(--text-muted);text-transform:uppercase;line-height:1}
@@ -1218,6 +1299,10 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
         <span class="theme-sw-preview" style="--p-bg:#fff5f7;--p-card:#fff;--p-acc:#e11d48;--p-acc2:#f43f5e"></span>
         <span class="theme-sw-label">🌸 Cherry</span>
       </button>
+      <button class="theme-sw" id="spThemeAws"      data-val="aws"      title="AWS"      aria-label="AWS">
+        <span class="theme-sw-preview" style="--p-bg:#eef1f5;--p-card:rgba(255,255,255,0.7);--p-acc:#ff9900;--p-acc2:#232f3e"></span>
+        <span class="theme-sw-label">☁️ AWS</span>
+      </button>
     </div>
   </div>
   <div class="sp-row">
@@ -1406,6 +1491,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
         </label>
         <button id="mapRefreshGca" class="map-mini-btn" title="Refresh GCA pending badges">⟳ GCA</button>
         <label class="map-mini-toggle" title="Show all stations, including empty ones" data-i18n-title="map_show_all_tip"><input type="checkbox" id="perfShowAll"> All</label>
+        <label class="map-mini-toggle" title="Include on-target stations to see the full real situation" data-i18n-title="map_show_ontarget_tip"><input type="checkbox" id="perfShowOnTarget"> On-Target</label>
         <div class="map-view-toggle">
           <button id="mapViewBoard" class="active" title="Incidents Board (recommended)">⚡</button>
           <button id="mapViewGrid" title="Grid view">⊞</button>

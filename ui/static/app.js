@@ -73,7 +73,7 @@ const I18N = {
     auth_verifying: "Verificando acceso",
     auth_no_access: "Sin acceso",
     auth_contact: "Contacta a Fumanue@",
-    auth_no_access_block: "No tienes acceso a esta aplicación.<br>Contacta a <b>Fumanue@</b> para solicitar acceso.",
+    auth_no_access_block: 'No perteneces al equipo <a href="https://permissions.amazon.com/a/team/coaching%20intelligence" target="_blank" style="color:var(--accent);text-decoration:underline;font-weight:700">Coaching Intelligence</a>.<br>Solicita acceso a <b>Fumanue@</b>.',
     auth_verify_error: "Error al verificar permisos.<br>Reinicia la app. Si persiste, contacta a <b>Fumanue@</b>.",
     // FC default
     fc_default_now: "FC predeterminado",
@@ -135,6 +135,7 @@ const I18N = {
     map_radar_tip: "Mini-mapa: cada punto = una estación",
     map_zoom_tip: "Zoom estaciones",
     map_show_all_tip: "Mostrar todas las estaciones, incluso vacías",
+    map_show_ontarget_tip: "Incluir estaciones on-target para ver la situación real completa",
   },
   en: {
     subtitle: "Your L&D / Operational One Stop Tool",
@@ -205,7 +206,7 @@ const I18N = {
     auth_verifying: "Verifying access",
     auth_no_access: "No access",
     auth_contact: "Contact Fumanue@",
-    auth_no_access_block: "You do not have access to this application.<br>Contact <b>Fumanue@</b> to request access.",
+    auth_no_access_block: 'You are not a member of the <a href="https://permissions.amazon.com/a/team/coaching%20intelligence" target="_blank" style="color:var(--accent);text-decoration:underline;font-weight:700">Coaching Intelligence</a> team.<br>Request access from <b>Fumanue@</b>.',
     auth_verify_error: "Error verifying permissions.<br>Restart the app. If it persists, contact <b>Fumanue@</b>.",
     // FC default
     fc_default_now: "Default FC",
@@ -267,6 +268,7 @@ const I18N = {
     map_radar_tip: "Mini-map: each dot = one station",
     map_zoom_tip: "Zoom stations",
     map_show_all_tip: "Show all stations, including empty ones",
+    map_show_ontarget_tip: "Include on-target stations to see the full real situation",
   }
 };
 let _lang = localStorage.getItem("argos-lang") || "es";
@@ -1266,10 +1268,11 @@ function prioLabel(sigma){
   return "OK";
 }
 
-function getFiltered(){
+function getFiltered(opts){
+  opts=opts||{};
   let rows=state.all.slice();
-  // Priority filter uses legacy priority ONLY
-  rows=rows.filter(r=>state.prio.has(rowSigmaBucket(r.prio)));
+  // Priority filter uses legacy priority ONLY (skipped when map asks for on-target)
+  if(!opts.ignorePrio) rows=rows.filter(r=>state.prio.has(rowSigmaBucket(r.prio)));
   if(state.coachedOnly) rows=rows.filter(r=>r.coached);
   if(state.hideCoached) rows=rows.filter(r=>!r.coached);
   // Priority mode filter (Sigma >= Mode)
@@ -1350,7 +1353,7 @@ function getFiltered(){
     const pa = Number(a.pct_op2||999), pb = Number(b.pct_op2||999);
     return pa - pb;  // lower % first
   });
-  return{rows:rows.slice(0,state.maxRows),total:rows.length};
+  return{rows: opts.noLimit ? rows : rows.slice(0,state.maxRows), total:rows.length};
 }
 
 function badgeCls(sigma){ return sigma>=3?"p3":sigma===2?"p2":sigma===1?"p1":"ok"; }
@@ -3372,7 +3375,7 @@ if(_spBtn && _spPanel){
   });
 
   // Theme buttons
-  const _themeButtons = ["spThemeLight","spThemeDark","spThemeKokiri","spThemeMidnight","spThemeViolet","spThemeCherry"].map($).filter(Boolean);
+  const _themeButtons = ["spThemeLight","spThemeDark","spThemeKokiri","spThemeMidnight","spThemeViolet","spThemeCherry","spThemeAws"].map($).filter(Boolean);
   function _syncThemeButtons(){
     const cur = document.documentElement.getAttribute("data-theme") || "light";
     _themeButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.val === cur));
@@ -4324,6 +4327,14 @@ document.addEventListener("click",(e)=>{
     if(perfMapVisible) renderPerfMap();
   });
 
+  // On-Target toggle — include at/above-target stations for the real-situation view
+  window._perfShowOnTarget = false;
+  var perfShowOnTargetCb = document.getElementById("perfShowOnTarget");
+  if(perfShowOnTargetCb) perfShowOnTargetCb.addEventListener("change", function(){
+    window._perfShowOnTarget = this.checked;
+    if(perfMapVisible) renderPerfMap();
+  });
+
   // Highlight filter buttons
   document.querySelectorAll(".map-pill[data-hl]").forEach(function(btn){
     btn.addEventListener("click", function(){
@@ -4557,8 +4568,10 @@ document.addEventListener("click",(e)=>{
   function renderPerfMap(){
     if(!state || !state.all || !state.all.length) return;
 
-    // Use filtered rows so map respects active dashboard filters
-    var rows = getFiltered().rows;
+    // Use filtered rows so map respects active dashboard filters.
+    // On-Target toggle: bypass priority bucket + row cap so at/above-target
+    // stations also appear (real-situation view), keeping dimension filters.
+    var rows = getFiltered(window._perfShowOnTarget ? {ignorePrio:true, noLimit:true} : {}).rows;
     // But always include all rows for stations — use state.all so unfiltered associates
     // still appear on the map (greyed out), while filtered ones drive the state color.
     // Actually: use only filtered rows so the map is a true reflection of current view.

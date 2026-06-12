@@ -1,0 +1,13 @@
+# Secrets — NEVER commit. remote_config.json carries the GitHub PAT used by
+# config_updater. It must live only as a local file / env var, never in git.
+remote_config.json
+configs/remote_config.json
+**/remote_config.json
+
+# Generic secret patterns
+*.pat
+*.token
+.env
+.env.*
+*secret*
+*token*.json

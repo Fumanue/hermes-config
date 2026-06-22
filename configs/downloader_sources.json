@@ -2,6 +2,24 @@
   "default_fc": "BCN4",
   "max_workers": 4,
   "min_hours_threshold": 1.0,
+  "_amzl_comment": "AMZL (Delivery Station) sources. AMZL uses ONLY Process Inspector (PPA) + Roster. process_id is PER-SITE in delivery (some DS use 100541 'ADTA Stow', others 100021 'Stow'). amzl_process_by_site overrides amzl_default_process for a given DS code.",
+  "amzl_default_process": "100021",
+  "amzl_process_name": "Stow",
+  "_amzl_common_processes_comment": "Processes pulled for EVERY delivery station in addition to its per-site process. Pick & Stage (100407) is common to all DS.",
+  "amzl_common_processes": ["100407"],
+  "_amzl_process_by_site_comment": "PPA process_id per DS. 100021=Stow, 100541=ADTA Stow. To be managed from the admin panel later; hardcoded here for now. Test sites: DMZ2=stow, DMA4=adta.",
+  "amzl_process_by_site": {
+    "DAS1": "100021",
+    "DMZ2": "100021",
+    "DMA4": "100541"
+  },
+  "amzl_role_key": "DELIVERY",
+  "_amzl_curve_proc_comment": "Maps PPA process_id -> Learning Curve process key in amzl_curves.json (so the rate's process picks the right curve). 100021=Stow, 100541=ADTA Stow, 100407=Pick & Stage (P&S).",
+  "amzl_curve_proc_by_id": {
+    "100021": "stow",
+    "100541": "adta",
+    "100407": "P&S"
+  },
   "fclm_process_ids": [
     "1002969",
     "1002976",

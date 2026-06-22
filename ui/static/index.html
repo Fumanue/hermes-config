@@ -256,6 +256,80 @@
   --logo-from:#232f3e;--logo-to:#ff9900;
 }
 
+[data-theme="amber"]{
+  /* Amber Slate (light) — neutral cool greys, near-white canvas, amber-orange
+     as the single accent. Clean, premium, modern-dashboard look. */
+  --bg-body:#fafafa;
+  --bg-topbar:#ffffff;
+  --bg-card:#ffffff;
+  --bg-panel:#f4f4f5;
+  --bg-input:#ffffff;
+  --bg-modal:#ffffff;
+  --bg-table-head:#f4f4f5;
+  --border:#e4e4e7;
+  --border-strong:#d4d4d8;
+  --text:#18181b;               /* near-black */
+  --text-secondary:#52525b;
+  --text-muted:#71717a;
+  --text-dim:#a1a1aa;
+  --accent:#ea580c;             /* amber-orange */
+  --accent2:#f97316;
+  --accent-light:rgba(234,88,12,0.08);
+  --accent-border:#fdba74;
+  --accent-text:#c2410c;
+  --blue:#2563eb;
+  --blue-light:rgba(37,99,235,0.06);
+  --green:#16a34a;
+  --red:#dc2626;
+  --orange:#ea580c;
+  --shadow:rgba(24,24,27,0.06);
+  --row-hover:rgba(234,88,12,0.025);
+  --gradient:linear-gradient(90deg,#9a3412,#ea580c,#f97316,#fb923c);
+  --tab-active:linear-gradient(135deg,#c2410c,#ea580c);
+  --btn-pipeline:linear-gradient(135deg,#c2410c,#f97316);
+  --btn-primary:linear-gradient(135deg,#27272a,#3f3f46);
+  --coached-bg:rgba(234,88,12,0.03);
+  --scroll-thumb:#d4d4d8;
+  --logo-from:#27272a;--logo-to:#ea580c;
+}
+
+[data-theme="amberdark"]{
+  /* Amber Slate (dark) — soft charcoal canvas with lighter cards and a
+     bright amber accent that pops against the dark neutrals. */
+  --bg-body:#1c1c1f;            /* soft charcoal (lifted from near-black) */
+  --bg-topbar:#242427;
+  --bg-card:#27272a;
+  --bg-panel:#202023;
+  --bg-input:#323237;
+  --bg-modal:#2a2a2e;
+  --bg-table-head:#202023;
+  --border:#3a3a3f;
+  --border-strong:#4a4a50;
+  --text:#fafafa;
+  --text-secondary:#d4d4d8;
+  --text-muted:#a1a1aa;
+  --text-dim:#71717a;
+  --accent:#fb923c;             /* bright amber */
+  --accent2:#fdba74;
+  --accent-light:rgba(251,146,60,0.12);
+  --accent-border:#ea580c;
+  --accent-text:#fdba74;
+  --blue:#60a5fa;
+  --blue-light:rgba(96,165,250,0.10);
+  --green:#34d399;
+  --red:#f87171;
+  --orange:#fb923c;
+  --shadow:rgba(0,0,0,0.40);
+  --row-hover:rgba(251,146,60,0.06);
+  --gradient:linear-gradient(90deg,#9a3412,#ea580c,#f97316,#fb923c);
+  --tab-active:linear-gradient(135deg,#c2410c,#f97316);
+  --btn-pipeline:linear-gradient(135deg,#9a3412,#f97316);
+  --btn-primary:linear-gradient(135deg,#3f3f46,#52525b);
+  --coached-bg:rgba(251,146,60,0.05);
+  --scroll-thumb:#3f3f46;
+  --logo-from:#fb923c;--logo-to:#ea580c;
+}
+
 /* AWS canvas — layered squid-ink gradient with a warm orange glow at corners.
    This is what the translucent cards "see" through, giving the glass effect. */
 [data-theme="aws"] body{
@@ -535,6 +609,44 @@ html.theme-transitioning *::after{
 .tab-panel.active{display:flex}
 .table-wrap{flex:1;overflow-y:auto;overflow-x:auto}
 .main-table{width:100%;border-collapse:collapse;font-size:14px}
+/* AMZL (Delivery Station) view: hide FC-only columns (Station, Notes) and the
+   warehouse station map. Driven by body[data-bl="amzl"]. */
+body[data-bl="amzl"] .bl-fc-only{display:none !important}
+body[data-bl="amzl"] #btnPerfMap,
+body[data-bl="amzl"] #perfMapWrap{display:none !important}
+/* AMZL-only elements: hidden everywhere except the delivery view. Use revert
+   so table cells/headers keep their natural table-cell display, not block. */
+.bl-amzl-only{display:none !important}
+body[data-bl="amzl"] .bl-amzl-only{display:revert !important}
+body[data-bl="amzl"] td.bl-amzl-only,
+body[data-bl="amzl"] th.bl-amzl-only{display:table-cell !important}
+/* Delivery view: far fewer columns + fewer rows than FC, so use the breathing
+   room — bigger photo, roomier rows, larger text — for an easier read. */
+body[data-bl="amzl"] .main-table{font-size:16px}
+body[data-bl="amzl"] .main-table td,
+body[data-bl="amzl"] .main-table th{padding:16px 16px}
+body[data-bl="amzl"] .photo-cell{width:46px;height:46px;border-width:2px}
+body[data-bl="amzl"] .no-photo{font-size:16px}
+body[data-bl="amzl"] .photo-wrap{gap:12px}
+body[data-bl="amzl"] .td-assoc .login-name{font-size:15px}
+body[data-bl="amzl"] .td-assoc .assoc-name{font-size:12px}
+/* Wider Associate column to fit the full name comfortably. */
+body[data-bl="amzl"] .main-table th.th-left:first-child{width:280px}
+body[data-bl="amzl"] .curve-label{font-size:13px}
+/* Associate full name: shown above the login, primary emphasis. */
+/* Associate cell: login is the primary view, full name a smaller subline. */
+.ident{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0}
+.ident-id{display:flex;flex-direction:column;align-items:flex-start;gap:0;min-width:0;max-width:100%}
+.ident-links{display:flex;flex-direction:row;align-items:center;gap:8px}
+.assoc-name{font-weight:400;font-size:11px;color:var(--text-muted,#888);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+/* Header info icon + hover popover (used by the AMZL Target column). */
+.info-ic{position:relative;display:inline-flex;align-items:center;justify-content:center;margin-left:4px;font-size:11px;color:var(--text-muted,#999);cursor:help;font-weight:400}
+.info-ic:hover,.info-ic:focus{color:var(--accent)}
+.info-pop{position:absolute;top:calc(100% + 10px);right:-8px;width:260px;padding:10px 12px;background:var(--bg-card,#27272a);color:var(--text,#eee);border:1px solid var(--border,#3a3a3a);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:11px;font-weight:400;line-height:1.5;text-align:left;white-space:normal;text-transform:none;letter-spacing:normal;z-index:50;opacity:0;visibility:hidden;transition:opacity .12s,visibility .12s;pointer-events:none}
+.info-ic:hover .info-pop,.info-ic:focus .info-pop{opacity:1;visibility:visible}
+.info-pop code{display:inline-block;margin:3px 0;padding:2px 6px;background:var(--accent-light,rgba(251,146,60,.15));border-radius:4px;font-size:11px;color:var(--accent,#fb923c)}
+.info-pop .ip-muted{color:var(--text-muted,#999);font-size:10px}
+.info-pop::after{content:"";position:absolute;bottom:100%;right:12px;border:6px solid transparent;border-bottom-color:var(--border,#3a3a3a)}
 .main-table thead{position:sticky;top:0;z-index:2}
 .main-table th{position:relative;user-select:none}
 .col-resizer{position:absolute;top:0;right:-2px;width:5px;height:100%;cursor:col-resize;z-index:5;opacity:0;transition:opacity .15s}
@@ -649,6 +761,13 @@ html.theme-transitioning *::after{
 .quality-table tr:hover td{background:var(--row-hover)}
 
 /* MODALS */
+/* High Defects rows in the GCA table — red left border + tint so the trainer
+   spots them at a glance. */
+#gcaTbody tr.gca-high-defects{background:rgba(220,38,38,0.06);box-shadow:inset 3px 0 0 var(--red)}
+#gcaTbody tr.gca-high-defects:hover{background:rgba(220,38,38,0.10)}
+.gca-hd-badge{display:inline-block;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:6px;letter-spacing:.3px;vertical-align:middle}
+#hdList .hd-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px}
+#hdList .hd-row:last-child{border-bottom:none}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
 .modal-overlay.show{display:flex}
 .modal{background:var(--bg-modal);border:1px solid var(--border);border-radius:16px;width:500px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px var(--shadow)}
@@ -1011,6 +1130,9 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .fcc-proc-pct{font-size:10.5px;font-weight:700;font-variant-numeric:tabular-nums}
 .fcc-proc-pct.bad {color:#dc2626} .fcc-proc-pct.warn{color:#ca8a04} .fcc-proc-pct.ok  {color:#16a34a}
 .fcc-proc-foot{font-size:9.5px;color:var(--text-muted);margin-top:2px;display:flex;justify-content:space-between;gap:6px}
+.fcc-proc-click{cursor:pointer;transition:transform .1s,box-shadow .1s,border-color .1s}
+.fcc-proc-click:hover{transform:translateY(-2px);box-shadow:0 8px 18px -10px var(--shadow);border-color:var(--accent)}
+.fcc-proc-active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
 
 .fcc-pin{margin-top:auto;padding:10px 12px;border-radius:8px;border:1.5px dashed var(--border-strong);background:var(--bg-panel);min-height:96px;display:flex;flex-direction:column;gap:6px;position:relative}
 .fcc-pin.empty{border-style:dashed;align-items:center;justify-content:center;color:var(--text-muted);font-size:11.5px;text-align:center}
@@ -1041,6 +1163,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .map-pill .map-pill-num{background:rgba(0,0,0,0.05);padding:1px 7px;border-radius:9px;font-variant-numeric:tabular-nums;color:var(--text);min-width:22px;text-align:center}
 .map-pill-gap  .map-pill-dot{background:#dc2626}
 .map-pill-idle .map-pill-dot{background:#ca8a04}
+.map-pill-fs   .map-pill-dot{background:#7c3aed}
 .map-pill-gca  .map-pill-dot{background:#f59e0b}
 .map-pill-ok   .map-pill-dot{background:#16a34a}
 .map-pill-gap.active  {border-color:#dc2626;color:#991b1b;background:rgba(220,38,38,0.10)}
@@ -1135,7 +1258,9 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .path-summary{background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px 14px;margin-top:12px;font-size:11px;color:var(--green)}
 .sm-station.on-path{border-color:var(--accent)!important;background:rgba(59,130,246,0.15)!important;box-shadow:0 0 8px rgba(59,130,246,0.4)}
 .sm-row.sm-p2r{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;padding:6px 0;border-top:1px dashed rgba(59,130,246,0.2)}
-.sm-p2r-station{width:24px!important;height:30px!important;border-radius:3px;opacity:0.85}
+.sm-p2r-station{width:42px!important;height:34px!important;border-radius:4px;opacity:0.9}
+.sm-p2r-station .sm-num{font-size:11px;font-weight:800}
+.sm-p2r-station .sm-type{font-size:7px}
 
 /* v111 Visual improvements */
 @keyframes smPulse{0%,100%{box-shadow:0 0 2px currentColor}50%{box-shadow:0 0 6px currentColor}}
@@ -1157,6 +1282,96 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .path-dist{color:var(--text-muted);font-size:10px;margin-left:auto}
 .path-summary{background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px 14px;margin-top:12px;font-size:11px;color:var(--green)}
 .sm-station.on-path{border-color:var(--accent)!important;background:rgba(59,130,246,0.15)!important;box-shadow:0 0 8px rgba(59,130,246,0.4)}
+
+/* ── Adoption modal (super admin / DDD) ── */
+.adopt-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;display:flex;align-items:center;justify-content:center;padding:24px}
+.adopt-modal{background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;width:min(940px,96vw);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.4)}
+.adopt-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border)}
+.adopt-title{font-size:16px;font-weight:800;color:var(--text)}
+.adopt-controls{display:flex;align-items:center;gap:10px}
+.adopt-sel{background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer}
+.adopt-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer}
+.adopt-x{background:transparent;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:4px 8px;border-radius:6px}
+.adopt-x:hover{background:var(--bg);color:var(--text)}
+.adopt-body{padding:18px;overflow-y:auto}
+.adopt-empty{padding:40px;text-align:center;color:var(--text-muted);font-size:14px}
+.ad-meta{font-size:12px;color:var(--text-muted);margin-bottom:14px}
+.ad-meta b{color:var(--text)}
+.ad-ldnote{margin-left:8px;background:var(--accent-light);color:var(--accent-text);border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700}
+.ad-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.ad-kpi{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.ad-num{font-size:24px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px}
+.ad-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted)}
+.ad-d{font-size:13px;font-weight:800}.ad-d.up{color:var(--green,#16a34a)}.ad-d.dn{color:#dc2626}
+.ad-sec{margin-bottom:18px}
+.ad-h{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:10px}
+.ad-legend{display:flex;gap:16px;margin-bottom:8px;font-size:11px;font-weight:700}
+.ad-legend .lg-u{color:var(--accent,#7c3aed)}
+.ad-legend .lg-e{color:#16a34a}
+.ad-chart{display:flex;align-items:flex-end;gap:10px;padding:6px 0 0;border-bottom:1px solid var(--border)}
+.ad-col{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;min-width:0}
+.ac-pair{display:flex;align-items:flex-end;gap:3px}
+.ac-stk{display:flex;flex-direction:column;align-items:center;gap:2px}
+.ad-bar{width:16px;border-radius:4px 4px 0 0}
+.ad-bar-u{background:var(--accent,#7c3aed)}
+.ad-bar-e{background:#16a34a}
+.ad-v{font-size:10px;font-weight:800;color:var(--text)}
+.ad-v-e{color:#16a34a}
+.ad-l{font-size:9px;color:var(--text-muted);font-family:monospace}
+.ad-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.ad-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.ad-tbl th{text-align:left;color:var(--text-muted);font-weight:700;padding:4px 6px;border-bottom:1px solid var(--border)}
+.ad-tbl td{padding:4px 6px;border-bottom:1px solid var(--border);color:var(--text)}
+.ad-fb{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:7px}
+.ad-fb-meta{font-size:10px;color:var(--text-muted);margin-bottom:3px}
+.ad-fb-meta b{color:var(--text)}
+.ad-fb-ver{background:var(--accent-light);color:var(--accent-text);border-radius:4px;padding:1px 6px;font-weight:700;margin-left:4px}
+.ad-fb-txt{font-size:12px;color:var(--text)}
+.ad-kpi-hero{background:linear-gradient(135deg,var(--accent,#7c3aed),#9d6bea);border:none}
+.ad-kpi-hero .ad-num,.ad-kpi-hero .ad-lbl{color:#fff}
+.ad-grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:18px}
+.ad-areas{display:flex;flex-direction:column;gap:10px}
+.ad-area-top{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px}
+.ad-area-bar{position:relative;height:10px;background:var(--bg);border:1px solid var(--border);border-radius:999px;overflow:hidden}
+.ad-area-ghost{position:absolute;top:0;left:0;height:100%;background:var(--accent,#7c3aed);opacity:.25;border-radius:999px}
+.ad-area-fill{position:absolute;top:0;left:0;height:100%;background:var(--accent,#7c3aed);border-radius:999px}
+.ad-area-all{font-weight:600;color:var(--text-muted);font-size:10px}
+.ad-area-sub{font-size:10px;color:var(--text-muted);margin-top:2px}
+.ad-podium{display:flex;flex-direction:column;gap:8px}
+.ad-pod{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px 12px}
+.ad-pod-1{border-color:#f5c518;box-shadow:0 0 0 1px #f5c51855}
+.ad-pod-m{font-size:22px}
+.ad-pod-u{font-weight:800;color:var(--text)}
+.ad-pod-meta{font-size:10px;color:var(--text-muted);flex:1}
+.ad-pod-ev{font-weight:800;color:var(--accent,#7c3aed);font-size:13px}
+.ad-chips{display:flex;flex-wrap:wrap;gap:6px}
+.ad-chip{background:#fee2e2;color:#b91c1c;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;font-family:monospace}
+.ad-ok{color:#16a34a;font-weight:700;font-size:13px}
+@media(max-width:680px){.ad-kpis{grid-template-columns:1fr 1fr}.ad-grid,.ad-grid2{grid-template-columns:1fr}}
+
+/* PPR rate KPIs (centre of map) */
+.ppr-rates{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:14px;border-bottom:1px solid var(--border)}
+.ppr-loading{padding:10px;color:var(--text-muted);font-size:12px;text-align:center;width:100%}
+.ppr-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:14px 18px;min-width:260px;box-shadow:0 8px 20px -14px var(--shadow)}
+.ppr-main{display:flex;align-items:center;gap:14px}
+.ppr-rate{font-size:38px;font-weight:800;line-height:1;color:var(--accent,#7c3aed);font-variant-numeric:tabular-nums}
+.ppr-rate small{font-size:13px;font-weight:700;color:var(--text-muted);margin-left:3px}
+.ppr-lbl{font-size:13px;font-weight:800;color:var(--text)}
+.ppr-vol{font-size:10.5px;color:var(--text-muted);margin-top:2px}
+.ppr-subs{display:flex;flex-direction:column;gap:5px;margin-top:12px;padding-top:10px;border-top:1px dashed var(--border)}
+.ppr-sub{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.ppr-sub-lbl{font-size:11.5px;color:var(--text-secondary);font-weight:600}
+.ppr-sub-rate{font-size:15px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+.ppr-sub-rate small{font-size:10px;font-weight:600;color:var(--text-muted);margin-left:2px}
+/* PPR vs OP2 + clickable */
+.ppr-vs{margin-top:4px;font-size:11px;font-weight:800}
+.ppr-vs small{font-weight:600;color:var(--text-muted)}
+.ppr-vs.ppr-ok{color:#16a34a}
+.ppr-vs.ppr-warn{color:#ca8a04}
+.ppr-vs.ppr-bad{color:#dc2626}
+.ppr-clickable{cursor:pointer;transition:transform .1s,box-shadow .1s,border-color .1s}
+.ppr-clickable:hover{transform:translateY(-2px);box-shadow:0 12px 26px -12px var(--shadow);border-color:var(--accent,#7c3aed)}
+.ppr-card-active{border-color:var(--accent,#7c3aed);box-shadow:0 0 0 2px var(--accent,#7c3aed) inset}
 </style>
 </head>
 <body>
@@ -1238,10 +1453,11 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       </select>
     </div>
     <div id="manualTimeWrap" class="t-manual-wrap">
-      <input type="time" id="manualStart" class="t-time-input" title="Hora inicio" />
+      <input type="datetime-local" id="manualStart" class="t-time-input" title="Fecha/hora inicio" />
       <span class="t-time-sep">→</span>
-      <input type="time" id="manualEnd" class="t-time-input" title="Hora fin" />
+      <input type="datetime-local" id="manualEnd" class="t-time-input" title="Fecha/hora fin" />
     </div>
+    <button id="btnDeliveryMode" class="settings-btn" title="Modo Delivery (AMZL)">🚚</button>
     <button id="btnManualTime" class="settings-btn" title="Modo manual de hora">🕐</button>
     <button class="settings-btn" id="btnSettings" title="Settings">⚙️</button>
   </div>
@@ -1303,6 +1519,14 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
         <span class="theme-sw-preview" style="--p-bg:#eef1f5;--p-card:rgba(255,255,255,0.7);--p-acc:#ff9900;--p-acc2:#232f3e"></span>
         <span class="theme-sw-label">☁️ AWS</span>
       </button>
+      <button class="theme-sw" id="spThemeAmber"    data-val="amber"    title="Amber Slate" aria-label="Amber Slate">
+        <span class="theme-sw-preview" style="--p-bg:#fafafa;--p-card:#fff;--p-acc:#ea580c;--p-acc2:#18181b"></span>
+        <span class="theme-sw-label">🔶 Amber</span>
+      </button>
+      <button class="theme-sw" id="spThemeAmberDark" data-val="amberdark" title="Amber Slate Dark" aria-label="Amber Slate Dark">
+        <span class="theme-sw-preview" style="--p-bg:#1c1c1f;--p-card:#27272a;--p-acc:#fb923c;--p-acc2:#fafafa"></span>
+        <span class="theme-sw-label">🌑 Amber Dark</span>
+      </button>
     </div>
   </div>
   <div class="sp-row">
@@ -1311,21 +1535,6 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <button class="sp-opt" id="spLangEs" data-val="es">🇪🇸 ES</button>
       <button class="sp-opt" id="spLangEn" data-val="en">🇬🇧 EN</button>
     </div>
-  </div>
-  <div class="sp-row">
-    <span class="sp-label">FC Default</span>
-    <select class="sp-select" id="spDefaultFc">
-      <option value="BCN1">BCN1</option>
-      <option value="BCN4">BCN4</option>
-      <option value="MAD4">MAD4</option>
-      <option value="MAD6">MAD6</option>
-      <option value="MAD7">MAD7</option>
-      <option value="MAD9">MAD9</option>
-      <option value="OVD1">OVD1</option>
-      <option value="RMU1">RMU1</option>
-      <option value="SVQ1">SVQ1</option>
-      <option value="VLC1">VLC1</option>
-    </select>
   </div>
   <div class="sp-row">
     <span class="sp-label">Densidad</span>
@@ -1425,6 +1634,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <button class="act-btn act-pipeline" id="btnPipeline" data-i18n="btn_run_pipeline">▶ Run Pipeline</button>
     <button class="act-btn act-csv" id="btnDownloadCSV">↓ CSV</button>
     <button class="act-btn" id="btnPerfMap" style="display:none;background:var(--accent-light);color:var(--accent-text);border:1px solid var(--accent-border)">🗺️ Map</button>
+    <button class="act-btn" id="btnAdoption" style="display:none;background:var(--accent-light);color:var(--accent-text);border:1px solid var(--accent-border)" title="Super admin: Argos adoption (DDD)">📊 Adoption</button>
     <button onclick="if(window._showCoachingPath)window._showCoachingPath()" class="act-btn" style="font-size:11px;padding:7px 14px;background:var(--bg-panel);border:1px solid var(--border)">🧭 Path</button>
 
     <div class="tb-count">Showing <b id="rowCount">0</b> of <b id="totalCount">0</b></div>
@@ -1434,14 +1644,24 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <thead>
         <tr>
           <th class="th-left" style="width:260px" data-i18n="th_associate">Associate</th>
-          <th data-k="dept"    style="width:60px" data-i18n="th_dept">Dept</th>
-          <th data-k="cohort"  style="width:90px" data-i18n="th_cohort">Cohort</th>
+          <th data-k="dept"    class="bl-fc-only" style="width:60px" data-i18n="th_dept">Dept</th>
+          <th data-k="cohort"  class="bl-fc-only" style="width:90px" data-i18n="th_cohort">Cohort</th>
+          <th data-k="lc"      class="bl-amzl-only" style="width:110px">Learning Curve</th>
           <th data-k="role"    style="width:150px" data-i18n="th_role">Role</th>
-          <th data-k="station" style="width:135px" data-i18n="th_station">Station</th>
+          <th data-k="station" class="bl-fc-only" style="width:135px" data-i18n="th_station">Station</th>
           <th data-k="sigma"   style="width:68px" data-i18n="th_prio">Prio</th>
           <th data-k="rate"    style="width:80px" data-i18n="th_rate">Rate</th>
+          <th data-k="target"  class="bl-amzl-only" style="width:95px">
+            Target<span class="info-ic" tabindex="0">ⓘ<span class="info-pop">
+              <b>Objetivo individual</b><br>
+              <code>AVG Vet Rate × LC Multiplier</code><br>
+              <span class="ip-muted">El AVG Vet Rate es el rate medio de los veteranos en turno; el LC Multiplier es el % esperado de su curva de aprendizaje.</span><br>
+              <b>Ejemplo:</b> AVG Vet 300 × LC4 (0,95) = <b>285</b>
+            </span></span>
+          </th>
           <th data-k="pct"     style="width:90px" data-i18n="th_pct_target">% to Target</th>
-          <th class="th-left" style="width:430px" data-i18n="th_notes">Notes</th>
+          <th class="th-left bl-fc-only" style="width:430px" data-i18n="th_notes">Notes</th>
+          <th class="bl-amzl-only" style="width:140px">Idle</th>
           <th style="width:78px" data-i18n="th_coached">Coached</th>
           <th style="width:95px" data-i18n="th_action">Action</th>
         </tr>
@@ -1466,6 +1686,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <!-- Status pills with live counts. Click to highlight that state only. -->
       <button id="mapHlGap"  class="map-pill map-pill-gap"  data-hl="gap"  title="Highlight stations with Gap"><span class="map-pill-dot"></span><span class="map-pill-lbl">Gap</span><span id="mapCntGap"  class="map-pill-num">0</span></button>
       <button id="mapHlIdle" class="map-pill map-pill-idle" data-hl="idle" title="Highlight idle stations"><span class="map-pill-dot"></span><span class="map-pill-lbl">Idle</span><span id="mapCntIdle" class="map-pill-num">0</span></button>
+      <button id="mapHlFs"   class="map-pill map-pill-fs"   data-hl="faststart" title="Highlight Fast Start stations"><span class="map-pill-dot"></span><span class="map-pill-lbl">Fast Start</span><span id="mapCntFs" class="map-pill-num">0</span></button>
       <button id="mapHlGca"  class="map-pill map-pill-gca"  data-hl="gca"  title="Highlight stations with GCA pending"><span class="map-pill-dot"></span><span class="map-pill-lbl">GCA</span><span id="mapCntGca"  class="map-pill-num">0</span></button>
       <span class="map-pill map-pill-ok map-pill-readonly" title="Stations performing on/above target"><span class="map-pill-dot"></span><span class="map-pill-lbl">OK</span><span id="mapCntOk" class="map-pill-num">0</span></span>
       <div style="width:1px;height:22px;background:var(--border);margin:0 6px"></div>
@@ -1508,6 +1729,8 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <span><span class="lg-sw" style="background:linear-gradient(180deg,#eff6ff 0%,#dbeafe 100%);border-color:#3b82f6"></span>Activa</span>
       <span><span class="lg-sw" style="background:var(--bg-panel);border-color:var(--border);opacity:.6"></span>Vacía</span>
     </div>
+    <!-- PPR rate KPIs (centre of map), filled by loadPprRates() -->
+    <div id="pprRates" class="ppr-rates"></div>
     <!-- Floor containers injected dynamically by _buildFloorTabs() -->
     <div id="perfFloorWrap"></div>
   </div>
@@ -1667,6 +1890,18 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       </div>
 
       <div class="faq-section" id="faqAccordion">
+        <div class="faq-item bl-amzl-only">
+          <button class="faq-q">Delivery Station (AMZL) — how does this view work?</button>
+          <div class="faq-a">
+            <p><b>English:</b></p>
+            <p>For Delivery Stations the workflow is simplified — there is <b>no station map and no process</b>. Argos pulls productivity (UPH) per associate from <b>PPA (Process Inspector)</b> for the time range you choose, compares it to the tenure-adjusted target to get <b>% to Target</b>, and lets you upload coaching just like in FC. The <b>Coached</b> column shows who already has a completed Guided Coaching instance.</p>
+            <p>Pick the date/time range with the 🕐 manual button (delivery uses an explicit date+time range, not a shift).</p>
+            <hr style="margin:12px 0;border-color:var(--border)">
+            <p><b>Español:</b></p>
+            <p>Para Delivery Stations el flujo es simplificado — <b>no hay mapa ni estación ni proceso</b>. Argos saca la productividad (UPH) por asociado de <b>PPA (Process Inspector)</b> para el rango que elijas, la compara con el target ajustado por tenure para obtener el <b>% to Target</b>, y permite subir coaching igual que en FC. La columna <b>Coached</b> indica quién ya tiene un Guided Coaching completado.</p>
+            <p>Elige el rango con el botón 🕐 manual (delivery usa un rango fecha+hora explícito, no un turno).</p>
+          </div>
+        </div>
         <div class="faq-item">
           <button class="faq-q" data-i18n="faq_q1">How are Target Errors calculated?</button>
           <div class="faq-a" id="faqA1" data-i18n-html="faq_a1"></div>
@@ -2001,6 +2236,26 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
+<!-- ═══ MODAL: High Defects alert ═══ -->
+<div class="modal-overlay" id="modalHighDefects">
+  <div class="modal" style="width:560px">
+    <div class="modal-header" style="background:linear-gradient(135deg,#dc2626,#ea580c);color:#fff">
+      <span class="modal-title" style="color:#fff;display:flex;align-items:center;gap:8px">⚠️ High Defects — acción requerida</span>
+      <button class="modal-close" data-close="modalHighDefects" style="color:#fff">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text);margin-bottom:10px">
+        Hay <b id="hdCount" style="color:var(--red)">0</b> coaching(s) de tipo
+        <b style="color:var(--red)">HIGH_DEFECTS</b> pendientes. Estos deben <b>cerrarse</b> — revisa con el asociado y completa la instancia en GCA.
+      </p>
+      <div id="hdList" style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="act-btn act-secondary" data-close="modalHighDefects">Entendido</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ MODAL: Upload ═══ -->
 <div class="modal-overlay" id="modalUpload">
   <div class="modal">
@@ -2082,7 +2337,27 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
-<script src="/static/app.js?v=v151_midway_pill_20260605" defer></script>
+<!-- ADOPTION MODAL (super admin only — DDD projection) -->
+<div class="adopt-overlay" id="adoptionModal" style="display:none">
+  <div class="adopt-modal">
+    <div class="adopt-head">
+      <span class="adopt-title">📊 Argos Adoption</span>
+      <div class="adopt-controls">
+        <select id="adoptFC" class="adopt-sel" title="FC scope"></select>
+        <label class="adopt-toggle" title="Show only the current ISO week (daily DDD view)">
+          <input type="checkbox" id="adoptWk"/> <span>Only this wk</span>
+        </label>
+        <label class="adopt-toggle" title="Include Learning &amp; Development / trainers">
+          <input type="checkbox" id="adoptLD"/> <span>Include L&amp;D</span>
+        </label>
+        <button class="adopt-x" onclick="closeAdoption()">✕</button>
+      </div>
+    </div>
+    <div class="adopt-body" id="adoptionBody"></div>
+  </div>
+</div>
+
+<script src="/static/app.js?v=v163_amzl_nodept_compact_20260616" defer></script>
 </body>
 </html>
 

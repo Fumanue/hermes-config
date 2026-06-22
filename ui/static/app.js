@@ -48,6 +48,7 @@ const I18N = {
     // Update banner / installer
     upd_available: "Hay una versión nueva disponible:",
     upd_yours: "tu versión:",
+    upd_note: "Actualizar a esta nueva versión — problema de Midway (login) solucionado.",
     upd_apply: "Actualizar ahora",
     upd_downloading: "Descargando Setup…",
     upd_launching: "Lanzando instalador, la app se cerrará…",
@@ -75,10 +76,6 @@ const I18N = {
     auth_contact: "Contacta a Fumanue@",
     auth_no_access_block: 'No perteneces al equipo <a href="https://permissions.amazon.com/a/team/coaching%20intelligence" target="_blank" style="color:var(--accent);text-decoration:underline;font-weight:700">Coaching Intelligence</a>.<br>Solicita acceso a <b>Fumanue@</b>.',
     auth_verify_error: "Error al verificar permisos.<br>Reinicia la app. Si persiste, contacta a <b>Fumanue@</b>.",
-    // FC default
-    fc_default_now: "FC predeterminado",
-    fc_set_default: "Establecer como predeterminado",
-    fc_default_set: "✅ {fc} establecido como FC predeterminado",
     // Empty states
     empty_no_records: "No hay registros que coincidan con el filtro",
     empty_no_data_fc: "Sin datos para este FC",
@@ -181,6 +178,7 @@ const I18N = {
     // Update banner / installer
     upd_available: "A new version is available:",
     upd_yours: "your version:",
+    upd_note: "Update to this new version — Midway (login) issue fixed.",
     upd_apply: "Update now",
     upd_downloading: "Downloading Setup…",
     upd_launching: "Launching installer, the app will close…",
@@ -208,10 +206,6 @@ const I18N = {
     auth_contact: "Contact Fumanue@",
     auth_no_access_block: 'You are not a member of the <a href="https://permissions.amazon.com/a/team/coaching%20intelligence" target="_blank" style="color:var(--accent);text-decoration:underline;font-weight:700">Coaching Intelligence</a> team.<br>Request access from <b>Fumanue@</b>.',
     auth_verify_error: "Error verifying permissions.<br>Restart the app. If it persists, contact <b>Fumanue@</b>.",
-    // FC default
-    fc_default_now: "Default FC",
-    fc_set_default: "Set as default",
-    fc_default_set: "✅ {fc} set as default FC",
     // Empty states
     empty_no_records: "No records match the filter",
     empty_no_data_fc: "No data for this FC",
@@ -458,6 +452,12 @@ function abbrevStation(s){
 // ── Normalise dashboard rows ───────────────────────────────
 function norm(r){
   const login      = String(r.login??r.Login??"").trim();
+  // Roster gives names as "Apellido,Nombre" — flip to "Nombre Apellido" for display.
+  let name         = String(r.name??r.EmployeeName??"").trim();
+  if(name.includes(",")){
+    const [last, first] = name.split(",").map(s=>s.trim());
+    if(first && last) name = `${first} ${last}`;
+  }
   const dept       = String(r.dept??r.Dept??"").trim()||"—";
   const cohort     = String(r.cohort??r.Cohort??"").trim();
   let nhFlag       = String(r.nh_flag??r.NH_Flag??"").trim();
@@ -485,6 +485,9 @@ function norm(r){
   const rate       = r.rate!=null?Number(r.rate):NaN;
   const pctRaw     = r.pct_op2??r["% to Target"]??null;
   const pct        = pctRaw==null?NaN:parseFloat(String(pctRaw).replace("%",""));
+  // AMZL only: per-associate target (Vet_AVG × curve Factor) and the site Vet baseline.
+  const target     = (r.target!=null && r.target!=="") ? Number(r.target) : NaN;
+  const vetAvg     = (r.vet_avg!=null && r.vet_avg!=="") ? Number(r.vet_avg) : NaN;
 
   // Priority thresholds: P3:<80 | P2:80-90 | P1:90-100 | OK:>=100
   let prio = 0;
@@ -516,8 +519,10 @@ function norm(r){
 
   // Pre-compute the lowercased search blob ONCE per row so the search
   // filter doesn't .toLowerCase() every cell on every keystroke.
-  const _search = (login+" "+role+" "+station+" "+dept+" "+cohort+" "+nhFlag).toLowerCase();
-  return{login,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,notes,rate,pct,course_id,employee_id,transcript_url,photo_url,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,_search};
+  const _search = (login+" "+name+" "+role+" "+station+" "+dept+" "+cohort+" "+nhFlag).toLowerCase();
+  const idle_pct = (r.idle_pct!=null && r.idle_pct!=="") ? Number(r.idle_pct) : null;
+  const idle_min = (r.idle_min!=null && r.idle_min!=="") ? Number(r.idle_min) : null;
+  return{login,name,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,notes,rate,pct,target,vetAvg,course_id,employee_id,transcript_url,photo_url,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,idle_pct,idle_min,_search};
 }
 
 // Build the notes string to upload (rate + pct + comments)
@@ -655,7 +660,7 @@ async function checkForUpdate(){
       "box-shadow:0 2px 8px rgba(0,0,0,.4)",
     ].join(";");
     banner.innerHTML = `
-      <span>${t("upd_available")} <b>v${v.latest}</b> (${t("upd_yours")} v${v.current}).</span>
+      <span>${t("upd_available")} <b>v${v.latest}</b> (${t("upd_yours")} v${v.current}). ${t("upd_note")}</span>
       <button id="updateBannerApply" style="background:#1a1a1a;border:1px solid rgba(0,0,0,.4);color:#fef3c7;padding:5px 14px;border-radius:4px;cursor:pointer;font-weight:600">${t("upd_apply")}</button>
       <span id="updateBannerStatus" style="opacity:.9;font-weight:500"></span>
       <button id="updateBannerClose" style="background:rgba(0,0,0,.15);border:1px solid rgba(0,0,0,.25);color:#1a1a1a;padding:3px 10px;border-radius:4px;cursor:pointer;font-weight:600">&times;</button>
@@ -815,6 +820,52 @@ function midwayPollFast(durationMs){
 pollMidwayOnce();
 startMidwayPoll("slow");
 
+// ── Business line (AMZL Delivery Station vs FC) ─────────────────────────
+// AMZL sites use a simplified Performance+FAQ view: no station column, no
+// station map, no warehouse process filters. The view follows the SELECTED
+// site (so an admin previewing a DS also gets the delivery view).
+function siteBL(fc){
+  const code = String(fc||"").toUpperCase();
+  return (window._amzlSites || []).includes(code) ? "AMZL" : "FC";
+}
+
+function _addAmzlOptionsTo(sel, sites){
+  if(!sel || !sites || !sites.length) return;
+  const have = new Set(Array.from(sel.options).map(o=>o.value.toUpperCase()));
+  let grp = sel.querySelector('optgroup[label="Delivery (AMZL)"]');
+  if(!grp){
+    grp = document.createElement("optgroup");
+    grp.label = "Delivery (AMZL)";
+    sel.appendChild(grp);
+  }
+  sites.forEach(code=>{
+    if(have.has(code)) return;
+    const o = document.createElement("option");
+    o.value = code; o.textContent = code;
+    grp.appendChild(o);
+  });
+}
+
+function _populateAmzlSites(sites){
+  // Topbar selector gets the DS list (the settings default-FC dropdown is gone —
+  // the FC chosen up top is the default now).
+  _addAmzlOptionsTo($("fcSelect"), sites);
+}
+
+// Toggle the AMZL view based on the currently selected site. Drives CSS via
+// body[data-bl] and force-hides the station map.
+function _applySiteBL(){
+  const bl = siteBL(currentFC);
+  document.body.setAttribute("data-bl", bl.toLowerCase());
+  if(bl === "AMZL"){
+    if(window._hidePerfMap) window._hidePerfMap();
+    const mapBtn = $("btnPerfMap"); if(mapBtn) mapBtn.style.display = "none";
+  } else if(window._isAdmin){
+    const mapBtn = $("btnPerfMap"); if(mapBtn) mapBtn.style.display = "";
+  }
+}
+window._applySiteBL = _applySiteBL;
+
 async function loadUserInfo(){
   const dot  = $("userDot");
   const name = $("userName");
@@ -832,6 +883,19 @@ async function loadUserInfo(){
     role.textContent = "";
     dot.className = "t-user-dot";
     window._userLogin = u.login || "";
+    // Business line (cached path) — never let a BL error hang the spinner.
+    try{
+      window._amzlSites    = (d.amzl_sites || []).map(s=>String(s).toUpperCase());
+      window._businessLine = String(d.business_line || "FC").toUpperCase();
+      _populateAmzlSites(window._amzlSites);
+      if(window._businessLine === "AMZL" && window._amzlSites.length &&
+         !window._amzlSites.includes(String(currentFC).toUpperCase())){
+        currentFC = window._amzlSites[0];
+        const sel = $("fcSelect"); if(sel) sel.value = currentFC;
+        $("sbFc") && ($("sbFc").textContent = currentFC);
+      }
+      _applySiteBL();
+    }catch(blErr){ console.error("BL apply (cached) failed:", blErr); }
     if(d.permissions) _applyPermissions(d.permissions);
     // Restore admin state from cache
     if(d.admin && d.admin.is_admin){
@@ -840,6 +904,7 @@ async function loadUserInfo(){
       if($("tabQuality")) $("tabQuality").style.display = "";
       if($("tabGca")) $("tabGca").style.display = "";
       if($("btnPerfMap")) $("btnPerfMap").style.display = "";
+      if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "inline-flex";
       if($("tabConfig")) $("tabConfig").style.display = "";
     }
@@ -862,6 +927,24 @@ async function loadUserInfo(){
     window._userLogin = login;
     $("userPill").title = login;
 
+    // Business line: AMZL (Delivery Station) vs FC. amzl_sites lets the UI
+    // decide per-selected-site which view to show; business_line is the user's
+    // own line (drives default site for delivery trainers). Wrapped so a BL
+    // error can never hang the login spinner.
+    try{
+      window._amzlSites    = (d.amzl_sites || []).map(s=>String(s).toUpperCase());
+      window._businessLine = String(d.business_line || "FC").toUpperCase();
+      _populateAmzlSites(window._amzlSites);
+      // Delivery trainers: if their saved site is an FC, jump to their first DS.
+      if(window._businessLine === "AMZL" && window._amzlSites.length &&
+         !window._amzlSites.includes(String(currentFC).toUpperCase())){
+        currentFC = window._amzlSites[0];
+        const sel = $("fcSelect"); if(sel) sel.value = currentFC;
+        $("sbFc") && ($("sbFc").textContent = currentFC);
+      }
+      _applySiteBL();
+    }catch(blErr){ console.error("BL apply (live) failed:", blErr); }
+
     // Apply tab/feature permissions from server
     if(d.permissions) _applyPermissions(d.permissions);
 
@@ -881,6 +964,7 @@ async function loadUserInfo(){
       if($("tabQuality")) $("tabQuality").style.display = "";
       if($("tabGca")) $("tabGca").style.display = "";
       if($("btnPerfMap")) $("btnPerfMap").style.display = "";
+      if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
     } else {
       // Non-admin: ensure beta features stay hidden
       if($("tabQuality")) $("tabQuality").style.display = "none";
@@ -947,7 +1031,8 @@ $("fcSelect").addEventListener("change",()=>{
   $("sbFc").textContent=currentFC;
   $("ul-fc").value=currentFC;
   $("bulk-fc").value=currentFC;
-  _updateDefaultFcBtn();
+  _persistDefaultFc(currentFC);   // the FC chosen up top becomes the default
+  if(window._applySiteBL) window._applySiteBL();
   if(window._reloadMapLayout) window._reloadMapLayout(currentFC);
   loadShifts().then(()=>loadDashboard());
 
@@ -973,30 +1058,67 @@ $("shiftSelect") && $("shiftSelect").addEventListener("change",()=>{
     btnMT.classList.toggle("manual-active", manualTimeMode);
     btnMT.title = manualTimeMode ? "Modo manual activo — click para volver a turno" : "Modo manual de hora";
     if(manualTimeMode){
+      // datetime-local needs YYYY-MM-DDTHH:MM (local time, not UTC).
       const now = new Date();
-      const hh  = String(now.getHours()).padStart(2,"0");
-      const mm  = String(now.getMinutes()).padStart(2,"0");
+      const pad = n => String(n).padStart(2,"0");
+      const local = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
       const mS  = $("manualStart"), mE = $("manualEnd");
-      if(mS && !mS.value) mS.value = hh+":"+mm;
-      if(mE && !mE.value) mE.value = hh+":"+mm;
+      if(mS && !mS.value) mS.value = local;
+      if(mE && !mE.value) mE.value = local;
     }
   });
 })();
 
-function _updateDefaultFcBtn(){
-  const btn=$("btnDefaultFc");
+// ── Delivery (AMZL) mode toggle ─────────────────────────
+// Explicit button: jumps to a Delivery Station (switching the dashboard to the
+// AMZL view) and back to the last FC. Delivery always needs a manual range, so
+// it also turns manual time mode on.
+(function(){
+  const btn = $("btnDeliveryMode");
   if(!btn) return;
-  const saved=localStorage.getItem("argos-default-fc")||"BCN4";
-  btn.title = currentFC===saved ? t("fc_default_now") : t("fc_set_default");
-  btn.textContent = currentFC===saved ? "★" : "☆";
+  let _lastFcSite = null;  // remember the FC to return to
+  btn.addEventListener("click", ()=>{
+    const sites = window._amzlSites || [];
+    if(!sites.length){ console.warn("No delivery stations available"); return; }
+    const inDelivery = siteBL(currentFC) === "AMZL";
+    if(!inDelivery){
+      _lastFcSite = currentFC;
+      // Jump to the first DS (or the saved default if it's a DS).
+      const target = sites.includes(String(currentFC).toUpperCase()) ? currentFC : sites[0];
+      _switchSite(target);
+      if(!manualTimeMode && $("btnManualTime")) $("btnManualTime").click();  // delivery uses a manual range
+    }else{
+      _switchSite(_lastFcSite || localStorage.getItem("argos-default-fc") || "BCN4");
+    }
+    btn.classList.toggle("manual-active", siteBL(currentFC)==="AMZL");
+  });
+})();
+
+// Switch the selected site programmatically (mirrors the fcSelect change path).
+function _switchSite(code){
+  if(!code) return;
+  currentFC = code;
+  currentShift = "";
+  const sel = $("fcSelect"); if(sel) sel.value = code;
+  $("sbFc") && ($("sbFc").textContent = code);
+  $("ul-fc") && ($("ul-fc").value = code);
+  $("bulk-fc") && ($("bulk-fc").value = code);
+  // Persist only FC sites as the default — the Delivery (AMZL) jump is a
+  // temporary view, not the user's home FC.
+  if(siteBL(code) !== "AMZL") _persistDefaultFc(code);
+  if(window._applySiteBL) window._applySiteBL();
+  if(window._reloadMapLayout) window._reloadMapLayout(code);
+  loadShifts().then(()=>loadDashboard());
 }
 
-$("btnDefaultFc") && $("btnDefaultFc").addEventListener("click",()=>{
-  localStorage.setItem("argos-default-fc", currentFC);
-  jpost(`${API}/api/prefs`, {default_fc: currentFC}).catch(()=>{});
-  _updateDefaultFcBtn();
-  showToast && showToast(tf("fc_default_set", {fc: currentFC}));
-});
+// The FC selected in the topbar IS the default — persisted silently to both
+// localStorage (instant next-launch) and prefs (server-side). No settings
+// dropdown, no star button: one source of truth, less to confuse the user.
+function _persistDefaultFc(code){
+  if(!code) return;
+  localStorage.setItem("argos-default-fc", code);
+  jpost(`${API}/api/prefs`, {default_fc: code}).catch(()=>{});
+}
 
 async function loadShifts(){
   const sel=$("shiftSelect");
@@ -1383,6 +1505,12 @@ function renderTable(){
       ?`<span class="td-rate">${Math.round(r.rate)}</span>`
       :`<span style="color:#ddd">—</span>`;
 
+    // Target (AMZL only) — Vet_AVG × Factor, the rate expected of THIS associate.
+    // Tooltip shows the site veteran average it derives from.
+    const targetCell=Number.isFinite(r.target)
+      ?`<span class="td-target" title="AVG Vet Rate del turno: ${Number.isFinite(r.vetAvg)?Math.round(r.vetAvg):'—'}">${Math.round(r.target)}</span>`
+      :`<span style="color:#ddd">—</span>`;
+
     // % to Target — colour coded, no label
     let pctCell=`<span style="color:#ddd">—</span>`;
     if(Number.isFinite(r.pct)){
@@ -1474,25 +1602,44 @@ function renderTable(){
             ${r.is_priority?'<span class="prio-badge" title="Priority (Sigma ≥ Mode)">⚡</span>':""}
           </div>
           <div class="ident">
-            <span class="login-name">${esc(r.login||"—")}</span>
-            <a class="fclm-link" href="https://fclm-portal.amazon.com/employee/timeDetails?warehouseId=${encodeURIComponent(currentFC)}&employeeId=${encodeURIComponent(r.employee_id||"")}" target="_blank" rel="noopener">📋 FCLM</a>
-            <a class="fclm-link" href="${esc(r.transcript_url)}" target="_blank" rel="noopener">📝 GCA</a>
+            <div class="ident-id">
+              <span class="login-name">${esc(r.login||"—")}</span>
+              ${r.name?`<span class="assoc-name">${esc(r.name)}</span>`:""}
+            </div>
+            <div class="ident-links">
+              <a class="fclm-link" href="${(siteBL(currentFC)==="AMZL"
+                  ?`https://fclm-portal.amazon.com/employee/ppaTimeDetails?warehouseId=${encodeURIComponent(currentFC)}&employeeId=${encodeURIComponent(r.employee_id||"")}`
+                  :`https://fclm-portal.amazon.com/employee/timeDetails?warehouseId=${encodeURIComponent(currentFC)}&employeeId=${encodeURIComponent(r.employee_id||"")}`)}" target="_blank" rel="noopener">📋 FCLM</a>
+              <a class="fclm-link" href="${esc(r.transcript_url)}" target="_blank" rel="noopener">📝 GCA</a>
+            </div>
           </div>
         </div>
       </td>
-      <td><span class="td-dept">${esc(r.dept)}</span></td>
-      <td><span class="td-dept">${esc(r.cohort||"—")}</span>${(()=>{
+      <td class="bl-fc-only"><span class="td-dept">${esc(r.dept)}</span></td>
+      <td class="bl-fc-only"><span class="td-dept">${esc(r.cohort||"—")}</span>${(()=>{
         if(r.curve==="VETERAN") return '<div class="curve-label curve-vet">VET</div>';
         if(r.curve==="XT") return `<div class="curve-label curve-xt">XT T${r.tenure_wk}${r.homeProcess?' ('+esc(r.homeProcess)+')':''}</div>`;
         if(r.curve==="NH"&&r.tenure_wk) return `<div class="curve-label curve-nh">NH T${r.tenure_wk}</div>`;
         return r.nhFlag?`<div class="curve-label curve-nh">${esc(r.nhFlag)}</div>`:'';
       })()}</td>
+      <td class="bl-amzl-only">${(()=>{
+        const lc = esc(r.nhFlag||"LC1");
+        const cls = (r.curve==="VETERAN") ? "curve-vet" : "curve-nh";
+        return `<div class="curve-label ${cls}">${lc}</div>`;
+      })()}</td>
       <td><span class="role-badge">${esc(r.role)}</span></td>
-      <td title="${esc(r.stationRaw||r.station)}"><span class="td-station">${esc(r.station)}</span></td>
+      <td class="bl-fc-only" title="${esc(r.stationRaw||r.station)}"><span class="td-station">${esc(r.station)}</span></td>
       <td><span class="pr ${pr}">${esc(prLbl)}</span></td>
       <td>${rateCell}</td>
+      <td class="bl-amzl-only">${targetCell}</td>
       <td>${pctCell}</td>
-      <td class="td-notes">${notesHtml}</td>
+      <td class="td-notes bl-fc-only">${notesHtml}</td>
+      <td class="bl-amzl-only">${(()=>{
+        if(r.idle_pct==null) return '<span class="notes-empty">—</span>';
+        const m = (r.idle_min!=null) ? ` · ${Math.round(r.idle_min)} min` : "";
+        const warn = r.idle_pct>=20 ? ' style="color:var(--red,#e53e3e);font-weight:700"' : "";
+        return `<span${warn}>${r.idle_pct.toFixed(1)}%${m}</span>`;
+      })()}</td>
       <td>${r.coached?`<span class="coached-chk"><span class="chk-circle">✓</span></span>`:""}</td>
       <td><button class="row-btn" data-upload-login="${esc(r.login)}">↑ Upload</button></td>
     </tr>`;
@@ -1581,6 +1728,7 @@ function renderAll(){
   buildSubprocessOptions();
   renderTable();
   if(window._renderPerfMap) window._renderPerfMap();
+  if(window._loadPprRates) window._loadPprRates();
 }
 
 // ── Download CSV ───────────────────────────────────────────
@@ -2645,9 +2793,18 @@ async function _initApp(){
   // Load persisted prefs from server (survives pywebview localStorage resets)
   let prefs = {default_fc:"BCN4", theme:"light", lang:"es"};
   try{ prefs = await jget(`${API}/api/prefs`); }catch(_){}
-  const saved = prefs.default_fc || localStorage.getItem("argos-default-fc") || "BCN4";
+  const defaultFc = prefs.default_fc || localStorage.getItem("argos-default-fc") || "BCN4";
+  // After a Run Pipeline we reload the page. Stay on the FC the user just ran
+  // (it was stashed in argos_pipeline_done), instead of snapping back to the
+  // saved default. Only honor a recent stamp (last 5 min).
+  let saved = defaultFc;
+  try{
+    const done = JSON.parse(localStorage.getItem("argos_pipeline_done") || "null");
+    if(done && done.fc && (Date.now() - (done.at||0) < 5*60*1000)) saved = done.fc;
+  }catch(_){}
   currentFC=saved;
-  localStorage.setItem("argos-default-fc", saved);
+  // Persist the default only — do NOT overwrite it with the post-pipeline FC.
+  localStorage.setItem("argos-default-fc", defaultFc);
   if(prefs.theme) { document.documentElement.setAttribute("data-theme", prefs.theme); localStorage.setItem("argos-theme", prefs.theme); }
   if(prefs.lang) { _lang = prefs.lang; localStorage.setItem("argos-lang", prefs.lang); }
   const sel=$("fcSelect");
@@ -2655,7 +2812,8 @@ async function _initApp(){
   const sbFc=$("sbFc"); if(sbFc) sbFc.textContent=currentFC;
   const ulFc=$("ul-fc"); if(ulFc) ulFc.value=currentFC;
   const bkFc=$("bulk-fc"); if(bkFc) bkFc.value=currentFC;
-  _updateDefaultFcBtn();
+  // Apply the AMZL/FC view for the restored site (hide map/station for a DS).
+  if(window._applySiteBL) window._applySiteBL();
   await loadShifts();
 }
 
@@ -3375,7 +3533,7 @@ if(_spBtn && _spPanel){
   });
 
   // Theme buttons
-  const _themeButtons = ["spThemeLight","spThemeDark","spThemeKokiri","spThemeMidnight","spThemeViolet","spThemeCherry","spThemeAws"].map($).filter(Boolean);
+  const _themeButtons = ["spThemeLight","spThemeDark","spThemeKokiri","spThemeMidnight","spThemeViolet","spThemeCherry","spThemeAws","spThemeAmber","spThemeAmberDark"].map($).filter(Boolean);
   function _syncThemeButtons(){
     const cur = document.documentElement.getAttribute("data-theme") || "light";
     _themeButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.val === cur));
@@ -3475,15 +3633,8 @@ if(_spBtn && _spPanel){
     });
   }
 
-  // Default FC
-  const _spFc = $("spDefaultFc");
-  if(_spFc){
-    _spFc.value = localStorage.getItem("argos-default-fc") || "BCN4";
-    _spFc.addEventListener("change", () => {
-      localStorage.setItem("argos-default-fc", _spFc.value);
-      jpost(`${API}/api/prefs`, {default_fc: _spFc.value}).catch(()=>{});
-    });
-  }
+  // Default FC is no longer set here — the FC chosen in the topbar is the
+  // default (persisted by _persistDefaultFc). No dropdown to keep in sync.
 }
 
 function _applyI18n(){
@@ -4312,12 +4463,91 @@ document.addEventListener("click",(e)=>{
   // Toggle map
   const btnMap = $("btnPerfMap");
   if(btnMap) btnMap.addEventListener("click",()=>{
+    // Delivery (AMZL) has no station map — never open it for DS sites.
+    if(typeof siteBL === "function" && siteBL(currentFC) === "AMZL") return;
     perfMapVisible = !perfMapVisible;
     const wrap = $("perfMapWrap");
     if(wrap) wrap.style.display = perfMapVisible ? "" : "none";
     btnMap.textContent = perfMapVisible ? "🗺️ Hide" : "🗺️ Map";
-    if(perfMapVisible) renderPerfMap();
+    if(perfMapVisible){ renderPerfMap(); loadPprRates(); }
   });
+
+  // Allow other code to force-close the map (e.g. when switching to a DS site).
+  window._hidePerfMap = function(){
+    perfMapVisible = false;
+    const wrap = $("perfMapWrap");
+    if(wrap) wrap.style.display = "none";
+    if(btnMap) btnMap.textContent = "🗺️ Map";
+  };
+
+  // PPR rate KPIs (centre of map): real (FCLM) vs OP2 daily target.
+  // Cards are shown for the ACTIVE floor only and clicking one filters the map
+  // to that process. Config-driven (/api/ppr-rates).
+  let _pprData = null;
+  async function loadPprRates(){
+    const box=$("pprRates"); if(!box) return;
+    box.innerHTML=`<div class="ppr-loading">Loading rates…</div>`;
+    try{
+      const r=await fetch(`${API}/api/ppr-rates?fc=${encodeURIComponent(currentFC||"BCN4")}`);
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      _pprData = await r.json();
+      renderPprRates();
+      // Grid view embeds these KPIs in the Floor Command Center, so re-render
+      // the map once OP2 data lands.
+      if(perfMapVisible && _mapView === "grid" && window._renderPerfMap) window._renderPerfMap();
+    }catch(e){ box.innerHTML=`<div class="ppr-loading" style="color:#dc2626">✗ ${esc(e.message)}</div>`; }
+  }
+  function renderPprRates(){
+    const box=$("pprRates"); if(!box || !_pprData) return;
+    const floor = perfActiveFloor || "p2";
+    // The Floor Command Center (which embeds these KPIs) only exists on AR-ring
+    // floors (P2/P3). In grid view on those floors we hide the top panel to
+    // avoid duplicates; on floors WITHOUT an FCC (P1 Pack) we keep it up top.
+    var floorDef = (window._getFloors ? window._getFloors() : []).find(function(f){ return f.id === floor; });
+    var hasFcc = floorDef && floorDef.type === "ar_ring";
+    if(_mapView === "grid" && hasFcc){ box.style.display="none"; box.innerHTML=""; return; }
+    box.style.display="";
+    let procs=(_pprData.processes||[]).filter(p=>p.found);
+    // Show only the processes that live on the active floor (P2/P3 vs P1).
+    procs = procs.filter(p => !Array.isArray(p.floors) || !p.floors.length || p.floors.indexOf(floor) !== -1);
+    if(!procs.length){ box.innerHTML=`<div class="ppr-loading">No PPR data for this floor — run the pipeline.</div>`; return; }
+    const activeProc = window._perfMapProc || "ALL";
+    box.innerHTML = procs.map(p=>{
+      const subs=(p.subs||[]).map(s=>
+        `<div class="ppr-sub"><span class="ppr-sub-lbl">${esc(s.label)}</span><span class="ppr-sub-rate">${s.rate!=null?s.rate:"—"}<small>uph</small></span></div>`
+      ).join("");
+      // vs OP2: green if >=100%, amber 90-100, red <90
+      let pctHtml="";
+      if(p.pct_op2!=null){
+        const cls = p.pct_op2>=100 ? "ppr-ok" : p.pct_op2>=90 ? "ppr-warn" : "ppr-bad";
+        pctHtml = `<div class="ppr-vs ${cls}">${p.pct_op2}% to OP2 <small>(target ${p.op2})</small></div>`;
+      } else if(p.op2!=null){
+        pctHtml = `<div class="ppr-vs">OP2 ${p.op2}</div>`;
+      }
+      const on = (p.proc_filter && p.proc_filter===activeProc) ? " ppr-card-active" : "";
+      return `<div class="ppr-card ppr-clickable${on}" data-proc="${esc(p.proc_filter||"ALL")}" title="Click to filter the map to ${esc(p.label)}">
+        <div class="ppr-main">
+          <div class="ppr-rate">${p.rate!=null?p.rate:"—"}<small>uph</small></div>
+          <div class="ppr-meta"><div class="ppr-lbl">${esc(p.label)}</div><div class="ppr-vol">${(p.units||0).toLocaleString()} units · ${p.hours} h · ${p.people} ppl</div>${pctHtml}</div>
+        </div>
+        ${subs?`<div class="ppr-subs">${subs}</div>`:""}
+      </div>`;
+    }).join("");
+    // Click a card → drive the existing map process filter buttons.
+    box.querySelectorAll(".ppr-clickable").forEach(card=>{
+      card.addEventListener("click", ()=>{
+        const proc = card.getAttribute("data-proc") || "ALL";
+        const already = window._perfMapProc === proc;
+        const target = already ? "ALL" : proc;
+        const btn = document.querySelector('.map-proc-btn[data-proc="'+target+'"]');
+        if(btn){ btn.click(); }            // reuse existing filter wiring
+        else { window._perfMapProc = target; if(window._renderPerfMap) window._renderPerfMap(); }
+        renderPprRates();                   // refresh active highlight
+      });
+    });
+  }
+  window._loadPprRates = loadPprRates;
+  window._renderPprRates = renderPprRates;
 
   // Show All toggle
   window._perfShowAll = false;
@@ -4478,6 +4708,7 @@ document.addEventListener("click",(e)=>{
         var el = document.getElementById("perfFloor_"+perfActiveFloor);
         if(el) el.style.display = "";
         renderPerfMap();
+        if(window._renderPprRates) window._renderPprRates();  // floor changed → swap PPR cards
       });
     });
 
@@ -4550,9 +4781,17 @@ document.addEventListener("click",(e)=>{
     // P1: SINGLES — "wsSINGLES_03_08" or "SINGLES-03-
     m = s.match(/SINGLES[_-](\d+)[_-](\d+)/i);
     if(m) return {floor:"p1", type:"singles", id:parseInt(m[1]), pos:parseInt(m[2])};
-    // P2R — "P2R2-216-01" → P2 top row (PTR area). num = 2100 + (muro-202)*2 + pos
+    // P2R — "wsPickToRebin2_216_01" (P2) or "wsPickToRebin3_316_02" (P3).
+    // The muro is numbered per floor: P2 = 2xx (202..220), P3 = 3xx (302..320).
+    // Normalise the muro to its 2xx base before computing the slot so both
+    // floors map into the same 50.. offset and render in the P2R row (not as a
+    // plain station). num = floor*1000 + 50 + (muroBase-202)*2 + pos.
     m = s.match(/(?:P2R|PickToRebin)(\d+)[_-](\d+)[_-](\d+)/);
-    if(m){ var fl=parseInt(m[1]); var muro=parseInt(m[2]); var pos2=parseInt(m[3]); return {floor:fl>=3?"p3":"p2", num: fl*1000+50+(muro-202)*2+pos2}; }
+    if(m){
+      var fl=parseInt(m[1]); var muro=parseInt(m[2]); var pos2=parseInt(m[3]);
+      var muroBase = muro % 100 + 200;            // 302 -> 202, 216 -> 216
+      return {floor: fl>=3?"p3":"p2", num: fl*1000+50+(muroBase-202)*2+pos2};
+    }
     // P1: Sobres — "ws1102" or "1102" (11xx=line1, 12xx=line2)
     m = s.match(/^(?:ws)?(1[12]\d{2})$/);
     if(m){ const n=parseInt(m[1]); const line=Math.floor(n/100)-10; return {floor:"p1", type:"sobres", id:line, pos:n%100}; }
@@ -4605,16 +4844,18 @@ document.addEventListener("click",(e)=>{
     });
 
     // Live counters
-    var cntGap=0, cntIdle=0, cntGca=0, cntOk=0, cntBelow=0;
+    var cntGap=0, cntIdle=0, cntGca=0, cntOk=0, cntBelow=0, cntFs=0;
     Object.values(stationData).forEach(function(sd){
       if(sd.state === "gap") cntGap++;
       else if(sd.state === "below") cntBelow++;
       else if(sd.state === "idle") cntIdle++;
+      else if(sd.state === "faststart") cntFs++;
       else if(sd.state === "ontarget" || sd.state === "normal") cntOk++;
       if(sd.rows.some(function(r){ return gcaPending.has((r.login||"").toLowerCase()); })) cntGca++;
     });
     var cg=$("mapCntGap"); if(cg) cg.textContent = cntGap;
     var ci=$("mapCntIdle"); if(ci) ci.textContent = cntIdle;
+    var cfs=$("mapCntFs"); if(cfs) cfs.textContent = cntFs;
     var cc=$("mapCntGca"); if(cc) cc.textContent = cntGca;
     var co=$("mapCntOk"); if(co) co.textContent = (cntOk + cntBelow);
 
@@ -4764,6 +5005,7 @@ document.addEventListener("click",(e)=>{
           var gcaPend = window._gcaPendingLogins || new Set();
           var matches = (hl==="gap" && data.state==="gap")
                      || (hl==="idle" && data.state==="idle")
+                     || (hl==="faststart" && data.state==="faststart")
                      || (hl==="gca" && data.rows.some(function(r){ return gcaPend.has((r.login||"").toLowerCase()); }));
           if(!matches) div.style.opacity = "0.12";
         }
@@ -4853,9 +5095,10 @@ document.addEventListener("click",(e)=>{
         var p2rSt = document.createElement('div');
         p2rSt.className = 'sm-station sm-p2r-station ' + p2rCls;
         var p2rBadge = p2rData ? modeBadge(p2rData) : '';
-        p2rSt.innerHTML = p2rBadge + '<span class="sm-type">P2R</span><span class="sm-num">' + muro + '-' + pos + '</span>';
+        var muroShort = muro % 100;  // 216 -> 16, 220 -> 20 (drop the floor digit)
+        p2rSt.innerHTML = p2rBadge + '<span class="sm-type">P2R</span><span class="sm-num">' + muroShort + '-' + pos + '</span>';
         if(p2rData){
-          var lbl = 'P2R ' + muro + '-' + pos;
+          var lbl = 'P2R ' + muroShort + '-' + pos;
           var proc2=window._perfMapProc||"ALL";
           if(proc2!=="ALL"){
             var pm2={PICK:["PICK_AR","P2R_PICK"],STOW:["STOW","QUANTITY_STOW"],QS:["QUANTITY_STOW"],PACK:["SM","SM1","SMMIX","SM2","AFE_PACK","P2R_PACK","SNS1","SNS2","SINGLES","WS_SLAM","WS_VDF"],DEC:["DECANT"]};
@@ -4864,7 +5107,7 @@ document.addEventListener("click",(e)=>{
           }
           if(window._perfMapHighlight){
             var hl2=window._perfMapHighlight; var gcaP2=window._gcaPendingLogins||new Set();
-            var m2=(hl2==="gap"&&p2rData.state==="gap")||(hl2==="idle"&&p2rData.state==="idle")||(hl2==="gca"&&p2rData.rows.some(function(r){return gcaP2.has((r.login||"").toLowerCase());}));
+            var m2=(hl2==="gap"&&p2rData.state==="gap")||(hl2==="idle"&&p2rData.state==="idle")||(hl2==="faststart"&&p2rData.state==="faststart")||(hl2==="gca"&&p2rData.rows.some(function(r){return gcaP2.has((r.login||"").toLowerCase());}));
             if(!m2) p2rSt.style.opacity="0.12";
           }
           p2rSt.style.cursor="pointer";
@@ -5043,7 +5286,7 @@ document.addEventListener("click",(e)=>{
     _mapView = v;
     try{ localStorage.setItem("argos_map_view", v); }catch(_){}
     _syncMapViewBtns();
-    if(perfMapVisible) renderPerfMap();
+    if(perfMapVisible){ renderPerfMap(); if(window._renderPprRates) window._renderPprRates(); }
   }
   _syncMapViewBtns();
   if(_mapViewBoardBtn) _mapViewBoardBtn.addEventListener("click", function(){ _setMapView("board"); });
@@ -5101,7 +5344,7 @@ document.addEventListener("click",(e)=>{
       if(!z || !z.rows.length) return;
 
       // Apply highlight filter at zone level — dim if no match
-      var hlMatch = !hl || (hl==="gap"&&z.gap>0)||(hl==="idle"&&z.idle>0)||(hl==="gca"&&z.gca>0);
+      var hlMatch = !hl || (hl==="gap"&&z.gap>0)||(hl==="idle"&&z.idle>0)||(hl==="faststart"&&z.fs>0)||(hl==="gca"&&z.gca>0);
 
       var zoneDiv = document.createElement("div");
       zoneDiv.className = "map-list-zone";
@@ -5218,6 +5461,7 @@ document.addEventListener("click",(e)=>{
       items = items.filter(function(it){
         if(hl === "gap")  return it.state === "gap" || it.state === "below";
         if(hl === "idle") return it.state === "idle";
+        if(hl === "faststart") return it.state === "faststart";
         if(hl === "gca")  return it.hasGca;
         return true;
       });
@@ -5414,24 +5658,33 @@ document.addEventListener("click",(e)=>{
         + '<div class="fcc-stat ok"><div class="fcc-stat-val">'+okCount+'</div><div class="fcc-stat-lbl">On Target</div></div>'
       + '</div>';
 
-    // Per-process KPIs (only show procs with at least 1 associate)
-    var procOrder = ["PICK","STOW","QS","PACK","DECANT","ICQA"];
+    // Per-process KPIs vs OP2 (real FCLM rate vs OP2 daily target). Replaces the
+    // old per-process averages. Cards are clickable → filter the map. Only the
+    // processes that live on this floor are shown.
     var procsHtml = "";
-    procOrder.forEach(function(p){
-      var s = procStats[p]; if(!s || !s.n) return;
-      var avgUph = s.uphN ? Math.round(s.uphSum / s.uphN) : 0;
-      var avgPct = s.pctN ? Math.round(s.pctSum / s.pctN) : 0;
-      var pctCls = avgPct >= 100 ? "ok" : avgPct >= 80 ? "warn" : "bad";
+    var pprList = (_pprData && _pprData.processes) ? _pprData.processes.filter(function(p){
+      return p.found && (!Array.isArray(p.floors) || !p.floors.length || p.floors.indexOf(floorId) !== -1);
+    }) : [];
+    var activeProc = window._perfMapProc || "ALL";
+    pprList.forEach(function(p){
+      var rate = (p.rate!=null) ? p.rate : "—";
+      var pctTxt = "", pctCls = "";
+      if(p.pct_op2!=null){
+        pctCls = p.pct_op2>=100 ? "ok" : p.pct_op2>=90 ? "warn" : "bad";
+        pctTxt = p.pct_op2 + "%";
+      }
+      var op2Txt = (p.op2!=null) ? ("OP2 "+p.op2) : "";
+      var on = (p.proc_filter && p.proc_filter===activeProc) ? " fcc-proc-active" : "";
       procsHtml +=
-        '<div class="fcc-proc">'
-        + '<div class="fcc-proc-name">'+p+'</div>'
+        '<div class="fcc-proc fcc-proc-click'+on+'" data-proc="'+esc(p.proc_filter||"ALL")+'" title="Click to filter the map to '+esc(p.label)+'">'
+        + '<div class="fcc-proc-name">'+esc(p.label)+'</div>'
         + '<div class="fcc-proc-row">'
-          + '<span class="fcc-proc-uph">'+avgUph+'<span style="font-size:9.5px;color:var(--text-muted);font-weight:600"> uph</span></span>'
-          + '<span class="fcc-proc-pct '+pctCls+'">'+avgPct+'%</span>'
+          + '<span class="fcc-proc-uph">'+rate+'<span style="font-size:9.5px;color:var(--text-muted);font-weight:600"> uph</span></span>'
+          + (pctTxt ? '<span class="fcc-proc-pct '+pctCls+'">'+pctTxt+'</span>' : '')
         + '</div>'
         + '<div class="fcc-proc-foot">'
-          + '<span>'+s.n+' assoc.</span>'
-          + (s.gap ? '<span style="color:#dc2626;font-weight:700">'+s.gap+' gap</span>' : '<span>·</span>')
+          + '<span>'+(op2Txt||'·')+'</span>'
+          + '<span>'+(p.people||0)+' ppl</span>'
         + '</div>'
         + '</div>';
     });
@@ -5439,6 +5692,17 @@ document.addEventListener("click",(e)=>{
 
     html += pinnedHtml + '</div>';
     centerEl.innerHTML = html;
+
+    // Wire OP2 KPI cards → filter the map (reuse existing process buttons).
+    centerEl.querySelectorAll(".fcc-proc-click").forEach(function(card){
+      card.addEventListener("click", function(){
+        var proc = card.getAttribute("data-proc") || "ALL";
+        var target = (window._perfMapProc === proc) ? "ALL" : proc;
+        var btn = document.querySelector('.map-proc-btn[data-proc="'+target+'"]');
+        if(btn){ btn.click(); }
+        else { window._perfMapProc = target; if(window._renderPerfMap) window._renderPerfMap(); }
+      });
+    });
 
     // Wire pin clear + per-row coach
     var clearBtn = centerEl.querySelector(".fcc-pin-clear");
@@ -5672,6 +5936,7 @@ document.addEventListener("click",(e)=>{
       (d.items||[]).forEach(function(it){ if(it.status==="PENDING"){ var lg=(it.login||"").toLowerCase(); if(!pMap[lg]) pMap[lg]={id:it.id||"",insight:it.insight||"",comment:it.comment||""}; }});
       window._gcaPendingMap = pMap;
       renderGca();
+      maybeAlertHighDefects();
     }catch(e){
       renderEmptyState("No se pudo cargar GCA", e.message,
                         { tbodyId: "gcaTbody", cols: 8 });
@@ -5679,6 +5944,38 @@ document.addEventListener("click",(e)=>{
     }
   }
   window._loadGcaDashboard = loadGcaDashboard;
+
+  // ── High Defects alert popup ──
+  // Warns the trainer that any pending HIGH_DEFECTS coaching must be closed.
+  // Fires once per dataset load (not on every filter re-render).
+  function maybeAlertHighDefects(){
+    if(!gcaData || !Array.isArray(gcaData.items)) return;
+    const hd = gcaData.items.filter(i => i.status === "PENDING" && i.scenario === "HIGH_DEFECTS");
+    const countEl = $g("hdCount"), listEl = $g("hdList");
+    if(countEl) countEl.textContent = hd.length;
+    if(listEl){
+      listEl.innerHTML = hd.length
+        ? hd.map(it=>{
+            const gcaUrl = `https://guided-coaching-dub.corp.amazon.com/#/view-coaching-instance/${it.id}`;
+            const who = esc(it.login || it.employee_id || "—");
+            const what = esc(it.insight || it.course_title || "");
+            return `<div class="hd-row">
+              <div><b>${who}</b>${what?` · <span style="color:var(--text-secondary)">${what}</span>`:""}</div>
+              <a href="${esc(gcaUrl)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:600;white-space:nowrap">Cerrar en GCA →</a>
+            </div>`;
+          }).join("")
+        : "";
+    }
+    if(!hd.length) return;
+    // Only auto-open once per (fc + set of HD ids) so it doesn't nag on every reload.
+    const sig = currentFC + "|" + hd.map(i=>i.id).sort().join(",");
+    try{
+      if(sessionStorage.getItem("argos-hd-alerted") === sig) return;
+      sessionStorage.setItem("argos-hd-alerted", sig);
+    }catch(_){}
+    openModal("modalHighDefects");
+  }
+  window._alertHighDefects = ()=>openModal("modalHighDefects");
 
   // ── Render everything ──
 
@@ -5999,7 +6296,12 @@ document.addEventListener("click",(e)=>{
     $g("gcaKpiCompleted").textContent = k.completed || 0;
     $g("gcaKpiPending").textContent = k.pending || 0;
     $g("gcaKpiPct").textContent = (k.compliance_pct || 0) + "%";
-    $g("gcaSubtitle").textContent = `Last 7 days · ${gcaData.fc || currentFC}`;
+    const hdPending = (gcaData.items||[]).filter(i=>i.status==="PENDING" && i.scenario==="HIGH_DEFECTS").length;
+    const sub = $g("gcaSubtitle");
+    sub.innerHTML = `Last 7 days · ${esc(gcaData.fc || currentFC)}` +
+      (hdPending ? ` <span id="gcaHdPill" class="gca-hd-badge" style="cursor:pointer" title="Ver High Defects que deben cerrarse">⚠️ ${hdPending} High Defects</span>` : "");
+    const hdPill = $g("gcaHdPill");
+    if(hdPill) hdPill.addEventListener("click", ()=>openModal("modalHighDefects"));
 
     // Bars
     const os = gcaData.owner_stats || {};
@@ -6055,8 +6357,10 @@ document.addEventListener("click",(e)=>{
         const photoHtml = it.photo_url
           ? `<img src="${esc(it.photo_url)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-right:6px;vertical-align:middle" onerror="this.style.display='none'">`
           : "";
-        return `<tr>
-          <td><div style="display:flex;align-items:center">${photoHtml}<span style="font-weight:600">${esc(loginDisplay)}</span></div></td>
+        const isHighDef = it.scenario === "HIGH_DEFECTS";
+        const hdBadge = isHighDef ? `<span class="gca-hd-badge" title="High Defects — debe cerrarse">HIGH DEFECTS</span>` : "";
+        return `<tr class="${isHighDef ? "gca-high-defects" : ""}">
+          <td><div style="display:flex;align-items:center">${photoHtml}<span style="font-weight:600">${esc(loginDisplay)}</span>${hdBadge}</div></td>
           <td>${esc(it.insight||it.course_title||"—")}</td>
           <td><span style="font-size:11px">${esc(it.owner)}</span></td>
           <td>${notes}</td>
@@ -6342,6 +6646,109 @@ document.addEventListener("click",(e)=>{
 
 
 })();
+
+  // ── Adoption dashboard (super admin, DDD) ──────────────────────────────
+  let _adoptFC = "BCN4", _adoptLD = false, _adoptWk = false;
+  if($("btnAdoption")) $("btnAdoption").addEventListener("click", ()=>{ $("adoptionModal").style.display="flex"; loadAdoption(); });
+  $("adoptFC")?.addEventListener("change", e=>{ _adoptFC = e.target.value; loadAdoption(); });
+  $("adoptLD")?.addEventListener("change", e=>{ _adoptLD = e.target.checked; loadAdoption(); });
+  $("adoptWk")?.addEventListener("change", e=>{ _adoptWk = e.target.checked; loadAdoption(); });
+  $("adoptionModal")?.addEventListener("click", e=>{ if(e.target.id==="adoptionModal") closeAdoption(); });
+  window.closeAdoption = ()=>{ const m=$("adoptionModal"); if(m) m.style.display="none"; };
+
+  async function loadAdoption(){
+    const body=$("adoptionBody");
+    body.innerHTML=`<div class="adopt-empty">Loading…</div>`;
+    try{
+      const r=await fetch(`${API}/api/adoption?fc=${encodeURIComponent(_adoptFC)}&include_ld=${_adoptLD}&week_only=${_adoptWk}`);
+      if(!r.ok) throw new Error((await r.json().catch(()=>({}))).detail || `HTTP ${r.status}`);
+      const d=await r.json();
+      const sel=$("adoptFC");
+      if(sel && !sel.dataset.filled){
+        const fcs=["BCN4","ALL",...(d.fcs||[]).filter(x=>x!=="BCN4")];
+        sel.innerHTML=[...new Set(fcs)].map(x=>`<option value="${x}">${x}</option>`).join("");
+        sel.value=_adoptFC; sel.dataset.filled="1";
+      }
+      const ldCb=$("adoptLD"); if(ldCb) ldCb.checked=_adoptLD;
+      const wkCb=$("adoptWk"); if(wkCb) wkCb.checked=_adoptWk;
+
+      const wow=d.wow||{};
+      const dlt=(c,p)=>{ if(p==null) return ""; const x=(c||0)-(p||0); if(!x) return `<span class="ad-d">—</span>`; const up=x>0; return `<span class="ad-d ${up?"up":"dn"}">${up?"▲":"▼"} ${Math.abs(x)}</span>`; };
+      const ldNote = (!_adoptLD && d.ld_excluded) ? `<span class="ad-ldnote">${d.ld_excluded} L&D excluded</span>` : "";
+
+      const rate = d.adoption_rate!=null ? `${d.adoption_rate}%` : "—";
+      const rateW = d.adoption_rate_week!=null ? `${d.adoption_rate_week}%` : "—";
+      const cov  = d.cohort_coverage!=null ? `${d.cohort_coverage}%` : "—";
+      const kpis=`<div class="ad-kpis">
+        <div class="ad-kpi ad-kpi-hero"><span class="ad-num">${rateW}</span><span class="ad-lbl">Adoption THIS WEEK (${d.active_target_week||0}/${d.hc_total||0})</span></div>
+        <div class="ad-kpi"><span class="ad-num">${rate}</span><span class="ad-lbl">Adoption all-time (${d.active_target||0}/${d.hc_total||0})</span></div>
+        <div class="ad-kpi"><span class="ad-num">${cov}</span><span class="ad-lbl">Cohort coverage (${d.cohorts_active||0}/${d.cohorts_total||0})</span></div>
+        <div class="ad-kpi"><span class="ad-num">${wow.users??"—"} ${dlt(wow.users,wow.users_prev)}</span><span class="ad-lbl">Users this week</span></div>
+      </div>`;
+
+      // Area breakdown: this-week bar (solid) + all-time (ghost), per IB/OB/ICQA.
+      const area = (d.by_area||[]).map(a=>{
+        const pctW=Math.min(100,a.rate_week||0), pct=Math.min(100,a.rate||0);
+        return `<div class="ad-area"><div class="ad-area-top"><span>${esc(a.area)}</span><b>${a.rate_week}% <span class="ad-area-all">(${a.rate}% all-time)</span></b></div>
+          <div class="ad-area-bar"><div class="ad-area-ghost" style="width:${pct}%"></div><div class="ad-area-fill" style="width:${pctW}%"></div></div>
+          <div class="ad-area-sub">${a.active_week}/${a.target} this week · ${a.active}/${a.target} all-time</div></div>`;
+      }).join("") || `<div class="adopt-empty">No area data</div>`;
+
+      // Podium (top 3 by executions)
+      const medals=["🥇","🥈","🥉"];
+      const podium=(d.podium||[]).map((p,i)=>
+        `<div class="ad-pod ad-pod-${i+1}"><div class="ad-pod-m">${medals[i]||""}</div><div class="ad-pod-u">${esc(p.user)}</div><div class="ad-pod-meta">${esc(p.cohort||"")} · ${esc(p.title||"")}</div><div class="ad-pod-ev">${p.events} exec</div></div>`
+      ).join("") || `<div class="adopt-empty">—</div>`;
+
+      const chart=adoptChart(d.by_week||[]);
+
+      const coh=(d.by_cohort||[]).map(c=>`<tr><td>${esc(c._cohort||"—")}</td><td>${c.users}</td><td>${c.events}</td></tr>`).join("")||`<tr><td colspan=3>—</td></tr>`;
+      const usr=(d.top_users||[]).map(u=>`<tr><td>${esc(u.user)}</td><td>${u.events}</td><td>${esc(u.cohort||"")}</td><td>${esc(u.title||"")}</td></tr>`).join("")||`<tr><td colspan=4>—</td></tr>`;
+      const inact=(d.inactive_cohorts||[]).map(c=>`<span class="ad-chip">${esc(c)}</span>`).join("")||`<span class="ad-ok">All target cohorts active 🎉</span>`;
+      const fb=(d.feedback||[]).map(f=>`<div class="ad-fb"><div class="ad-fb-meta">${esc(f.ts||"")} · <b>${esc(f.login||"?")}</b>${f.title?` · ${esc(f.title)}`:""}${f.version?`<span class="ad-fb-ver">v${esc(f.version)}</span>`:""}</div><div class="ad-fb-txt">${esc(f.feedback||"")}</div></div>`).join("")||`<div class="adopt-empty">No feedback for this FC</div>`;
+
+      body.innerHTML=`
+        <div class="ad-meta">FC: <b>${esc(d.fc||"ALL")}</b> · Target: <b>Leads + Area Managers</b> · L&D: <b>${_adoptLD?"included":"excluded"}</b>${d.week_only?` · <b style="color:var(--accent,#7c3aed)">Detail = ${esc(d.current_week||"this week")} only</b>`:""} ${ldNote}</div>
+        ${kpis}
+        <div class="ad-sec"><div class="ad-h">Adoption by area</div><div class="ad-areas">${area}</div></div>
+        <div class="ad-grid2">
+          <div class="ad-sec"><div class="ad-h">Weekly adoption (users + executions)</div>${chart}</div>
+          <div class="ad-sec"><div class="ad-h">🏆 Podium — most executions</div><div class="ad-podium">${podium}</div></div>
+        </div>
+        <div class="ad-sec"><div class="ad-h">Inactive cohorts (opportunity)</div><div class="ad-chips">${inact}</div></div>
+        <div class="ad-grid">
+          <div class="ad-sec"><div class="ad-h">By cohort</div>
+            <table class="ad-tbl"><thead><tr><th>Cohort</th><th>Users</th><th>Events</th></tr></thead><tbody>${coh}</tbody></table></div>
+          <div class="ad-sec"><div class="ad-h">Top users</div>
+            <table class="ad-tbl"><thead><tr><th>User</th><th>Ev.</th><th>Cohort</th><th>Title</th></tr></thead><tbody>${usr}</tbody></table></div>
+        </div>
+        <div class="ad-sec"><div class="ad-h">Feedback</div>${fb}</div>`;
+    }catch(e){ body.innerHTML=`<div class="adopt-empty" style="color:#dc2626">✗ ${esc(e.message)}</div>`; }
+  }
+
+  // Weekly chart: unique users + executions (events), grouped bars per week.
+  // Heights in PIXELS (not %) so the webview can't collapse them. Only the last
+  // ~8 weeks WITH activity are shown (drops old one-off noise), so the bars fill
+  // the width and the trend reads cleanly for DDD.
+  function adoptChart(rows){
+    if(!rows.length) return `<div class="adopt-empty">No data</div>`;
+    const recent = rows.slice(-8);                       // last 8 active weeks
+    const MAXH=120;
+    const maxU=Math.max(1,...recent.map(r=>r.users||0));
+    const maxE=Math.max(1,...recent.map(r=>r.events||0));
+    const cols=recent.map(r=>{
+      const hu=Math.max(4, Math.round((r.users||0)/maxU*MAXH));
+      const he=Math.max(4, Math.round((r.events||0)/maxE*MAXH));
+      const wk=String(r._wk||"").replace(/^\d{4}-/,"");
+      return `<div class="ac-col" title="${esc(r._wk)}: ${r.users} users · ${r.events} executions">
+        <div class="ac-pair">
+          <div class="ac-stk"><div class="ad-v">${r.users||0}</div><div class="ad-bar ad-bar-u" style="height:${hu}px"></div></div>
+          <div class="ac-stk"><div class="ad-v ad-v-e">${r.events||0}</div><div class="ad-bar ad-bar-e" style="height:${he}px"></div></div>
+        </div>
+        <div class="ad-l">${esc(wk)}</div></div>`;
+    }).join("");
+    return `<div class="ad-legend"><span class="lg-u">▮ Unique users</span><span class="lg-e">▮ Executions</span></div><div class="ad-chart">${cols}</div>`;
+  }
 
 
 }); // end DOMContentLoaded

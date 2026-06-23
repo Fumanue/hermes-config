@@ -21,7 +21,7 @@ const I18N = {
     q_subtitle: "Acumulado semanal Atlas · domingo a ahora · detección sigma por Error Type",
     q_opportunities: "Oportunidades", q_present: "Presentes", q_coached: "Coached", q_pending: "Pendientes",
     btn_present_only: "Solo presentes", btn_hide_coached: "Ocultar coached",
-    btn_hide_on_target: "Ocultar on-target", btn_run_pipeline: "▶ Ejecutar Pipeline",
+    btn_hide_on_target: "Ocultar on-target", btn_run_pipeline: "▶ Start Pipeline",
     btn_refresh: "↻ Refresh", btn_sync_gc: "⟳ Sync GC",
     btn_upload_coaching: "↑ Subir Coaching", btn_summary: "📊 Resumen", btn_bulk: "↑↑ Subida masiva", btn_csv: "↓ CSV",
     qth_associate: "Asociado", qth_error: "Tipo Error", qth_errors_wk: "Errores Sem",
@@ -66,6 +66,11 @@ const I18N = {
     mw_no_auth: "Midway no auth",
     mw_no_auth_tip: "Midway aún no autenticada. Se solicitará automáticamente al pulsar Run Pipeline.",
     mw_seconds_expired: "expirada",
+    // Alert poll countdown pill
+    poll_gca: "GCA",
+    poll_quality: "Q",
+    poll_due: "ahora…",
+    poll_tip: "Próxima comprobación automática de alertas (GCA y Calidad). Se ejecutan cada 10 min.",
     // Offline banner
     off_no_network: "Sin conexión a la red",
     off_midway_expired: "Midway expirada",
@@ -84,6 +89,12 @@ const I18N = {
     empty_no_visible_rows: "⚠️ No hay filas visibles",
     empty_no_gca_title: "Sin datos GCA",
     empty_no_gca_sub: "Lanza el GCA pipeline para refrescar.",
+    gca_new_title: "🔔 Nuevo reactivo GCA",
+    gca_new_body: "{n} coaching(s) pendiente(s) nuevo(s) en {fc}.",
+    gca_view_btn: "Ver en GCA",
+    qual_alert_title: "⚠️ Alerta de calidad",
+    qual_alert_body: "{n} asociado(s) ≥2σ presente(s) en {fc}.",
+    qual_view_btn: "Ver en Quality",
     empty_no_pending_coachings: "No hay coachings pendientes",
     empty_no_coachings_floor: "No hay coachings con estación en {floor}",
     // CSV
@@ -154,7 +165,7 @@ const I18N = {
     q_subtitle: "Weekly cumulative Atlas · Sunday to now · sigma detection by Error Type",
     q_opportunities: "Opportunities", q_present: "Present", q_coached: "Coached", q_pending: "Pending",
     btn_present_only: "Present only", btn_hide_coached: "Hide Coached",
-    btn_hide_on_target: "Hide On-Target", btn_run_pipeline: "▶ Run Pipeline",
+    btn_hide_on_target: "Hide On-Target", btn_run_pipeline: "▶ Start Pipeline",
     btn_refresh: "↻ Refresh", btn_sync_gc: "⟳ Sync GC",
     btn_upload_coaching: "↑ Upload Coaching", btn_summary: "📊 Summary", btn_bulk: "↑↑ Bulk Upload", btn_csv: "↓ CSV",
     qth_associate: "Associate", qth_error: "Error Type", qth_errors_wk: "Errors WK",
@@ -190,6 +201,10 @@ const I18N = {
     mw_label: "Midway",
     mw_checking: "Checking Midway…",
     mw_active_in: "Midway active (expires in {x})",
+    poll_gca: "GCA",
+    poll_quality: "Q",
+    poll_due: "now…",
+    poll_tip: "Next automatic alert check (GCA and Quality). They run every 10 min.",
     mw_expiring_in: "Midway expiring soon (in {x})",
     mw_expired: "Midway expired",
     mw_expired_tip: "Your Midway session has expired. It will renew automatically when you click Run Pipeline.",
@@ -214,6 +229,12 @@ const I18N = {
     empty_no_visible_rows: "⚠️ No visible rows",
     empty_no_gca_title: "No GCA data",
     empty_no_gca_sub: "Run the GCA pipeline to refresh.",
+    gca_new_title: "🔔 New GCA reactivo",
+    gca_new_body: "{n} new pending coaching(s) at {fc}.",
+    gca_view_btn: "View in GCA",
+    qual_alert_title: "⚠️ Quality alert",
+    qual_alert_body: "{n} associate(s) ≥2σ present at {fc}.",
+    qual_view_btn: "View in Quality",
     empty_no_pending_coachings: "No pending coachings",
     empty_no_coachings_floor: "No coachings with station on {floor}",
     // CSV
@@ -354,7 +375,9 @@ const $=id=>document.getElementById(id);
 // "err" (red). Caller can also pass a plain object {title, body, type, ms}.
 function showToast(opts){
   if(typeof opts === "string") opts = { body: opts };
-  const { title = "", body = "", type = "ok", ms = 3500 } = opts || {};
+  // actionLabel + onAction add a clickable button (e.g. "Ver en GCA") that
+  // runs onAction without the toast's click-to-dismiss swallowing it.
+  const { title = "", body = "", type = "ok", ms = 3500, actionLabel = "", onAction = null } = opts || {};
   let host = document.getElementById("toastHost");
   if(!host){
     host = document.createElement("div");
@@ -372,7 +395,8 @@ function showToast(opts){
   const el = document.createElement("div");
   el.style.cssText = `pointer-events:auto;background:var(--bg-card);color:var(--text);border-left:3px solid ${c.bd};border-radius:8px;padding:12px 16px;min-width:240px;max-width:420px;box-shadow:0 12px 32px -8px rgba(0,0,0,.28),0 0 0 1px var(--border);font-size:13px;line-height:1.45;transform:translateX(20px);opacity:0;transition:transform .25s cubic-bezier(.2,.7,.2,1),opacity .25s`;
   el.innerHTML = (title ? `<div style="font-weight:600;margin-bottom:4px">${title}</div>` : "") +
-                 `<div style="color:var(--text-secondary)">${body}</div>`;
+                 `<div style="color:var(--text-secondary)">${body}</div>` +
+                 (actionLabel ? `<div style="margin-top:8px"><button class="toast-action" style="background:${c.bd};color:#fff;border:none;padding:5px 12px;border-radius:5px;cursor:pointer;font-weight:600;font-size:12px">${actionLabel}</button></div>` : "");
   host.appendChild(el);
   // Trigger transition on next frame
   requestAnimationFrame(() => { el.style.transform = "translateX(0)"; el.style.opacity = "1"; });
@@ -381,6 +405,10 @@ function showToast(opts){
     el.style.opacity = "0";
     setTimeout(() => el.remove(), 250);
   };
+  if(actionLabel && onAction){
+    const ab = el.querySelector(".toast-action");
+    if(ab) ab.addEventListener("click", (e)=>{ e.stopPropagation(); close(); try{ onAction(); }catch(_){} });
+  }
   el.addEventListener("click", close);
   setTimeout(close, ms);
 }
@@ -522,7 +550,8 @@ function norm(r){
   const _search = (login+" "+name+" "+role+" "+station+" "+dept+" "+cohort+" "+nhFlag).toLowerCase();
   const idle_pct = (r.idle_pct!=null && r.idle_pct!=="") ? Number(r.idle_pct) : null;
   const idle_min = (r.idle_min!=null && r.idle_min!=="") ? Number(r.idle_min) : null;
-  return{login,name,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,notes,rate,pct,target,vetAvg,course_id,employee_id,transcript_url,photo_url,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,idle_pct,idle_min,_search};
+  const pending_coachings = Array.isArray(r.pending_coachings) ? r.pending_coachings : [];
+  return{login,name,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,notes,rate,pct,target,vetAvg,course_id,employee_id,transcript_url,photo_url,pending_coachings,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,idle_pct,idle_min,_search};
 }
 
 // Build the notes string to upload (rate + pct + comments)
@@ -567,6 +596,143 @@ const state={
 // ── Modals ─────────────────────────────────────────────────
 const openModal =id=>$(id).classList.add("show");
 const closeModal=id=>$(id).classList.remove("show");
+
+// ── Close-coaching modal (Complete / Cancel) — shared by GCA, Performance,
+//    Quality. Notes are MANDATORY for both actions (server enforces too).
+let _ccCancelReasons = null;   // cached list from /api/coaching/cancel-reasons
+let _ccCtx = null;             // {instance_id, fc, action, login, name, onDone}
+
+async function _ccLoadReasons(){
+  if(_ccCancelReasons) return _ccCancelReasons;
+  try{
+    const d = await jget(`${API}/api/coaching/cancel-reasons`);
+    _ccCancelReasons = (d && d.reasons) || [];
+  }catch(_){ _ccCancelReasons = []; }
+  return _ccCancelReasons;
+}
+
+// opts: {instanceId, fc, action:"complete"|"cancel", login, name, onDone}
+async function openCloseCoaching(opts){
+  const o = opts || {};
+  if(!o.instanceId){ showToast({title:"Error", body:"Sin instance_id — refresca GCA.", type:"err"}); return; }
+  _ccCtx = o;
+  const isCancel = o.action === "cancel";
+  $("cc-title").textContent = isCancel ? "✗ Cancelar coaching" : "✓ Completar coaching";
+  $("cc-who").innerHTML = `<b>${esc(o.name || o.login || "")}</b>${o.login ? " ("+esc(o.login)+")" : ""}`
+    + (o.coachingLabel ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:3px">📋 ${esc(o.coachingLabel)}</div>` : "");
+  $("cc-category-wrap").style.display = isCancel ? "none" : "";
+  $("cc-reason-wrap").style.display   = isCancel ? "" : "none";
+  $("cc-notes").value = "";
+  $("cc-result").innerHTML = "";
+  $("cc-notes-hint").textContent = isCancel
+    ? "Las notas son obligatorias."
+    : "Se enviará como: «N. <tus notas>» según la categoría.";
+  const submit = $("cc-submit");
+  submit.disabled = false; submit.style.opacity = "1";
+  submit.textContent = isCancel ? "✗ Cancelar coaching" : "✓ Completar";
+
+  if(isCancel){
+    const reasons = await _ccLoadReasons();
+    const sel = $("cc-reason");
+    sel.innerHTML = reasons.length
+      ? reasons.map(r=>`<option value="${esc(r.value)}">${esc(r.label)}</option>`).join("")
+      : `<option value="">(sin motivos configurados)</option>`;
+  }
+  openModal("modalCloseCoaching");
+}
+
+async function _ccSubmit(){
+  if(!_ccCtx) return;
+  const o = _ccCtx;
+  const isCancel = o.action === "cancel";
+  const notes = $("cc-notes").value.trim();
+  // Notes mandatory — block here (server also enforces).
+  if(!notes){
+    $("cc-result").innerHTML = `<div style="color:var(--red,#dc2626);font-size:12px;margin-top:6px">Las notas son obligatorias para cerrar el coaching.</div>`;
+    $("cc-notes").focus();
+    return;
+  }
+  let payloadNotes = notes;
+  let cancelReason = "";
+  if(isCancel){
+    cancelReason = $("cc-reason").value;
+    if(!cancelReason){
+      $("cc-result").innerHTML = `<div style="color:var(--red,#dc2626);font-size:12px;margin-top:6px">Selecciona un motivo de cancelación.</div>`;
+      return;
+    }
+  } else {
+    // Prefix the 1-5 category to the notes: "3. <notas>"
+    const cat = $("cc-category").value || "1";
+    payloadNotes = `${cat}. ${notes}`;
+  }
+  const submit = $("cc-submit");
+  submit.disabled = true; submit.style.opacity = ".6";
+  submit.textContent = "Enviando…";
+  try{
+    const r = await fetch(`${API}/api/coaching/close`, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        fc: o.fc || currentFC,
+        instance_id: o.instanceId,
+        action: o.action,
+        notes: payloadNotes,
+        cancel_reason: cancelReason,
+      }),
+    });
+    const j = await r.json().catch(()=>({}));
+    if(!r.ok || !j.ok){
+      throw new Error((j && j.detail) || `HTTP ${r.status}`);
+    }
+    closeModal("modalCloseCoaching");
+    showToast({title: isCancel?"Coaching cancelado":"Coaching completado",
+               body: `${o.name || o.login || ""} · ${j.status}`, type:"ok"});
+    if(typeof o.onDone === "function"){ try{ o.onDone(j); }catch(_){} }
+  }catch(e){
+    $("cc-result").innerHTML = `<div style="color:var(--red,#dc2626);font-size:12px;margin-top:6px">No se pudo cerrar: ${esc(e.message||String(e))}</div>`;
+    submit.disabled = false; submit.style.opacity = "1";
+    submit.textContent = isCancel ? "✗ Cancelar coaching" : "✓ Completar";
+  }
+}
+window.openCloseCoaching = openCloseCoaching;
+
+// Open the close flow from a Performance/Quality row that carries
+// pending_coachings (from the GCA cache). Shows ONE popup listing each pending
+// coaching with its course title + insight, each with Complete/Cancel buttons —
+// so the coach always sees WHICH coaching they're closing.
+function openCloseFromRow(pending, meta){
+  const list = Array.isArray(pending) ? pending : [];
+  if(!list.length){
+    showToast({title:"Sin coachings pendientes", body:"Este asociado no tiene coachings pendientes para cerrar.", type:"info"});
+    return;
+  }
+  const base = {fc: (meta&&meta.fc)||currentFC, login:(meta&&meta.login)||"", name:(meta&&meta.name)||"",
+                onDone:(meta&&meta.onDone)||null};
+  const pickList = $("ccPickList");
+  $("ccPickWho").innerHTML = `<b>${esc(base.name||base.login)}</b> · ${list.length} coaching${list.length>1?"s":""} pendiente${list.length>1?"s":""}`;
+  pickList.innerHTML = list.map((c,i)=>{
+    const insight = c.insight || c.course_title || c.reason || "Coaching";
+    const course = c.course_title || "";
+    return `
+    <div style="padding:10px 12px;margin-bottom:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card)">
+      <div style="font-weight:700;font-size:15px;line-height:1.25">${esc(insight)}</div>
+      ${course && course!==insight ? `<div style="font-size:11px;color:var(--text-secondary);margin-top:3px">${esc(course)}</div>` : ""}
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${esc(c.scenario||"")}</div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="row-btn cc-pick-complete" data-i="${i}">✓ Completar</button>
+        <button class="row-btn cc-pick-cancel" data-i="${i}">✗ Cancelar</button>
+      </div>
+    </div>`;
+  }).join("");
+  const go = (i, action)=>{
+    closeModal("modalCcPick");
+    openCloseCoaching({...base, action, instanceId: list[i].id,
+      coachingLabel: list[i].insight || list[i].course_title || ""});
+  };
+  pickList.querySelectorAll(".cc-pick-complete").forEach(b=>b.addEventListener("click",()=>go(Number(b.dataset.i),"complete")));
+  pickList.querySelectorAll(".cc-pick-cancel").forEach(b=>b.addEventListener("click",()=>go(Number(b.dataset.i),"cancel")));
+  openModal("modalCcPick");
+}
+window.openCloseFromRow = openCloseFromRow;
 
 // ── User auth / Phonetool info ─────────────────────────────
 // ── Auth: called FIRST before anything else ──────────────────
@@ -702,6 +868,296 @@ async function checkForUpdate(){
     // swallow — silent fallback
   }
 }
+
+// ── GCA background poll ────────────────────────────────────────
+// Every 5 minutes, quietly re-run the GCA pipeline for the user's DEFAULT FC
+// and check the pending-reactivo count. When a NEW pending HIGH_DEFECTS
+// reactivo appears (count went up vs. last seen), alert the user: sound +
+// in-app toast + Windows system notification, and jump to the GCA tab.
+const GCA_POLL_MS = 10 * 60 * 1000;  // 10 min (aligned with Quality poll = same trigger cadence)
+let _gcaPollTimer = null;
+let _gcaSeenHdIds = null;   // null = first run (baseline set, no alert)
+// Timestamp (ms epoch) of the NEXT scheduled GCA/Quality poll, so the topbar
+// can show a live countdown next to the Midway pill. null = not scheduled yet.
+let _gcaNextRunAt = null;
+let _qualityNextRunAt = null;
+
+// Shared AudioContext. Browsers (incl. pywebview/Edge) block audio until the
+// user has interacted with the page at least once — so we create/resume it on
+// the first user gesture. Without this the very first beep can be silent.
+let _audioCtx = null;
+function _ensureAudioCtx(){
+  try{
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if(!Ctx) return null;
+    if(!_audioCtx) _audioCtx = new Ctx();
+    if(_audioCtx.state === "suspended") _audioCtx.resume().catch(()=>{});
+    return _audioCtx;
+  }catch(_){ return null; }
+}
+// Prime audio on the first interaction (one-shot).
+["click","keydown","pointerdown"].forEach(ev=>
+  window.addEventListener(ev, _ensureAudioCtx, { once:true, passive:true }));
+
+// Attention-grabbing alert chime via WebAudio (no asset file — survives the
+// locked-down corp environment where loading an mp3 might be blocked).
+// Loud, multi-pulse "siren" pattern so it's clearly an alert, not a blip.
+function _playGcaBeep(){
+  try{
+    const ctx = _ensureAudioCtx();
+    if(!ctx) return;
+    // 3 rising two-tone pulses (≈1.4s total). square wave = more piercing.
+    // Master gain via a compressor-free chain; per-pulse envelope peaks ~0.85.
+    const pulses = [
+      [784, 1047],   // G5 -> C6
+      [880, 1175],   // A5 -> D6
+      [988, 1319],   // B5 -> E6
+    ];
+    let t = ctx.currentTime + 0.01;
+    pulses.forEach((pair)=>{
+      pair.forEach((freq, j)=>{
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = j === 0 ? "square" : "triangle";
+        osc.frequency.value = freq;
+        const t0 = t + j * 0.12;
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(0.85, t0 + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22);
+        osc.start(t0);
+        osc.stop(t0 + 0.24);
+      });
+      t += 0.42;   // gap between pulses
+    });
+  }catch(_){ /* audio not available — non-fatal */ }
+}
+
+// Windows system notification (useful when Argos is minimized). Falls back
+// silently if the Notification API is unavailable or permission denied.
+function _systemNotify(title, body){
+  try{
+    if(!("Notification" in window)) return;
+    const fire = () => { try{ new Notification(title, { body }); }catch(_){} };
+    if(Notification.permission === "granted") fire();
+    else if(Notification.permission !== "denied"){
+      Notification.requestPermission().then(p => { if(p === "granted") fire(); }).catch(()=>{});
+    }
+  }catch(_){ /* non-fatal */ }
+}
+
+// Format an associate's location for the alert: "Station · ProcessPath".
+function _fmtReactivoLoc(it){
+  const parts = [];
+  if(it.station) parts.push(it.station);
+  if(it.process_path) parts.push(it.process_path);
+  return parts.join(" · ");
+}
+
+function _alertNewReactivo(newItems, fc){
+  _playGcaBeep();
+  const title = t("gca_new_title");
+  const n = newItems.length;
+  // Build a short body listing who + where (up to 3, then "+N more").
+  const lines = newItems.slice(0, 3).map(it=>{
+    const who = it.name || it.login || "—";
+    const loc = _fmtReactivoLoc(it);
+    return loc ? `${who} — 📍 ${loc}` : who;
+  });
+  const extra = n > 3 ? ` (+${n - 3})` : "";
+  const body = `${tf("gca_new_body", { n, fc })}<br>${lines.join("<br>")}${extra}`;
+  // Alert without yanking the user out of their current tab — offer a button
+  // to jump to GCA instead of auto-switching.
+  showToast({ title, body, type: "warn", ms: 14000,
+    actionLabel: t("gca_view_btn"),
+    onAction: ()=>{ try{ if(typeof switchTab === "function") switchTab("gca"); }catch(_){} } });
+  // System notification (plain text, no HTML) — include first location.
+  const notifBody = newItems.slice(0,3)
+    .map(it=>{ const loc=_fmtReactivoLoc(it); return (it.name||it.login||"—")+(loc?` — ${loc}`:""); })
+    .join("\n") + extra;
+  _systemNotify(title, notifBody);
+}
+
+async function _gcaPollOnce(){
+  // Schedule the NEXT tick's countdown up front (the interval is fixed at
+  // GCA_POLL_MS regardless of how long this poll takes).
+  _gcaNextRunAt = Date.now() + GCA_POLL_MS;
+  // Poll the user's DEFAULT FC (not the currently-selected site) so the alert
+  // is stable regardless of where they're browsing.
+  const fc = (localStorage.getItem("argos-default-fc") || currentFC || "BCN4");
+  try{
+    const r = await fetch(`${API}/api/gca/poll?fc=${encodeURIComponent(fc)}`, { method:"POST" });
+    const j = await r.json().catch(()=>({}));
+    if(!j || !j.ok) return;
+    const items = Array.isArray(j.hd_items) ? j.hd_items : [];
+    const ids = new Set(items.map(it=>it.id).filter(Boolean));
+    if(_gcaSeenHdIds === null){
+      _gcaSeenHdIds = ids;   // first run: baseline, never alert
+      return;
+    }
+    // Truly-new = ids not seen before (robust to count staying equal when one
+    // closes and another opens).
+    const fresh = items.filter(it=>it.id && !_gcaSeenHdIds.has(it.id));
+    if(fresh.length){
+      _alertNewReactivo(fresh, j.fc || fc);
+    }
+    _gcaSeenHdIds = ids;
+  }catch(_){ /* network/auth blip — try again next tick */ }
+}
+
+function _startGcaBackgroundPoll(){
+  if(_gcaPollTimer) return;   // already running
+  // Kick off one poll shortly after login (baseline), then every 10 min.
+  _gcaNextRunAt = Date.now() + 15000;
+  setTimeout(_gcaPollOnce, 15000);
+  _gcaPollTimer = setInterval(_gcaPollOnce, GCA_POLL_MS);
+}
+
+// ── Quality background poll ────────────────────────────────────
+// Every 10 minutes, quietly re-run the Quality pipeline for the user's DEFAULT
+// FC and alert when an associate is >=2 Sigma AND present on site. Diffs by
+// login so it only alerts on associates newly crossing the bar (not the same
+// ones every tick). Fires from any tab (sound + toast + Windows notification).
+const QUALITY_POLL_MS = 10 * 60 * 1000;  // 10 min
+let _qualityPollTimer = null;
+let _qualitySeenLogins = null;   // null = first run (baseline, no alert)
+
+function _alertQualityFlagged(newItems, fc){
+  _playGcaBeep();
+  const title = t("qual_alert_title");
+  const n = newItems.length;
+  const lines = newItems.slice(0, 3).map(it=>{
+    const who = it.login || "—";
+    const sig = (it.sigma != null) ? `${it.sigma}σ` : "";
+    const loc = [it.station, it.process].filter(Boolean).join(" · ");
+    return `${who} ${sig}${loc ? ` — 📍 ${loc}` : ""}`;
+  });
+  const extra = n > 3 ? ` (+${n - 3})` : "";
+  const body = `${tf("qual_alert_body", { n, fc })}<br>${lines.join("<br>")}${extra}`;
+  showToast({ title, body, type: "warn", ms: 14000,
+    actionLabel: t("qual_view_btn"),
+    onAction: ()=>{ try{ openCoachQueue(fc); }catch(_){ if(typeof switchTab==="function") switchTab("quality"); } } });
+  const notifBody = newItems.slice(0,3)
+    .map(it=>{ const loc=[it.station,it.process].filter(Boolean).join(" · "); return `${it.login||"—"} ${it.sigma||""}σ${loc?` — ${loc}`:""}`; })
+    .join("\n") + extra;
+  _systemNotify(title, notifBody);
+}
+
+async function _qualityPollOnce(){
+  _qualityNextRunAt = Date.now() + QUALITY_POLL_MS;
+  const fc = (localStorage.getItem("argos-default-fc") || currentFC || "BCN4");
+  try{
+    const r = await fetch(`${API}/api/quality/poll?fc=${encodeURIComponent(fc)}`, { method:"POST" });
+    const j = await r.json().catch(()=>({}));
+    if(!j || !j.ok) return;
+    const items = Array.isArray(j.flagged) ? j.flagged : [];
+    const logins = new Set(items.map(it=>String(it.login||"").toLowerCase()).filter(Boolean));
+    if(_qualitySeenLogins === null){
+      _qualitySeenLogins = logins;   // first run: baseline, never alert
+      return;
+    }
+    const fresh = items.filter(it=>{
+      const lg = String(it.login||"").toLowerCase();
+      return lg && !_qualitySeenLogins.has(lg);
+    });
+    if(fresh.length){
+      _alertQualityFlagged(fresh, j.fc || fc);
+    }
+    _qualitySeenLogins = logins;
+  }catch(_){ /* network/auth blip — retry next tick */ }
+}
+
+function _startQualityBackgroundPoll(){
+  if(_qualityPollTimer) return;
+  _qualityNextRunAt = Date.now() + 25000;
+  setTimeout(_qualityPollOnce, 25000);   // baseline ~25s after login
+  _qualityPollTimer = setInterval(_qualityPollOnce, QUALITY_POLL_MS);
+  _startPollCountdownTicker();            // paint the topbar countdown pill
+}
+
+// ── Alert poll countdown pill (next to Midway) ─────────────────
+// Shows a live "GCA 4m · Q 7m" countdown to the next background poll so the
+// user knows the alerts are armed and when the next check fires. Updates every
+// second. Only visible to alert-group members (the pill stays hidden until the
+// polls are started by _applyAlertsAccess).
+let _pollCountdownTimer = null;
+function _fmtCountdown(ms){
+  if(ms == null) return "—";
+  const s = Math.max(0, Math.round(ms / 1000));
+  if(s <= 0)   return t("poll_due");
+  if(s < 60)   return s + "s";
+  const m = Math.floor(s / 60), rem = s % 60;
+  if(m < 10)   return rem ? `${m}m ${rem}s` : `${m}m`;
+  return m + "m";
+}
+function _paintPollPill(){
+  const pill = $("pollPill");
+  if(!pill) return;
+  if(!window._canAlerts){ pill.style.display = "none"; return; }
+  pill.style.display = "";
+  const now = Date.now();
+  const gMs = _gcaNextRunAt != null ? _gcaNextRunAt - now : null;
+  const qMs = _qualityNextRunAt != null ? _qualityNextRunAt - now : null;
+  const gEl = $("pollGca"), qEl = $("pollQuality");
+  if(gEl){
+    gEl.textContent = `${t("poll_gca")} ${_fmtCountdown(gMs)}`;
+    gEl.classList.toggle("due", gMs != null && gMs <= 0);
+  }
+  if(qEl){
+    qEl.textContent = `${t("poll_quality")} ${_fmtCountdown(qMs)}`;
+    qEl.classList.toggle("due", qMs != null && qMs <= 0);
+  }
+  pill.title = t("poll_tip");
+}
+function _startPollCountdownTicker(){
+  if(_pollCountdownTimer) return;
+  _paintPollPill();
+  _pollCountdownTimer = setInterval(_paintPollPill, 1000);
+}
+
+// Gate alerts to the curated alerts group: show the Check Coaching Manual
+// button and start the GCA + Quality background polls ONLY for members.
+// Everyone else gets no alerts and no button.
+function _applyAlertsAccess(canAlerts){
+  window._canAlerts = !!canAlerts;
+  const btn = $("btnTestAlerts");
+  if(btn) btn.style.display = canAlerts ? "" : "none";
+  if(canAlerts){
+    _startGcaBackgroundPoll();
+    _startQualityBackgroundPoll();
+  }
+}
+
+// (Removed the auto-run-on-startup: it could stall the boot. Instead the
+// "Start Pipeline" button runs Performance and, on finish, kicks off GCA +
+// Quality in the background — see the btnPipeline handler.)
+
+// DEV/manual: force both polls to alert on whatever currently meets criteria,
+// ignoring the "new since baseline" gate. Wired to a "Probar alerta" button.
+async function testAlertsNow(){
+  const fc = (localStorage.getItem("argos-default-fc") || currentFC || "BCN4");
+  showToast({ title:"🔔 Probando alertas…", body:`Forzando GCA + Quality para ${fc}`, type:"info", ms:4000 });
+  // GCA reactivos
+  try{
+    const r = await fetch(`${API}/api/gca/poll?fc=${encodeURIComponent(fc)}`, { method:"POST" });
+    const j = await r.json().catch(()=>({}));
+    const items = (j && Array.isArray(j.hd_items)) ? j.hd_items : [];
+    if(items.length){ _alertNewReactivo(items, j.fc || fc); }
+    else { showToast({ title:"GCA", body:"No hay HIGH_DEFECTS pendientes ahora.", type:"info", ms:5000 }); }
+    if(j && j.ok) _gcaSeenHdIds = new Set(items.map(it=>it.id).filter(Boolean));
+  }catch(e){ showToast({title:"GCA poll falló", body:String(e), type:"err"}); }
+  // Quality
+  try{
+    const r = await fetch(`${API}/api/quality/poll?fc=${encodeURIComponent(fc)}`, { method:"POST" });
+    const j = await r.json().catch(()=>({}));
+    if(!r.ok){ showToast({title:"Quality poll", body:`HTTP ${r.status} — ¿endpoint desplegado?`, type:"err", ms:6000}); return; }
+    const flagged = (j && Array.isArray(j.flagged)) ? j.flagged : [];
+    if(flagged.length){ _alertQualityFlagged(flagged, j.fc || fc); }
+    else { showToast({ title:"Quality", body:"Nadie ≥2σ presente ahora.", type:"info", ms:5000 }); }
+    if(j && j.ok) _qualitySeenLogins = new Set(flagged.map(it=>String(it.login||"").toLowerCase()).filter(Boolean));
+  }catch(e){ showToast({title:"Quality poll falló", body:String(e), type:"err"}); }
+}
+window.testAlertsNow = testAlertsNow;
 
 // ── Midway status pill + YubiKey toast ─────────────────────────
 // The pill polls /api/auth/midway-status every 10 minutes (read-only, never
@@ -897,18 +1353,24 @@ async function loadUserInfo(){
       _applySiteBL();
     }catch(blErr){ console.error("BL apply (cached) failed:", blErr); }
     if(d.permissions) _applyPermissions(d.permissions);
+    // Quality + GCA tabs: visible to everyone (member or admin). Map, Config,
+    // multi-site and Adoption stay admin-only.
+    if($("tabQuality")) $("tabQuality").style.display = "";
+    if($("tabGca")) $("tabGca").style.display = "";
     // Restore admin state from cache
     if(d.admin && d.admin.is_admin){
       window._isAdmin = true;
       window._isSuperAdmin = d.admin.is_super_admin || false;
-      if($("tabQuality")) $("tabQuality").style.display = "";
-      if($("tabGca")) $("tabGca").style.display = "";
       if($("btnPerfMap")) $("btnPerfMap").style.display = "";
       if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "inline-flex";
       if($("tabConfig")) $("tabConfig").style.display = "";
+    } else {
+      if($("btnQualityMulti")) $("btnQualityMulti").style.display = "none";
+      if($("btnPerfMap")) $("btnPerfMap").style.display = "none";
     }
     _unblockUI();
+    _applyAlertsAccess(d.can_alerts);
     return;
   }
 
@@ -966,11 +1428,16 @@ async function loadUserInfo(){
       if($("btnPerfMap")) $("btnPerfMap").style.display = "";
       if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
     } else {
-      // Non-admin: ensure beta features stay hidden
-      if($("tabQuality")) $("tabQuality").style.display = "none";
-      if($("tabGca")) $("tabGca").style.display = "none";
+      // Non-admin: Quality + GCA are now open to any Coaching team member
+      // (single-site only — the multi-site button stays admin-only). Map stays
+      // admin-only.
+      if($("tabQuality")) $("tabQuality").style.display = "";
+      if($("tabGca")) $("tabGca").style.display = "";
+      if($("btnQualityMulti")) $("btnQualityMulti").style.display = "none";
       if($("btnPerfMap")) $("btnPerfMap").style.display = "none";
     }
+    // Alerts (GCA reactivo + Quality) run only for the curated alerts group.
+    _applyAlertsAccess(d.can_alerts);
 
     _unblockUI();
 
@@ -1003,6 +1470,7 @@ document.addEventListener("DOMContentLoaded", function() {
 document.querySelectorAll("[data-close]").forEach(el=>
   el.addEventListener("click",()=>closeModal(el.dataset.close))
 );
+$("cc-submit") && $("cc-submit").addEventListener("click", _ccSubmit);
 document.querySelectorAll(".modal-overlay").forEach(el=>
   el.addEventListener("click",e=>{ if(e.target===el) el.classList.remove("show"); })
 );
@@ -1496,7 +1964,7 @@ function renderTable(){
     return;
   }
 
-  tb.innerHTML=rows.map(r=>{
+  tb.innerHTML=rows.map((r,ri)=>{
     const pr=badgeCls(r.prio);
     const prLbl=prioLabel(r.prio);
 
@@ -1641,7 +2109,14 @@ function renderTable(){
         return `<span${warn}>${r.idle_pct.toFixed(1)}%${m}</span>`;
       })()}</td>
       <td>${r.coached?`<span class="coached-chk"><span class="chk-circle">✓</span></span>`:""}</td>
-      <td><button class="row-btn" data-upload-login="${esc(r.login)}">↑ Upload</button></td>
+      <td>
+        <div style="display:flex;gap:4px;align-items:center">
+          <button class="row-btn" data-upload-login="${esc(r.login)}">↑ Upload</button>
+          ${(r.pending_coachings && r.pending_coachings.length)
+            ? `<button class="row-btn cc-row-close" data-ri="${ri}" title="Cerrar coaching pendiente (${r.pending_coachings.length})">✓/✗${r.pending_coachings.length>1?" ("+r.pending_coachings.length+")":""}</button>`
+            : ""}
+        </div>
+      </td>
     </tr>`;
   }).join("");
 
@@ -1650,6 +2125,18 @@ function renderTable(){
   );
   tb.querySelectorAll("[data-upload-login]").forEach(btn=>
     btn.addEventListener("click",()=>openUploadPrefill(btn.dataset.uploadLogin))
+  );
+  // Close-coaching from a Performance row: open the popup listing each pending
+  // coaching (title+insight) with its own Complete/Cancel buttons.
+  tb.querySelectorAll(".cc-row-close").forEach(btn=>
+    btn.addEventListener("click",()=>{
+      const r = rows[Number(btn.dataset.ri)];
+      if(!r) return;
+      openCloseFromRow(r.pending_coachings, {
+        fc: currentFC, login: r.login, name: r.name,
+        onDone: ()=>loadDashboard(),
+      });
+    })
   );
 }
 
@@ -2376,7 +2863,7 @@ function renderQuality(){
   _renderQualitySummary(rows);
 
   if(!rows.length){
-    body.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:40px;color:#999">No quality opportunities found.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="15" style="text-align:center;padding:40px;color:#999">No quality opportunities found.</td></tr>`;
     return;
   }
 
@@ -2387,7 +2874,7 @@ function renderQuality(){
   const pageStart = (window._qPage - 1) * Q_PAGE_SIZE;
   const pageRows = rows.slice(pageStart, pageStart + Q_PAGE_SIZE);
 
-  body.innerHTML = pageRows.map(r=>{
+  body.innerHTML = pageRows.map((r,ri)=>{
     const login = String(qualityValue(r,["login","Login"],"")).trim();
     const fc = String(qualityValue(r,["fc","FC"],"")).trim();
     const errorType = qualityErrorLabel(r);
@@ -2432,14 +2919,71 @@ function renderQuality(){
       <td><span class="mode-label mode-${mode.toLowerCase()}">${esc(mode)}</span></td>
       <td>${present?'<span class="present-chk">✓</span>':'<span class="present-dash">—</span>'}</td>
       <td>${coached?'<span class="coached-chk"><span class="chk-circle">✓</span></span>':'—'}</td>
-      <td><button class="row-btn quality-upload" data-login="${esc(login)}" data-fc="${esc(fc)}" data-course="${esc(courseId)}" data-error="${esc(errorType)}" data-total="${total}" data-sigma="${sigma}" ${coached ? 'disabled style="opacity:.35;cursor:not-allowed"' : !courseId ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>${coached?'✓ Done':!courseId?'No Course':'↑ Upload'}</button></td>
+      <td style="text-align:left">${(()=>{
+        // At-a-glance root-cause split (top 2) — like the Performance notes.
+        const split = Array.isArray(r.rc_split) ? r.rc_split : [];
+        if(!split.length) return '<span style="color:var(--text-muted);font-size:11px">—</span>';
+        const palette = ["#2563eb","#f59e0b","#16a34a","#dc2626"];
+        const top = split.slice(0,2);
+        return top.map((s,i)=>{
+          const pct = Math.max(2, Math.min(100, s.pct));
+          // shorten "Asin Categorization Filter" -> "Asin Categorization"
+          const name = String(s.name||"").replace(/\s*Filter$/i,"");
+          return `<div style="display:flex;align-items:center;gap:5px;margin:1px 0" title="${esc(s.name)}: ${s.pct}% (${s.count})">
+            <div style="flex:0 0 70px;font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</div>
+            <div style="flex:1;background:var(--border);border-radius:3px;height:11px;position:relative;min-width:30px">
+              <div style="position:absolute;inset:0;width:${pct}%;background:${palette[i%palette.length]};border-radius:3px"></div>
+            </div>
+            <div style="flex:0 0 30px;font-size:10px;text-align:right;font-weight:700">${s.pct}%</div>
+          </div>`;
+        }).join("");
+      })()}</td>
+      <td>
+        <div style="display:flex;gap:4px;align-items:center">
+          ${(()=>{
+            // Does this associate already have a PENDING coaching for THIS topic
+            // (same course UUID)? If so: no re-upload — only close (cancel/complete).
+            const rowUuid = String(courseId||"").toLowerCase().replace(/^.*\/course\//,"").replace(/\/$/,"");
+            const pend = Array.isArray(r.pending_coachings) ? r.pending_coachings : [];
+            const sameTopic = pend.filter(p => {
+              const pu = String(p.course_uuid||"").toLowerCase();
+              return pu && rowUuid && pu === rowUuid;
+            });
+            // Upload button: hidden when already coached OR a same-topic pending
+            // exists (must close that one first). Shown otherwise.
+            let html = "";
+            if(sameTopic.length){
+              html += `<button class="row-btn q-cc-close" data-login="${esc(login)}" data-fc="${esc(fc)}" data-pending="${esc(JSON.stringify(sameTopic))}" title="Ya hay un coaching de este topic subido — ciérralo (completar/cancelar)">✓/✗ Cerrar</button>`;
+            } else {
+              html += `<button class="row-btn quality-upload" data-login="${esc(login)}" data-fc="${esc(fc)}" data-course="${esc(courseId)}" data-error="${esc(errorType)}" data-total="${total}" data-sigma="${sigma}" ${coached ? 'disabled style="opacity:.35;cursor:not-allowed"' : !courseId ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>${coached?'✓ Done':!courseId?'No Course':'↑ Upload'}</button>`;
+              // Other-topic pendings still get a generic close button.
+              const otherPend = pend.filter(p => !sameTopic.includes(p));
+              if(otherPend.length){
+                html += `<button class="row-btn q-cc-close" data-login="${esc(login)}" data-fc="${esc(fc)}" data-pending="${esc(JSON.stringify(otherPend))}" title="Cerrar coaching pendiente (${otherPend.length})">✓/✗${otherPend.length>1?" ("+otherPend.length+")":""}</button>`;
+              }
+            }
+            return html;
+          })()}
+          ${(()=>{
+            // Root-cause Dive Deep: only for >=2 Sigma rows on PEI/BFV (the
+            // error keys OpenSearch RC covers).
+            const ek = String(qualityValue(r,["ErrorKey","error_key"],"")).toUpperCase();
+            const rcKey = ek.includes("BIN_FILTER") ? "BIN_FILTER_VIOLATIONS"
+                        : (ek.includes("PICK_ERROR")||ek==="PEI") ? "PICK_ERROR_INDICATOR" : "";
+            if(sigma >= 2 && rcKey){
+              return `<button class="row-btn q-rc-btn" data-login="${esc(login)}" data-fc="${esc(fc)}" data-ek="${rcKey}" title="Root cause + Dive Deep">🔎 RC</button>`;
+            }
+            return "";
+          })()}
+        </div>
+      </td>
     </tr>`;
   }).join("");
 
   // Pagination controls
   if(totalPages > 1){
     const paginationEl = document.createElement("tr");
-    paginationEl.innerHTML = `<td colspan="14" style="text-align:center;padding:8px 0">
+    paginationEl.innerHTML = `<td colspan="15" style="text-align:center;padding:8px 0">
       <button class="q-page-btn" ${window._qPage<=1?'disabled':''} onclick="window._qPage--;renderQuality()">← Prev</button>
       <span style="margin:0 12px;font-size:11px;color:var(--text-secondary)">Page ${window._qPage} of ${totalPages} (${rows.length} rows)</span>
       <button class="q-page-btn" ${window._qPage>=totalPages?'disabled':''} onclick="window._qPage++;renderQuality()">Next →</button>
@@ -2678,6 +3222,189 @@ document.addEventListener("click", async (e)=>{
     alert(`Quality upload failed: ${err.message}`);
   }
 });
+
+// Quality row: close a pending coaching (Complete/Cancel) via the GCA-backed
+// pending list embedded on the button.
+document.addEventListener("click", (e)=>{
+  const btn = e.target.closest(".q-cc-close");
+  if(!btn) return;
+  let pending = [];
+  try{ pending = JSON.parse(btn.dataset.pending || "[]"); }catch(_){ pending = []; }
+  const login = btn.dataset.login || "";
+  const rowFc = btn.dataset.fc || currentFC;
+  openCloseFromRow(pending, {
+    fc: rowFc, login, name: login,
+    onDone: ()=>loadQuality(),
+  });
+});
+
+// ── Quality Root-Cause + Dive Deep (>=2σ rows) ────────────────────────
+function _rcBar(s, color){
+  const pct = Math.max(0, Math.min(100, s.pct));
+  return `<div style="display:flex;align-items:center;gap:8px;margin:4px 0">
+    <div style="flex:0 0 180px;font-size:12px;font-weight:600">${esc(s.name)}</div>
+    <div style="flex:1;background:var(--border);border-radius:5px;height:18px;position:relative;overflow:hidden">
+      <div style="position:absolute;inset:0;width:${pct}%;background:${color};border-radius:5px"></div>
+    </div>
+    <div style="flex:0 0 92px;text-align:right;font-size:12px"><b>${s.pct}%</b> <span style="color:var(--text-muted)">(${s.count})</span></div>
+  </div>`;
+}
+
+async function openRcModal(login, fc, errorKey){
+  openModal("modalRc");
+  const rcFc = fc || currentFC;   // used to build FC Research links per ASIN
+  const titleEl = $("rc-title"), body = $("rc-body");
+  const ekLabel = errorKey === "BIN_FILTER_VIOLATIONS" ? "Bin Filter Violations" : "Pick Error Indicator";
+  titleEl.textContent = `Root Cause · ${login} · ${ekLabel}`;
+  body.innerHTML = `<div style="color:var(--text-secondary);font-size:13px">Cargando…</div>`;
+  try{
+    const d = await jget(`${API}/api/quality/rc?fc=${encodeURIComponent(fc||currentFC)}&login=${encodeURIComponent(login)}&error_key=${encodeURIComponent(errorKey)}`);
+    if(!d || !d.ok || !d.errors || !d.errors[errorKey]){
+      body.innerHTML = `<div style="color:var(--text-secondary);font-size:13px">Sin datos de root cause para este asociado.${(d&&d.error)?'<br>'+esc(d.error):''}<br><span style="font-size:11px">Corre el pipeline de Quality para refrescar.</span></div>`;
+      return;
+    }
+    const info = d.errors[errorKey];
+    const palette = ["#2563eb","#f59e0b","#16a34a","#dc2626","#7c3aed","#0891b2","#db2777","#65a30d"];
+    let html = `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">${info.total} eventos · split por <b>${esc(info.split_field)}</b></div>`;
+    // Split bars
+    html += info.split.map((s,i)=>_rcBar(s, palette[i%palette.length])).join("");
+    // Dive deep per RC (collapsible)
+    html += `<div style="margin-top:14px;font-weight:700;font-size:13px">🔎 Dive Deep</div>`;
+    info.split.forEach((s)=>{
+      const rows = (info.dive_by_rc && info.dive_by_rc[s.name]) || [];
+      const df = info.dive_fields || [];
+      html += `<details style="margin-top:8px;border:1px solid var(--border);border-radius:8px;padding:8px 10px">
+        <summary style="cursor:pointer;font-weight:600;font-size:12px">${esc(s.name)} <span style="color:var(--text-muted)">(${s.count})</span></summary>
+        <table style="width:100%;margin-top:6px;font-size:11px;border-collapse:collapse">
+          <thead><tr style="text-align:left;color:var(--text-muted)">
+            ${df.map(f=>`<th style="padding:3px 6px">${esc(f)}</th>`).join("")}<th style="padding:3px 6px;text-align:right">#</th>
+          </tr></thead>
+          <tbody>
+          ${rows.slice(0,50).map(rw=>`<tr style="border-top:1px solid var(--border)">
+            ${df.map(f=>{
+              const val = String(rw[f]||"");
+              // ASIN/FCSku columns become a clickable link to FC Research.
+              if(/asin|fcsku|sku/i.test(f) && val){
+                const u = `https://qi-fcresearch-eu.corp.amazon.com/${encodeURIComponent(rcFc)}/results?s=${encodeURIComponent(val)}`;
+                return `<td style="padding:3px 6px"><a href="${esc(u)}" target="_blank" rel="noopener" style="color:var(--accent);font-family:'JetBrains Mono',monospace;text-decoration:none">${esc(val)} ↗</a></td>`;
+              }
+              return `<td style="padding:3px 6px">${esc(val)}</td>`;
+            }).join("")}
+            <td style="padding:3px 6px;text-align:right;font-weight:700">${rw.count}</td>
+          </tr>`).join("")}
+          </tbody>
+        </table>${rows.length>50?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px">+${rows.length-50} más…</div>`:""}
+      </details>`;
+    });
+    body.innerHTML = html;
+  }catch(e){
+    body.innerHTML = `<div style="color:var(--red,#dc2626);font-size:13px">Error: ${esc(e.message||String(e))}</div>`;
+  }
+}
+
+document.addEventListener("click", (e)=>{
+  const btn = e.target.closest(".q-rc-btn");
+  if(!btn) return;
+  openRcModal(btn.dataset.login||"", btn.dataset.fc||currentFC, btn.dataset.ek||"");
+});
+
+// ── Coaching Queue modal (View Quality) ───────────────────────────────
+// Actionable list: associates >=2 Sigma, present on site, not yet coached —
+// each with their RC split + a button to upload/close the coaching.
+async function openCoachQueue(fc){
+  fc = fc || currentFC;
+  openModal("modalCoachQueue");
+  const body = $("cq-body");
+  $("cq-title").textContent = `Cola de Coaching · ${fc}`;
+  body.innerHTML = `<div style="color:var(--text-secondary);font-size:13px">Cargando…</div>`;
+  try{
+    const d = await jget(`${API}/api/quality/dashboard?fc=${encodeURIComponent(fc)}`);
+    const all = (d && d.data) || [];
+    // Filter: sigma>=2, present, not coached.
+    const queue = all.filter(r=>{
+      const sig = Number(r.sigma||0);
+      const present = String(r.present)===true || r.present===true || String(r.present).toLowerCase()==="true";
+      const coached = r.coached===true || String(r.coached).toLowerCase()==="true";
+      return sig>=2 && present && !coached;
+    }).sort((a,b)=>Number(b.sigma||0)-Number(a.sigma||0));
+
+    if(!queue.length){
+      body.innerHTML = `<div style="color:var(--text-secondary);font-size:14px;padding:20px;text-align:center">✓ No hay asociados pendientes de coaching (≥2σ, presentes, sin coachear).</div>`;
+      return;
+    }
+    const palette = ["#2563eb","#f59e0b","#16a34a","#dc2626"];
+    let html = `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px"><b>${queue.length}</b> asociado(s) por coachear · ≥2σ · presentes</div>`;
+    html += queue.map(r=>{
+      const login = String(r.login||"");
+      const ek = String(r.error_key||r.ErrorKey||"");
+      const errLabel = String(r.error_type||ek).replace(/_/g," ");
+      const sig = Number(r.sigma||0).toFixed(1);
+      const split = Array.isArray(r.rc_split)?r.rc_split:[];
+      const courseId = String(r.course_id||r.course_uuid||"");
+      const rcKey = ek.toUpperCase().includes("BIN_FILTER")?"BIN_FILTER_VIOLATIONS":(ek.toUpperCase().includes("PICK_ERROR")||ek.toUpperCase()==="PEI")?"PICK_ERROR_INDICATOR":"";
+      const pend = Array.isArray(r.pending_coachings)?r.pending_coachings:[];
+      const rowUuid = courseId.toLowerCase().replace(/^.*\/course\//,"").replace(/\/$/,"");
+      const sameTopic = pend.filter(p=>{const pu=String(p.course_uuid||"").toLowerCase();return pu&&rowUuid&&pu===rowUuid;});
+      // split bars (top 2)
+      const bars = split.slice(0,2).map((s,i)=>{
+        const pct=Math.max(2,Math.min(100,s.pct)); const nm=String(s.name||"").replace(/\s*Filter$/i,"");
+        return `<div style="display:flex;align-items:center;gap:5px;margin:1px 0" title="${esc(s.name)}: ${s.pct}%">
+          <div style="flex:0 0 110px;font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(nm)}</div>
+          <div style="flex:1;background:var(--border);border-radius:3px;height:10px;position:relative;min-width:40px"><div style="position:absolute;inset:0;width:${pct}%;background:${palette[i%palette.length]};border-radius:3px"></div></div>
+          <div style="flex:0 0 30px;font-size:10px;text-align:right;font-weight:700">${s.pct}%</div></div>`;
+      }).join("") || `<span style="color:var(--text-muted);font-size:11px">sin RC</span>`;
+      // action button
+      let actionBtn = "";
+      if(sameTopic.length){
+        actionBtn = `<button class="row-btn cq-close" data-login="${esc(login)}" data-fc="${esc(fc)}" data-pending="${esc(JSON.stringify(sameTopic))}">✓/✗ Cerrar</button>`;
+      } else if(courseId){
+        actionBtn = `<button class="row-btn cq-upload" data-login="${esc(login)}" data-fc="${esc(fc)}" data-course="${esc(courseId)}" data-error="${esc(errLabel)}" data-total="${r.total_errors_wk||0}" data-sigma="${r.sigma||0}">↑ Upload</button>`;
+      } else {
+        actionBtn = `<span style="font-size:11px;color:var(--text-muted)">No Course</span>`;
+      }
+      const rcBtn = rcKey ? `<button class="row-btn q-rc-btn" data-login="${esc(login)}" data-fc="${esc(fc)}" data-ek="${rcKey}" title="Dive Deep">🔎</button>` : "";
+      return `<div style="display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px">
+        <div style="flex:0 0 150px">
+          <div style="font-weight:700;font-size:13px">${esc(login)}</div>
+          <div style="font-size:10px;color:var(--text-muted)">${esc(errLabel)}</div>
+          <div style="font-size:11px"><span class="pr ${qualitySigmaClass(Number(sig))}">Σ${sig}</span></div>
+        </div>
+        <div style="flex:1;min-width:0">${bars}</div>
+        <div style="flex:0 0 auto;display:flex;gap:4px;align-items:center">${rcBtn}${actionBtn}</div>
+      </div>`;
+    }).join("");
+    body.innerHTML = html;
+    // wire upload/close from queue (reuse existing handlers via class)
+    body.querySelectorAll(".cq-upload").forEach(b=>b.addEventListener("click",()=>{
+      openUploadPrefillQuality(b.dataset);
+    }));
+    body.querySelectorAll(".cq-close").forEach(b=>b.addEventListener("click",()=>{
+      let pend=[]; try{pend=JSON.parse(b.dataset.pending||"[]");}catch(_){}
+      openCloseFromRow(pend,{fc:b.dataset.fc,login:b.dataset.login,name:b.dataset.login,onDone:()=>{loadQuality&&loadQuality();openCoachQueue(fc);}});
+    }));
+  }catch(e){
+    body.innerHTML = `<div style="color:var(--red,#dc2626);font-size:13px">Error: ${esc(e.message||String(e))}</div>`;
+  }
+}
+window.openCoachQueue = openCoachQueue;
+
+// Upload from the coaching queue (mirrors the quality-upload handler).
+async function openUploadPrefillQuality(ds){
+  const login=ds.login, fc=ds.fc, courseId=ds.course, errorType=ds.error;
+  if(!login||!courseId) return;
+  try{
+    await jpost(`${API}/api/quality/upload`, {
+      fc, login, course_id: courseId, error_type: errorType,
+      total_errors_wk: Number(ds.total||0), sigma: Number(ds.sigma||0),
+      notes: `Quality Coaching | ${errorType} | WK Errors: ${ds.total} | Sigma: ${Number(ds.sigma||0).toFixed(2)}`
+    });
+    showToast({title:"Coaching subido", body:`${login} · ${errorType}`, type:"ok"});
+    if(loadQuality) loadQuality();
+    openCoachQueue(fc);  // refresh the queue
+  }catch(e){
+    showToast({title:"Upload falló", body:String(e.message||e), type:"err"});
+  }
+}
 
 // ── Quality: Statusbar with pipeline timestamp ────────────────────────
 function _updateQualityStatusbar(){
@@ -3241,6 +3968,13 @@ $("btnPipeline").addEventListener("click", async ()=>{
                 fc: currentFC,
               }));
             }catch(ex){}
+            // After Performance finishes, kick GCA + Quality so all three are
+            // fresh from one "Start Pipeline" click. Fire-and-forget server-side
+            // (they keep running even though we reload the page right after).
+            if(window._canAlerts){
+              try{ fetch(`${API}/api/gca/poll?fc=${encodeURIComponent(currentFC)}`, {method:"POST"}); }catch(_){}
+              try{ fetch(`${API}/api/quality/poll?fc=${encodeURIComponent(currentFC)}`, {method:"POST"}); }catch(_){}
+            }
             // window.location.reload() is the only reliable way to repaint in pywebview
             // after a pipeline. Auth cache is persisted in localStorage so the reload
             // is instant — loadUserInfo() reads the cache and skips the fetch entirely.
@@ -3488,6 +4222,14 @@ initProcessMs();
         ms: 4500,
       });
     }, 500);
+    // After a manual Start Pipeline, GCA + Quality were kicked off server-side.
+    // Give them time to finish, then open the Coaching Queue automatically so
+    // the coach sees who needs coaching (no need to wait for the poll baseline).
+    if(window._canAlerts){
+      setTimeout(function(){
+        try{ if(typeof openCoachQueue === "function") openCoachQueue(info.fc || currentFC); }catch(_){}
+      }, 20000);
+    }
   }catch(ex){}
 })();
 
@@ -5956,15 +6698,29 @@ document.addEventListener("click",(e)=>{
     if(listEl){
       listEl.innerHTML = hd.length
         ? hd.map(it=>{
-            const gcaUrl = `https://guided-coaching-dub.corp.amazon.com/#/view-coaching-instance/${it.id}`;
             const who = esc(it.login || it.employee_id || "—");
             const what = esc(it.insight || it.course_title || "");
+            const safeId = esc(it.id || "");
+            const loc = [it.station, it.process_path].filter(Boolean).join(" · ");
+            const locHtml = loc ? `<div style="font-size:11px;color:var(--text-secondary)">📍 ${esc(loc)}</div>` : "";
             return `<div class="hd-row">
-              <div><b>${who}</b>${what?` · <span style="color:var(--text-secondary)">${what}</span>`:""}</div>
-              <a href="${esc(gcaUrl)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:600;white-space:nowrap">Cerrar en GCA →</a>
+              <div><b>${who}</b>${what?` · <span style="color:var(--text-secondary)">${what}</span>`:""}${locHtml}</div>
+              <div style="display:flex;gap:6px;white-space:nowrap">
+                <button class="row-btn cc-complete" data-iid="${safeId}" data-login="${who}" data-name="${esc(it.name||"")}">✓ Completar</button>
+                <button class="row-btn cc-cancel" data-iid="${safeId}" data-login="${who}" data-name="${esc(it.name||"")}">✗ Cancelar</button>
+              </div>
             </div>`;
           }).join("")
         : "";
+      // Wire the per-row close buttons.
+      listEl.querySelectorAll(".cc-complete").forEach(b=>b.addEventListener("click",()=>
+        openCloseCoaching({instanceId:b.dataset.iid, fc:currentFC, action:"complete",
+          login:b.dataset.login, name:b.dataset.name,
+          onDone:()=>{ closeModal("modalHighDefects"); if(window._loadGcaDashboard) window._loadGcaDashboard(); }})));
+      listEl.querySelectorAll(".cc-cancel").forEach(b=>b.addEventListener("click",()=>
+        openCloseCoaching({instanceId:b.dataset.iid, fc:currentFC, action:"cancel",
+          login:b.dataset.login, name:b.dataset.name,
+          onDone:()=>{ closeModal("modalHighDefects"); if(window._loadGcaDashboard) window._loadGcaDashboard(); }})));
     }
     if(!hd.length) return;
     // Only auto-open once per (fc + set of HD ids) so it doesn't nag on every reload.
@@ -6365,9 +7121,25 @@ document.addEventListener("click",(e)=>{
           <td><span style="font-size:11px">${esc(it.owner)}</span></td>
           <td>${notes}</td>
           <td><div style="display:flex;align-items:center;gap:4px">${presenceDot}</div></td>
-          <td><a href="${esc(gcaUrl)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:600;font-size:11px">Open GCA →</a></td>
+          <td>
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
+              <div style="display:flex;gap:4px">
+                <button class="row-btn cc-complete" data-iid="${esc(it.id||"")}" data-login="${esc(loginDisplay)}" data-name="${esc(it.name||"")}">✓</button>
+                <button class="row-btn cc-cancel" data-iid="${esc(it.id||"")}" data-login="${esc(loginDisplay)}" data-name="${esc(it.name||"")}">✗</button>
+              </div>
+              <a href="${esc(gcaUrl)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-size:10px">Open GCA →</a>
+            </div>
+          </td>
         </tr>`;
       }).join("");
+      // Wire per-row close buttons (one coaching = one instance_id).
+      const _onClose = ()=>{ if(window._loadGcaDashboard) window._loadGcaDashboard(); };
+      tbody.querySelectorAll(".cc-complete").forEach(b=>b.addEventListener("click",()=>
+        openCloseCoaching({instanceId:b.dataset.iid, fc:currentFC, action:"complete",
+          login:b.dataset.login, name:b.dataset.name, onDone:_onClose})));
+      tbody.querySelectorAll(".cc-cancel").forEach(b=>b.addEventListener("click",()=>
+        openCloseCoaching({instanceId:b.dataset.iid, fc:currentFC, action:"cancel",
+          login:b.dataset.login, name:b.dataset.name, onDone:_onClose})));
     }
     const totalPending = (gcaData.items||[]).filter(i=>i.status==="PENDING").length;
     const totalCompleted = (gcaData.items||[]).filter(i=>i.status==="COMPLETED").length;

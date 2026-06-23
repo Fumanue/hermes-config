@@ -449,6 +449,11 @@ html.theme-transitioning *::after{
 .t-midway[data-state="expiring"] .t-midway-label{color:var(--orange)}
 .t-midway[data-state="expired"] .t-midway-label,
 .t-midway[data-state="missing"] .t-midway-label{color:var(--red)}
+.t-poll{display:flex;align-items:center;gap:5px;padding:4px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;font-size:10.5px;color:var(--text-muted);white-space:nowrap;cursor:default}
+.t-poll-ico{font-size:10px;opacity:.8;flex-shrink:0}
+.t-poll-seg{font-weight:600;font-variant-numeric:tabular-nums}
+.t-poll-seg.due{color:var(--orange)}
+.t-poll-sep{width:1px;height:11px;background:var(--border-strong);margin:0 2px}
 /* Mwinit toast: full-screen-ish modal that tells the user to touch their YubiKey */
 .mwinit-toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-card);border:2px solid var(--accent);border-radius:18px;padding:36px 44px;box-shadow:0 20px 60px rgba(0,0,0,0.4);z-index:10000;text-align:center;min-width:380px;max-width:520px}
 .mwinit-toast.hidden{display:none}
@@ -1426,6 +1431,12 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <span class="t-midway-dot"></span>
       <span class="t-midway-label" id="midwayLabel">Midway</span>
     </div>
+    <div class="t-poll" id="pollPill" style="display:none" title="Próxima comprobación automática de alertas">
+      <span class="t-poll-ico">🔔</span>
+      <span class="t-poll-seg" id="pollGca">GCA —</span>
+      <span class="t-poll-sep"></span>
+      <span class="t-poll-seg" id="pollQuality">Q —</span>
+    </div>
     <div class="t-user" id="userPill" title="Checking user...">
       <span class="t-user-dot loading" id="userDot"></span>
       <span class="t-user-name" id="userName">Checking…</span>
@@ -1631,10 +1642,11 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <div class="sep"></div>
     <button class="act-btn act-secondary" id="btnUpload" data-i18n="btn_upload_coaching">↑ Upload Coaching</button>
     <button class="act-btn act-secondary" id="btnBulk" data-i18n="btn_bulk">↑↑ Bulk Upload</button>
-    <button class="act-btn act-pipeline" id="btnPipeline" data-i18n="btn_run_pipeline">▶ Run Pipeline</button>
+    <button class="act-btn act-pipeline" id="btnPipeline" data-i18n="btn_run_pipeline">▶ Start Pipeline</button>
     <button class="act-btn act-csv" id="btnDownloadCSV">↓ CSV</button>
     <button class="act-btn" id="btnPerfMap" style="display:none;background:var(--accent-light);color:var(--accent-text);border:1px solid var(--accent-border)">🗺️ Map</button>
     <button class="act-btn" id="btnAdoption" style="display:none;background:var(--accent-light);color:var(--accent-text);border:1px solid var(--accent-border)" title="Super admin: Argos adoption (DDD)">📊 Adoption</button>
+    <button onclick="if(window.testAlertsNow)window.testAlertsNow()" class="act-btn" id="btnTestAlerts" style="display:none;font-size:11px;padding:7px 12px;background:var(--bg-panel);border:1px solid var(--border)" title="Comprobar coachings manuales pendientes (GCA + Quality) ahora">🔔 Check Coaching Manual</button>
     <button onclick="if(window._showCoachingPath)window._showCoachingPath()" class="act-btn" style="font-size:11px;padding:7px 14px;background:var(--bg-panel);border:1px solid var(--border)">🧭 Path</button>
 
     <div class="tb-count">Showing <b id="rowCount">0</b> of <b id="totalCount">0</b></div>
@@ -1856,6 +1868,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
           <th style="width:110px" data-i18n="qth_mode">Mode</th>
           <th style="width:90px" data-i18n="qth_present">Present</th>
           <th style="width:90px" data-i18n="qth_coached">Coached</th>
+          <th style="width:180px;text-align:left">Root Cause</th>
           <th style="width:110px" data-i18n="qth_action">Action</th>
         </tr>
       </thead>
@@ -2298,6 +2311,86 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
+<!-- ═══ MODAL: Close coaching (Complete / Cancel) ═══ -->
+<div class="modal-overlay" id="modalCloseCoaching">
+  <div class="modal" style="width:560px">
+    <div class="modal-header"><span class="modal-title" id="cc-title">Cerrar coaching</span><button class="modal-close" data-close="modalCloseCoaching">×</button></div>
+    <div class="modal-body">
+      <div id="cc-who" style="font-size:13px;color:var(--text-secondary);margin-bottom:12px"></div>
+      <!-- Complete: category 1-5 -->
+      <div class="form-group" id="cc-category-wrap">
+        <label class="form-label">Categoría</label>
+        <select class="form-input" id="cc-category">
+          <option value="1">1 · Conocimiento — falta de conocimiento del proceso</option>
+          <option value="2">2 · Ergonomics — no aplica reglas de ergonomía</option>
+          <option value="3">3 · Actitudinal — el coach detecta actitud</option>
+          <option value="4">4 · Process Issue — problema de estación/proceso (no del asociado)</option>
+          <option value="5">5 · Limitación — barrera no controlable</option>
+        </select>
+      </div>
+      <!-- Cancel: predefined reason -->
+      <div class="form-group" id="cc-reason-wrap" style="display:none">
+        <label class="form-label">Motivo de cancelación</label>
+        <select class="form-input" id="cc-reason"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notas <span style="color:var(--red,#dc2626)">*</span></label>
+        <textarea class="form-textarea" id="cc-notes" placeholder="Notas obligatorias…"></textarea>
+        <div class="form-hint" id="cc-notes-hint"></div>
+      </div>
+      <div id="cc-result"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="act-btn act-secondary" data-close="modalCloseCoaching">Cancelar</button>
+      <button class="act-btn act-primary" id="cc-submit">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Coaching Queue (View Quality) — ≥2σ present, not coached ═══ -->
+<div class="modal-overlay" id="modalCoachQueue">
+  <div class="modal" style="width:860px;max-height:88vh;display:flex;flex-direction:column">
+    <div class="modal-header"><span class="modal-title" id="cq-title">Cola de Coaching</span><button class="modal-close" data-close="modalCoachQueue">×</button></div>
+    <div class="modal-body" id="cq-body" style="overflow-y:auto">
+      <div style="color:var(--text-secondary);font-size:13px">Cargando…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Root Cause + Dive Deep (Quality >=2σ) ═══ -->
+<div class="modal-overlay" id="modalRc">
+  <div class="modal" style="width:680px;max-height:85vh;display:flex;flex-direction:column">
+    <div class="modal-header"><span class="modal-title" id="rc-title">Root Cause</span><button class="modal-close" data-close="modalRc">×</button></div>
+    <div class="modal-body" id="rc-body" style="overflow-y:auto">
+      <div style="color:var(--text-secondary);font-size:13px">Cargando…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Complete or Cancel? (chooser from Perf/Quality rows) ═══ -->
+<div class="modal-overlay" id="modalCcAsk">
+  <div class="modal" style="width:420px">
+    <div class="modal-header"><span class="modal-title">Cerrar coaching</span><button class="modal-close" data-close="modalCcAsk">×</button></div>
+    <div class="modal-body"><div id="ccAskBody" style="font-size:13px"></div></div>
+    <div class="modal-footer">
+      <button class="act-btn act-secondary" data-close="modalCcAsk">Volver</button>
+      <button class="act-btn act-secondary" id="ccAskCancel">✗ Cancelar coaching</button>
+      <button class="act-btn act-primary" id="ccAskComplete">✓ Completar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Pick coaching (when an associate has several pending) ═══ -->
+<div class="modal-overlay" id="modalCcPick">
+  <div class="modal" style="width:520px">
+    <div class="modal-header"><span class="modal-title">Elegir coaching</span><button class="modal-close" data-close="modalCcPick">×</button></div>
+    <div class="modal-body">
+      <div id="ccPickWho" style="font-size:13px;margin-bottom:12px"></div>
+      <div id="ccPickList"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ MODAL: Pipeline ═══ -->
 <div class="modal-overlay" id="modalPipeline">
   <div class="modal" style="width:700px">
@@ -2357,7 +2450,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
-<script src="/static/app.js?v=v163_amzl_nodept_compact_20260616" defer></script>
+<script src="/static/app.js?v=v164_pollcountdown_coached_20260623" defer></script>
 </body>
 </html>
 

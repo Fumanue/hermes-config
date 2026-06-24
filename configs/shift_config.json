@@ -1,4 +1,26 @@
 {
+  "DMA4": {
+    "_comment": "AMZL Delivery Station. Two selectable cycles (act as shifts). Cycle 1 = 01:00-08:00, Cycle 2 = 08:00-11:00. The selected cycle's range is what the AMZL pipeline measures both processes (Stow/ADTA + Pick & Stage) over.",
+    "Delivery": {
+      "Cycle_1": {
+        "shift_start": 60,
+        "shift_end": 480,
+        "H1_start": 60,
+        "H1_end": 270,
+        "H2_start": 270,
+        "H2_end": 480
+      },
+      "Cycle_2": {
+        "shift_start": 480,
+        "shift_end": 660,
+        "H1_start": 480,
+        "H1_end": 570,
+        "H2_start": 570,
+        "H2_end": 660
+      }
+    },
+    "default_department": "Delivery"
+  },
   "BCN1": {
     "Outbound": {
       "Day": {

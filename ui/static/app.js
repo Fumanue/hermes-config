@@ -95,6 +95,8 @@ const I18N = {
     qual_alert_title: "⚠️ Alerta de calidad",
     qual_alert_body: "{n} asociado(s) ≥2σ presente(s) en {fc}.",
     qual_view_btn: "Ver en Quality",
+    q_pending_close: "Pendiente · Cerrar",
+    q_pending_other: "Pendiente",
     empty_no_pending_coachings: "No hay coachings pendientes",
     empty_no_coachings_floor: "No hay coachings con estación en {floor}",
     // CSV
@@ -235,6 +237,8 @@ const I18N = {
     qual_alert_title: "⚠️ Quality alert",
     qual_alert_body: "{n} associate(s) ≥2σ present at {fc}.",
     qual_view_btn: "View in Quality",
+    q_pending_close: "Pending · Close",
+    q_pending_other: "Pending",
     empty_no_pending_coachings: "No pending coachings",
     empty_no_coachings_floor: "No coachings with station on {floor}",
     // CSV
@@ -1046,6 +1050,9 @@ function _alertQualityFlagged(newItems, fc){
 async function _qualityPollOnce(){
   _qualityNextRunAt = Date.now() + QUALITY_POLL_MS;
   const fc = (localStorage.getItem("argos-default-fc") || currentFC || "BCN4");
+  // Delivery sites have no Quality — skip the poll (would just error/return
+  // empty). The countdown still advances so the next FC change re-arms it.
+  if(typeof siteBL === "function" && siteBL(fc) === "AMZL") return;
   try{
     const r = await fetch(`${API}/api/quality/poll?fc=${encodeURIComponent(fc)}`, { method:"POST" });
     const j = await r.json().catch(()=>({}));
@@ -1316,6 +1323,13 @@ function _applySiteBL(){
   if(bl === "AMZL"){
     if(window._hidePerfMap) window._hidePerfMap();
     const mapBtn = $("btnPerfMap"); if(mapBtn) mapBtn.style.display = "none";
+    // Delivery has no Quality: if the user is sitting on the (now-hidden)
+    // Quality tab, bounce them back to Performance so they don't stare at a
+    // blank panel.
+    const qTab = document.querySelector('.t-tab[data-tab="quality"]');
+    if(qTab && qTab.classList.contains("on") && typeof switchTab === "function"){
+      switchTab("dashboard");
+    }
   } else if(window._isAdmin){
     const mapBtn = $("btnPerfMap"); if(mapBtn) mapBtn.style.display = "";
   }
@@ -2953,24 +2967,25 @@ function renderQuality(){
             // exists (must close that one first). Shown otherwise.
             let html = "";
             if(sameTopic.length){
-              html += `<button class="row-btn q-cc-close" data-login="${esc(login)}" data-fc="${esc(fc)}" data-pending="${esc(JSON.stringify(sameTopic))}" title="Ya hay un coaching de este topic subido — ciérralo (completar/cancelar)">✓/✗ Cerrar</button>`;
+              html += `<button class="row-btn q-cc-close pending-close" data-login="${esc(login)}" data-fc="${esc(fc)}" data-pending="${esc(JSON.stringify(sameTopic))}" title="Ya hay un coaching de este topic subido — ciérralo (completar o cancelar)">⏳ ${t("q_pending_close")}</button>`;
             } else {
               html += `<button class="row-btn quality-upload" data-login="${esc(login)}" data-fc="${esc(fc)}" data-course="${esc(courseId)}" data-error="${esc(errorType)}" data-total="${total}" data-sigma="${sigma}" ${coached ? 'disabled style="opacity:.35;cursor:not-allowed"' : !courseId ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>${coached?'✓ Done':!courseId?'No Course':'↑ Upload'}</button>`;
               // Other-topic pendings still get a generic close button.
               const otherPend = pend.filter(p => !sameTopic.includes(p));
               if(otherPend.length){
-                html += `<button class="row-btn q-cc-close" data-login="${esc(login)}" data-fc="${esc(fc)}" data-pending="${esc(JSON.stringify(otherPend))}" title="Cerrar coaching pendiente (${otherPend.length})">✓/✗${otherPend.length>1?" ("+otherPend.length+")":""}</button>`;
+                html += `<button class="row-btn q-cc-close pending-close-other" data-login="${esc(login)}" data-fc="${esc(fc)}" data-pending="${esc(JSON.stringify(otherPend))}" title="Cerrar coaching pendiente de otro topic (${otherPend.length})">⏳ ${t("q_pending_other")}${otherPend.length>1?" ("+otherPend.length+")":""}</button>`;
               }
             }
             return html;
           })()}
           ${(()=>{
-            // Root-cause Dive Deep: only for >=2 Sigma rows on PEI/BFV (the
-            // error keys OpenSearch RC covers).
+            // Root-cause Dive Deep on PEI/BFV (the error keys OpenSearch RC
+            // covers) — shown for ALL rows now, not only >=2 Sigma (we have the
+            // RC data per associate regardless of sigma).
             const ek = String(qualityValue(r,["ErrorKey","error_key"],"")).toUpperCase();
             const rcKey = ek.includes("BIN_FILTER") ? "BIN_FILTER_VIOLATIONS"
                         : (ek.includes("PICK_ERROR")||ek==="PEI") ? "PICK_ERROR_INDICATOR" : "";
-            if(sigma >= 2 && rcKey){
+            if(rcKey){
               return `<button class="row-btn q-rc-btn" data-login="${esc(login)}" data-fc="${esc(fc)}" data-ek="${rcKey}" title="Root cause + Dive Deep">🔎 RC</button>`;
             }
             return "";
@@ -3356,7 +3371,7 @@ async function openCoachQueue(fc){
       // action button
       let actionBtn = "";
       if(sameTopic.length){
-        actionBtn = `<button class="row-btn cq-close" data-login="${esc(login)}" data-fc="${esc(fc)}" data-pending="${esc(JSON.stringify(sameTopic))}">✓/✗ Cerrar</button>`;
+        actionBtn = `<button class="row-btn cq-close pending-close" data-login="${esc(login)}" data-fc="${esc(fc)}" data-pending="${esc(JSON.stringify(sameTopic))}" title="Ya hay un coaching de este topic subido — ciérralo (completar o cancelar)">⏳ ${t("q_pending_close")}</button>`;
       } else if(courseId){
         actionBtn = `<button class="row-btn cq-upload" data-login="${esc(login)}" data-fc="${esc(fc)}" data-course="${esc(courseId)}" data-error="${esc(errLabel)}" data-total="${r.total_errors_wk||0}" data-sigma="${r.sigma||0}">↑ Upload</button>`;
       } else {

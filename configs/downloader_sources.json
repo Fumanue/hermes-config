@@ -20,6 +20,16 @@
     "100541": "adta",
     "100407": "P&S"
   },
+  "_amzl_process_display_comment": "Display name shown in the dashboard Role column per PPA process_id. Distinguishes ADTA Stow from normal Stow and labels Pick & Stage.",
+  "amzl_process_display": {
+    "100021": "Stow",
+    "100541": "ADTA Stow",
+    "100407": "Pick & Stage"
+  },
+  "_amzl_process_windows_comment": "Per-SITE, per-PROCESS time windows (local HH:MM). Normally EMPTY: delivery measures every process over the SELECTED CYCLE's range (see shift_config.json DMA4 Cycle_1/Cycle_2). Only set this to override a single process to a different window than the cycle.",
+  "amzl_process_windows": {},
+  "_amzl_no_min_hours_comment": "PPA process_ids EXEMPT from the 1-hour minimum-hours active filter (short-duration processes where <1h is still valid productivity). Pick & Stage runs in a short cycle.",
+  "amzl_no_min_hours_processes": ["100407"],
   "fclm_process_ids": [
     "1002969",
     "1002976",

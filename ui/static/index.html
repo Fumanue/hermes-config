@@ -626,6 +626,12 @@ body[data-bl="amzl"] #perfMapWrap{display:none !important}
 /* Delivery mode packs the topbar (manual datetime + shift selector): drop the
    informational poll-countdown pill so the action buttons stay reachable. */
 body[data-bl="amzl"] .t-poll{display:none !important}
+/* Delivery has no Quality data — hide the Quality tab + its multi-site button
+   in AMZL view. Delivery sites get: Performance, Targets, FAQ, GCA only. This
+   CSS wins over any JS that sets display="" on auth, so we don't have to guard
+   every code path. */
+body[data-bl="amzl"] #tabQuality,
+body[data-bl="amzl"] #btnQualityMulti{display:none !important}
 /* AMZL-only elements: hidden everywhere except the delivery view. Use revert
    so table cells/headers keep their natural table-cell display, not block. */
 .bl-amzl-only{display:none !important}
@@ -710,6 +716,19 @@ body[data-bl="amzl"] .curve-label{font-size:13px}
 .row-btn{padding:4px 11px;font-size:10.5px;border-radius:12px;border:1px solid var(--border-strong);background:var(--bg-input);color:var(--text);cursor:pointer;font-weight:500;transition:all .15s}
 .row-btn:hover:not(:disabled){background:var(--accent-light);border-color:var(--accent-border);color:var(--accent-text)}
 .row-btn:disabled{opacity:.3;cursor:not-allowed}
+/* "Pendiente · Cerrar": amber, signals a same-topic coaching already exists and
+   must be closed (can't re-upload). Stands out from the blue Upload. */
+.row-btn.pending-close{background:#fef3c7;border-color:#f59e0b;color:#92400e;font-weight:700}
+.row-btn.pending-close:hover:not(:disabled){background:#fde68a;border-color:#d97706;color:#78350f}
+.row-btn.pending-close-other{background:#fffbeb;border-color:#fcd34d;color:#92400e}
+[data-theme="dark"] .row-btn.pending-close,
+[data-theme="amberdark"] .row-btn.pending-close,
+[data-theme="midnight"] .row-btn.pending-close,
+[data-theme="cherry"] .row-btn.pending-close{background:#78350f;border-color:#f59e0b;color:#fde68a}
+[data-theme="dark"] .row-btn.pending-close-other,
+[data-theme="amberdark"] .row-btn.pending-close-other,
+[data-theme="midnight"] .row-btn.pending-close-other,
+[data-theme="cherry"] .row-btn.pending-close-other{background:#451a03;border-color:#b45309;color:#fcd34d}
 
 /* MAP LIST VIEW */
 .map-list-zone{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;overflow:hidden}
@@ -2462,7 +2481,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
-<script src="/static/app.js?v=v165_topbar_overflow_fix_20260624" defer></script>
+<script src="/static/app.js?v=v166_delivery_rc_pending_20260624" defer></script>
 </body>
 </html>
 

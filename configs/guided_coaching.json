@@ -11,6 +11,14 @@
       "uuid": "9a639d7e-0b7a-5bc3-9402-7989ae335a5d",
       "applies_to": "both"
     },
+    "STOW_DS": {
+      "uuid": "b900e1fe-b917-598a-a883-64a701732fbf",
+      "applies_to": "both"
+    },
+    "PICK_STAGE_DS": {
+      "uuid": "5aa0d34d-fd08-55ba-a3ff-580acca1cbba",
+      "applies_to": "both"
+    },
     "AFE_PACK": {
       "uuid": "62040a95-c1dc-54ce-8223-6d8e71633148",
       "applies_to": "both"

@@ -1085,10 +1085,10 @@ function _fmtCountdown(ms){
   if(ms == null) return "—";
   const s = Math.max(0, Math.round(ms / 1000));
   if(s <= 0)   return t("poll_due");
-  if(s < 60)   return s + "s";
+  // Compact fixed-width "m:ss" so the pill never grows wide enough to push the
+  // topbar action buttons off-screen (e.g. "9:46" instead of "9m 46s").
   const m = Math.floor(s / 60), rem = s % 60;
-  if(m < 10)   return rem ? `${m}m ${rem}s` : `${m}m`;
-  return m + "m";
+  return `${m}:${String(rem).padStart(2, "0")}`;
 }
 function _paintPollPill(){
   const pill = $("pollPill");

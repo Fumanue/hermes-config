@@ -430,7 +430,7 @@ html.theme-transitioning *::after{
 
 /* FC + SHIFT */
 #fcSelect{border:1px solid var(--border-strong);background:var(--bg-input);padding:6px 14px;border-radius:18px;font-size:12px;color:var(--accent-text);font-weight:600;cursor:pointer;outline:none;appearance:none}
-.t-right{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:1;min-width:0;padding-left:8px}
+.t-right{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px;margin-left:auto;flex-shrink:1;min-width:0;padding-left:8px}
 .t-user{display:flex;align-items:center;gap:5px;padding:4px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;font-size:11px;color:var(--text);white-space:nowrap}
 .t-user-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
 .t-user-dot.loading{background:var(--orange);animation:pulse 1.5s infinite}
@@ -449,7 +449,11 @@ html.theme-transitioning *::after{
 .t-midway[data-state="expiring"] .t-midway-label{color:var(--orange)}
 .t-midway[data-state="expired"] .t-midway-label,
 .t-midway[data-state="missing"] .t-midway-label{color:var(--red)}
-.t-poll{display:flex;align-items:center;gap:5px;padding:4px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;font-size:10.5px;color:var(--text-muted);white-space:nowrap;cursor:default}
+.t-poll{display:flex;align-items:center;gap:4px;padding:4px 9px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;font-size:10.5px;color:var(--text-muted);white-space:nowrap;cursor:default;flex-shrink:0}
+/* Action buttons (delivery/manual-time/settings) must NEVER be pushed off the
+   right edge — they carry the theme/lang/config controls. They never shrink;
+   the informational pills (poll, user) yield space first via the rules below. */
+.t-right .settings-btn{flex-shrink:0}
 .t-poll-ico{font-size:10px;opacity:.8;flex-shrink:0}
 .t-poll-seg{font-weight:600;font-variant-numeric:tabular-nums}
 .t-poll-seg.due{color:var(--orange)}
@@ -619,6 +623,9 @@ html.theme-transitioning *::after{
 body[data-bl="amzl"] .bl-fc-only{display:none !important}
 body[data-bl="amzl"] #btnPerfMap,
 body[data-bl="amzl"] #perfMapWrap{display:none !important}
+/* Delivery mode packs the topbar (manual datetime + shift selector): drop the
+   informational poll-countdown pill so the action buttons stay reachable. */
+body[data-bl="amzl"] .t-poll{display:none !important}
 /* AMZL-only elements: hidden everywhere except the delivery view. Use revert
    so table cells/headers keep their natural table-cell display, not block. */
 .bl-amzl-only{display:none !important}
@@ -1022,6 +1029,11 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   .topbar{padding:0 12px}
   .t-tab{padding:6px 12px;font-size:11.5px}
   .t-right{gap:6px}
+}
+@media(max-width:1500px){
+  /* Tight topbar (e.g. Delivery mode adds the manual datetime inputs): hide the
+     poll countdown pill first — it's informational, the action buttons aren't. */
+  .t-poll{display:none!important}
 }
 @media(max-width:1100px){
   .t-user{display:none}
@@ -2450,7 +2462,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
-<script src="/static/app.js?v=v164_pollcountdown_coached_20260623" defer></script>
+<script src="/static/app.js?v=v165_topbar_overflow_fix_20260624" defer></script>
 </body>
 </html>
 

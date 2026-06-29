@@ -1,6 +1,6 @@
 {
-  "version": "2.0.35",
-  "updated_at": "2026-06-10T23:07:31",
+  "version": "2.0.40",
+  "updated_at": "2026-06-25T16:48:35",
   "changed_files": [
     "config\\argos\\area_roles.json",
     "config\\argos\\cleaning_rules.json",

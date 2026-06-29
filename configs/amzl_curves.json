@@ -1,0 +1,33 @@
+{
+  "_comment": "AMZL (Delivery Station) Learning Curve. Unlike FC (weeks 1-10), delivery curves are keyed by CUMULATIVE PROCESS HOURS buckets. The factor is the Expected LC% (fraction of OP2 target) for an associate at that tenure. Source: EU ACES Learning Curve Program Dashboard. 'Raw Data - Process Hours' CSV gives each associate their LC bucket (LC Hours column); this maps the bucket -> factor. Vet = fully ramped (1.0). Buckets are matched by the CSV 'LC Hours' label (e.g. '24-36') OR by Total Process Hours falling in [lo, hi).",
+  "year": "2026",
+  "vet_factor": 1.0,
+  "curves": {
+    "stow": [
+      {"bucket": "0-12",    "lo": 0,   "hi": 12,  "lc": "LC1", "factor": 0.70},
+      {"bucket": "12-24",   "lo": 12,  "hi": 24,  "lc": "LC2", "factor": 0.85},
+      {"bucket": "24-36",   "lo": 24,  "hi": 36,  "lc": "LC3", "factor": 0.90},
+      {"bucket": "36-48",   "lo": 36,  "hi": 48,  "lc": "LC4", "factor": 0.95},
+      {"bucket": "48-60",   "lo": 48,  "hi": 60,  "lc": "LC5", "factor": 0.95},
+      {"bucket": "60-120",  "lo": 60,  "hi": 120, "lc": "LC6", "factor": 0.95},
+      {"bucket": "Vet",     "lo": 120, "hi": null,"lc": "Vet", "factor": 1.0}
+    ],
+    "adta": [
+      {"bucket": "0-12",    "lo": 0,   "hi": 12,  "lc": "LC1", "factor": 0.55},
+      {"bucket": "12-24",   "lo": 12,  "hi": 24,  "lc": "LC2", "factor": 0.70},
+      {"bucket": "24-36",   "lo": 24,  "hi": 36,  "lc": "LC3", "factor": 0.75},
+      {"bucket": "36-48",   "lo": 36,  "hi": 48,  "lc": "LC4", "factor": 0.80},
+      {"bucket": "48-60",   "lo": 48,  "hi": 60,  "lc": "LC5", "factor": 0.85},
+      {"bucket": "60-120",  "lo": 60,  "hi": 120, "lc": "LC6", "factor": 0.90},
+      {"bucket": "Vet",     "lo": 120, "hi": null,"lc": "Vet", "factor": 1.0}
+    ],
+    "P&S": [
+      {"bucket": "0-6",     "lo": 0,   "hi": 6,   "lc": "LC1", "factor": 0.75},
+      {"bucket": "6-12",    "lo": 6,   "hi": 12,  "lc": "LC2", "factor": 0.80},
+      {"bucket": "12-18",   "lo": 12,  "hi": 18,  "lc": "LC3", "factor": 0.80},
+      {"bucket": "18-24",   "lo": 18,  "hi": 24,  "lc": "LC4", "factor": 0.85},
+      {"bucket": "24-60",   "lo": 24,  "hi": 60,  "lc": "LC5", "factor": 0.85},
+      {"bucket": "Vet",     "lo": 60,  "hi": null,"lc": "Vet", "factor": 1.0}
+    ]
+  }
+}

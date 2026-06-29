@@ -1,0 +1,134 @@
+{
+  "_comment": "PPR rate KPIs shown in the centre of the perf map. Declarative so new processes are added here, not in code. Each process reads its FCLM_<process_id>.csv, keeps rows matching size/unit_type, and computes rate = sum(Units)/sum(Paid Hours-Total). Sub-rates break it down by Function Name.",
+  "processes": [
+    {
+      "key": "transfer_in",
+      "label": "Each Transfer In",
+      "process_id": "1002976",
+      "process_name": "Each Transfer In",
+      "size": "Total",
+      "unit_type": "EACH",
+      "subs": [
+        {
+          "function": "Stow Each Nike",
+          "label": "Stow Each Nike (Each)"
+        },
+        {
+          "function": "Stow Each Nike Light",
+          "label": "Stow Each Nike Light (Qty Stow)"
+        }
+      ],
+      "floors": [
+        "p2",
+        "p3"
+      ],
+      "proc_filter": "STOW"
+    },
+    {
+      "key": "pick",
+      "label": "Pick",
+      "process_id": "1003001",
+      "process_name": "Pick",
+      "size": "Total",
+      "unit_type": "EACH",
+      "subs": [
+        {
+          "function": "HighVelocity Picking",
+          "label": "HighVelocity Picking"
+        },
+        {
+          "function": "Pick To Rebin",
+          "label": "Pick To Rebin"
+        }
+      ],
+      "floors": [
+        "p2",
+        "p3"
+      ],
+      "proc_filter": "PICK"
+    },
+    {
+      "key": "pack_multis",
+      "label": "Pack Multis",
+      "process_id": "1002991",
+      "process_name": "Pack Multis",
+      "size": "Total",
+      "unit_type": "EACH",
+      "subs": [],
+      "floors": [
+        "p2",
+        "p3"
+      ],
+      "proc_filter": "PACK"
+    },
+    {
+      "key": "chuting",
+      "label": "Chuting",
+      "process_id": "1002969",
+      "process_name": "Chuting",
+      "size": "Total",
+      "unit_type": "EACH",
+      "subs": [],
+      "floors": [
+        "p1"
+      ],
+      "proc_filter": "PACK"
+    },
+    {
+      "key": "pack_singles",
+      "label": "Pack Singles",
+      "process_id": "1002993",
+      "process_name": "Pack Singles",
+      "size": "Total",
+      "unit_type": "EACH",
+      "subs": [
+        {
+          "function": "Scan Verify Medium",
+          "label": "SM (Scan Verify Medium)"
+        },
+        {
+          "function": "Scan Verify Large",
+          "label": "SM2 (Scan Verify Large)"
+        },
+        {
+          "function": "Scan Verify Small",
+          "label": "SMMIX (Scan Verify Small)"
+        },
+        {
+          "function": "Slam At Pack",
+          "label": "SNS1 (Slam at Pack)"
+        },
+        {
+          "function": "SLAP VDF",
+          "label": "SNS2 (SLAP VDF)"
+        }
+      ],
+      "floors": [
+        "p1"
+      ],
+      "proc_filter": "PACK"
+    },
+    {
+      "key": "decant",
+      "label": "Decant",
+      "process_id": "1003019",
+      "process_name": "Transfer In Dock",
+      "size": "Total",
+      "unit_type": "Case",
+      "subs": [
+        {
+          "function": "Decant",
+          "label": "Decant"
+        },
+        {
+          "function": "Pallet_decant_split",
+          "label": "Pallet Decant Split"
+        }
+      ],
+      "floors": [
+        "p1"
+      ],
+      "proc_filter": "DEC"
+    }
+  ]
+}

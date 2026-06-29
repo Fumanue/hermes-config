@@ -1,0 +1,13 @@
+{
+  "_comment": "Cancel reasons for closing a coaching as CANCELLED from Argos. 'value' is the closedReason enum sent to GCA; 'label' is what the coach sees. Enum pattern (confirmed from HAR for the first one): UPPERCASE the label, spaces/hyphens/slashes -> underscore, drop other punctuation. e.g. 'Associate declined coaching' -> ASSOCIATE_DECLINED_COACHING. The other 7 are derived from that pattern; if a real cancel ever fails for one, fix its 'value' here (no rebuild needed — read at runtime).",
+  "reasons": [
+    { "value": "ASSOCIATE_DECLINED_COACHING", "label": "Associate declined coaching", "confirmed": true },
+    { "value": "ASSOCIATE_NOT_AVAILABLE_NOT_IN_THE_SAME_PROCESS", "label": "Associate not available - Not in the same process", "confirmed": true },
+    { "value": "ASSOCIATE_NOT_AVAILABLE_NOT_ON_SITE", "label": "Associate not available - Not on site", "confirmed": true },
+    { "value": "ASSOCIATE_NOT_AT_FAULT_PROCESS_ISSUE", "label": "Associate not at fault - Process issue", "confirmed": true },
+    { "value": "ASSOCIATE_NOT_AVAILABLE_AISLE_CLOSED", "label": "Associate not available - Aisle Closed", "confirmed": true },
+    { "value": "ASSOCIATE_NOT_AT_FAULT_DEFECTS_DETECTED_WHILE_PERFORMING_SUPPORT_ROLE", "label": "Associate not at fault - Defects detected while performing support role", "confirmed": true },
+    { "value": "ASSOCIATE_NOT_AT_FAULT_MACHINE_TOOL_ISSUE", "label": "Associate not at fault - Machine/tool issue", "confirmed": true },
+    { "value": "ASSOCIATE_NOT_AT_FAULT_ASIN_ISSUE", "label": "Associate not at fault - ASIN issue", "confirmed": true }
+  ]
+}

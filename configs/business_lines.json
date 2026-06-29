@@ -1,0 +1,10 @@
+{
+  "_comment": "Maps each site to its business line. FC = Fulfillment Center (default, full station-map workflow). AMZL = Delivery Station (simplified Performance+FAQ only, no station/map). business_line_for(site) reads this; anything not listed falls back to 'default'.",
+  "default": "FC",
+  "amzl_sites": [
+    "DAS1", "DCT4", "DCT7", "DCT9", "DCZ3", "DCZ4",
+    "DGA1", "DGA2", "DIC1", "DMA3", "DMA4", "DMA6",
+    "DMZ2", "DMZ4", "DQA3", "DQA4", "DQA7", "DQA8",
+    "DQB2", "DQL2", "DQV2", "DQV6", "DZG2"
+  ]
+}

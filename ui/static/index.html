@@ -602,6 +602,12 @@ html.theme-transitioning *::after{
 .tb-count{margin-left:auto;font-size:11px;color:var(--text-muted)}.tb-count b{color:var(--text);font-weight:700}
 
 /* TOGGLE BTN */
+/* Close-coaching + CALM logging are ADMIN-ONLY. Hidden by default; shown only
+   when the auth flow adds .is-admin to <body>. The server also enforces admin
+   on these endpoints — this just hides the UI for non-admins. */
+.cc-row-close, .cc-complete, .cc-cancel, .q-cc-close{ display:none !important; }
+body.is-admin .cc-row-close, body.is-admin .cc-complete, body.is-admin .cc-cancel,
+body.is-admin .q-cc-close{ display:inline-flex !important; }
 .toggle-btn{padding:5px 13px;font-size:11px;border-radius:16px;border:1px solid var(--border-strong);background:var(--bg-input);color:var(--text-muted);cursor:pointer;transition:all .15s}
 .toggle-btn:hover{border-color:var(--accent)}
 .toggle-btn.on,.toggle-btn.active{background:var(--accent-light);border-color:var(--accent-border);color:var(--accent-text);font-weight:700;box-shadow:0 2px 8px var(--shadow)}
@@ -1672,6 +1678,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     </select>
     <div class="sep"></div>
     <button class="act-btn act-secondary" id="btnUpload" data-i18n="btn_upload_coaching">↑ Upload Coaching</button>
+    <button class="act-btn act-secondary btn-new-coaching">➕ Upload New Coaching</button>
     <button class="act-btn act-secondary" id="btnBulk" data-i18n="btn_bulk">↑↑ Bulk Upload</button>
     <button class="act-btn act-pipeline" id="btnPipeline" data-i18n="btn_run_pipeline">▶ Start Pipeline</button>
     <button class="act-btn act-csv" id="btnDownloadCSV">↓ CSV</button>
@@ -1871,6 +1878,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <span class="q-pill" data-v="VET">VET</span>
     </div>
     <div class="sep"></div>
+    <button class="act-btn act-secondary btn-new-coaching" style="font-size:11px;padding:4px 12px">➕ Upload New Coaching</button>
     <button class="act-btn act-primary" id="btnQualityBulk" style="font-size:11px;padding:4px 12px">↑↑ Bulk Upload</button>
     <button class="act-btn act-csv" id="btnQualityExport" style="font-size:11px;padding:4px 10px">↓ CSV</button>
     <div style="position:relative;display:inline-block">
@@ -2051,14 +2059,10 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       </div>
     </div>
     <div style="flex:1"></div>
-    <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary);cursor:pointer">
-      <input type="checkbox" id="gcaPresenceToggle" checked style="accent-color:var(--accent)"> Presence filter
-    </label>
-    <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-secondary);cursor:pointer">
-      <input type="checkbox" id="gcaAutoRefresh" style="accent-color:var(--green)"> Auto (90m)
-    </label>
+    <button class="toggle-btn active" id="gcaPresentOnly"><span id="gcaPresentIcon">●</span> Present only</button>
     <button onclick="if(window._showCoachingPath)window._showCoachingPath()" class="act-btn" style="font-size:11px;padding:7px 14px;background:var(--bg-panel);border:1px solid var(--border)">🧭 Path</button>
     <button class="act-btn act-secondary" id="btnGcaCsv" style="font-size:11px;padding:7px 14px">↓ CSV</button>
+    <button class="act-btn act-secondary btn-new-coaching" id="btnNewCoaching" style="font-size:11px;padding:7px 14px">➕ Upload New Coaching</button>
     <button class="act-btn act-primary" id="btnGcaPipeline" style="font-size:11px;padding:7px 14px">▶ Run GCA Pipeline</button>
   </div>
 
@@ -2108,6 +2112,14 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 
   <!-- Owner Filter Pills -->
   <div id="gcaOwnerFilters" style="display:flex;gap:6px;flex-wrap:wrap;padding:8px 16px"></div>
+
+  <!-- Login/name search — directly above the associates table -->
+  <div style="padding:0 16px 4px">
+    <div class="tb-search" style="max-width:300px">
+      <span style="color:#ccc;font-size:13px">⌕</span>
+      <input id="gcaSearchInput" placeholder="Buscar login o nombre…">
+    </div>
+  </div>
 
   <!-- GCA Table -->
   <div style="padding:0 16px 16px;overflow-x:auto">
@@ -2306,7 +2318,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <div class="modal-header"><span class="modal-title">↑ Upload Coaching</span><button class="modal-close" data-close="modalUpload">×</button></div>
     <div class="modal-body">
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Login</label><input class="form-input" id="ul-login" placeholder="e.g. fumanue"></div>
+        <div class="form-group"><label class="form-label">Login</label><input class="form-input" id="ul-login" placeholder="login"></div>
         <div class="form-group"><label class="form-label">FC</label><input class="form-input" id="ul-fc" value="BCN4"></div>
       </div>
       <div class="form-group"><label class="form-label">Course ID</label><input class="form-input" id="ul-course" placeholder="Auto-detect if blank"><div class="form-hint">Se detecta automáticamente si está disponible</div></div>
@@ -2343,6 +2355,32 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 </div>
 
 <!-- ═══ MODAL: Close coaching (Complete / Cancel) ═══ -->
+<div class="modal-overlay" id="modalNewCoaching">
+  <div class="modal" style="width:560px">
+    <div class="modal-header"><span class="modal-title">➕ Upload New Coaching</span><button class="modal-close" data-close="modalNewCoaching">×</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Login(s) <span style="color:var(--red,#dc2626)">*</span></label>
+        <input class="form-input" id="nc-login" placeholder="login (uno o varios separados por coma/espacio)" autocomplete="off">
+        <div class="form-hint">Puedes subir el mismo coaching a varios: ej. login1, login2, login3</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Coaching title / insight <span style="color:var(--red,#dc2626)">*</span></label>
+        <select class="form-input" id="nc-course"><option value="">Cargando…</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Upload notes <span style="color:var(--red,#dc2626)">*</span></label>
+        <textarea class="form-textarea" id="nc-notes" placeholder="Notas del coaching…"></textarea>
+      </div>
+      <div id="nc-result" style="font-size:12px;margin-top:6px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="act-btn act-secondary" data-close="modalNewCoaching">Cancelar</button>
+      <button class="act-btn act-primary" id="nc-submit">↑ Upload</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalCloseCoaching">
   <div class="modal" style="width:560px">
     <div class="modal-header"><span class="modal-title" id="cc-title">Cerrar coaching</span><button class="modal-close" data-close="modalCloseCoaching">×</button></div>
@@ -2368,6 +2406,27 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
         <label class="form-label">Notas <span style="color:var(--red,#dc2626)">*</span></label>
         <textarea class="form-textarea" id="cc-notes" placeholder="Notas obligatorias…"></textarea>
         <div class="form-hint" id="cc-notes-hint"></div>
+      </div>
+      <!-- CALM labor-tracking: log the associate into the coached process,
+           and STOP them out of coaching tracking. Two independent buttons. -->
+      <div class="form-group" id="cc-calm-wrap" style="display:none;border-top:1px solid var(--border,#e5e7eb);padding-top:10px">
+        <label class="form-label">Labor tracking (CALM)</label>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <span style="font-size:12px;color:var(--text-secondary);white-space:nowrap">Proceso:</span>
+          <select class="form-input" id="cc-calm-process" style="flex:1">
+            <option value="STOW">STOW</option>
+            <option value="PICK">PICK</option>
+            <option value="PACK">PACK</option>
+            <option value="RECEIVE">RECEIVE</option>
+            <option value="ICQA">ICQA</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button type="button" class="act-btn act-secondary" id="cc-calm-log" style="flex:1;min-width:150px">🎓 Logar AA</button>
+          <button type="button" class="act-btn act-secondary" id="cc-calm-stop" style="flex:1;min-width:150px">⏸️ Deslogar (ISTOP)</button>
+        </div>
+        <div class="form-hint" id="cc-calm-hint"></div>
+        <div id="cc-calm-result" style="font-size:12px;margin-top:6px"></div>
       </div>
       <div id="cc-result"></div>
     </div>

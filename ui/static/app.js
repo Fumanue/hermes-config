@@ -366,6 +366,22 @@ function inferProcess(role){
   return "OTHER";
 }
 
+// Best-effort process guess for the CALM dropdown. Tries exact role-group
+// membership first, then substring keywords (covers coaching titles/insights
+// and station names like "PPSingleMedium" -> PACK/STOW that aren't exact roles).
+function guessCalmProcess(text){
+  const r = String(text||"").toUpperCase();
+  if(!r) return "";
+  const grp = inferProcess(r);
+  if(grp && grp !== "OTHER") return grp;
+  if(/ICQA|BIN\s*FILTER|SBC|CYCLE\s*COUNT|DEFECT|QUALITY/.test(r)) return "ICQA";
+  if(/STOW/.test(r)) return "STOW";
+  if(/PICK|PEI|P2R_PICK/.test(r)) return "PICK";
+  if(/PACK|SINGLE|AFE|SLAM|VDF|PP/.test(r)) return "PACK";
+  if(/RECEIVE|DECANT|RCV|INBOUND/.test(r)) return "RECEIVE";
+  return "";
+}
+
 // ── Utils ──────────────────────────────────────────────────
 function esc(s){ return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function transcriptUrl(login){ return `https://guided-coaching-dub.corp.amazon.com/#/employee-transcript/${encodeURIComponent(String(login||"").trim())}`; }
@@ -635,6 +651,27 @@ async function openCloseCoaching(opts){
   submit.disabled = false; submit.style.opacity = "1";
   submit.textContent = isCancel ? "✗ Cancelar coaching" : "✓ Completar";
 
+  // CALM labor-tracking box: only when completing (not cancelling) and we know
+  // the associate's badge. The process drives which feed code gets logged.
+  const calmWrap = $("cc-calm-wrap");
+  if(calmWrap){
+    const badge = String(o.badge || o.employee_id || "").replace(/\D/g,"");
+    const proc  = String(o.process || o.role || "").trim();
+    if(!isCancel && badge){
+      calmWrap.style.display = "";
+      $("cc-calm-result").innerHTML = "";
+      // Auto-detect the process from the coaching role/title and preselect it
+      // in the dropdown; the coach can override (covers names we don't map,
+      // e.g. "PPSingleMedium" -> STOW).
+      const sel = $("cc-calm-process");
+      if(sel) sel.value = guessCalmProcess(proc) || "STOW";
+      const hint = $("cc-calm-hint");
+      if(hint) hint.textContent = `Verifica el proceso y pulsa «Logar AA»; usa «Deslogar» al terminar.`;
+    } else {
+      calmWrap.style.display = "none";
+    }
+  }
+
   if(isCancel){
     const reasons = await _ccLoadReasons();
     const sel = $("cc-reason");
@@ -699,6 +736,44 @@ async function _ccSubmit(){
 }
 window.openCloseCoaching = openCloseCoaching;
 
+// CALM labor-tracking buttons inside the close-coaching modal.
+// "Loguear proceso": logs the associate into the feed code for the process
+// they were coached on. "STOP": ISTOP+MSTOP to exit coaching tracking.
+async function _ccCalm(kind){
+  if(!_ccCtx) return;
+  const o = _ccCtx;
+  const badge = String(o.badge || o.employee_id || "").replace(/\D/g,"");
+  const res = $("cc-calm-result");
+  if(!badge){ if(res) res.innerHTML = `<span style="color:var(--red,#dc2626)">Sin badge del asociado.</span>`; return; }
+  const logBtn = $("cc-calm-log"), stopBtn = $("cc-calm-stop");
+  const btn = kind==="stop" ? stopBtn : logBtn;
+  const prevTxt = btn ? btn.textContent : "";
+  if(btn){ btn.disabled = true; btn.style.opacity=".6"; btn.textContent = "Enviando…"; }
+  try{
+    const url  = kind==="stop" ? `${API}/api/coaching/calm-stop` : `${API}/api/coaching/calm-log`;
+    // Use the (possibly coach-corrected) process from the dropdown.
+    const proc = $("cc-calm-process")?.value || String(o.process||o.role||"");
+    // Send the AA login so the server resolves the real badge BARCODE id (the
+    // kiosk needs that, not the 9-digit employeeId). badge is a fallback.
+    const aaLogin = String(o.login||"");
+    const body = kind==="stop"
+      ? { fc:o.fc||currentFC, login:aaLogin, badge }
+      : { fc:o.fc||currentFC, login:aaLogin, badge, process:proc };
+    const r = await fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+    const j = await r.json().catch(()=>({}));
+    if(!r.ok || !j.ok) throw new Error((j&&j.detail)||`HTTP ${r.status}`);
+    if(res) res.innerHTML = kind==="stop"
+      ? `<span style="color:var(--green,#16a34a)">⏸️ STOP enviado (ISTOP+MSTOP).</span>`
+      : `<span style="color:var(--green,#16a34a)">🎓 Logueado en ${esc(j.calm_code||"")}.</span>`;
+  }catch(e){
+    if(res) res.innerHTML = `<span style="color:var(--red,#dc2626)">Error: ${esc(e.message||String(e))}</span>`;
+  }finally{
+    if(btn){ btn.disabled=false; btn.style.opacity="1"; btn.textContent=prevTxt; }
+  }
+}
+$("cc-calm-log")?.addEventListener("click", ()=>_ccCalm("log"));
+$("cc-calm-stop")?.addEventListener("click", ()=>_ccCalm("stop"));
+
 // Open the close flow from a Performance/Quality row that carries
 // pending_coachings (from the GCA cache). Shows ONE popup listing each pending
 // coaching with its course title + insight, each with Complete/Cancel buttons —
@@ -710,6 +785,10 @@ function openCloseFromRow(pending, meta){
     return;
   }
   const base = {fc: (meta&&meta.fc)||currentFC, login:(meta&&meta.login)||"", name:(meta&&meta.name)||"",
+                badge:(meta&&(meta.badge||meta.employee_id))||"",
+                employee_id:(meta&&meta.employee_id)||"",
+                process:(meta&&(meta.process||meta.role))||"",
+                role:(meta&&meta.role)||"",
                 onDone:(meta&&meta.onDone)||null};
   const pickList = $("ccPickList");
   $("ccPickWho").innerHTML = `<b>${esc(base.name||base.login)}</b> · ${list.length} coaching${list.length>1?"s":""} pendiente${list.length>1?"s":""}`;
@@ -737,6 +816,77 @@ function openCloseFromRow(pending, meta){
   openModal("modalCcPick");
 }
 window.openCloseFromRow = openCloseFromRow;
+
+// ── Upload New Coaching (GCA tab) ──────────────────────────
+// Pick a login, a coaching title/insight (course dropdown), and notes, then
+// upload a brand-new manual coaching. Used to test with a trainer.
+let _ncCourses = null;
+async function _ncLoadCourses(){
+  const sel = $("nc-course");
+  if(!sel) return;
+  if(_ncCourses){ return; }
+  try{
+    const d = await jget(`${API}/api/coaching/courses?fc=${encodeURIComponent(currentFC)}`);
+    _ncCourses = (d && d.courses) || [];
+  }catch(_){ _ncCourses = []; }
+  if(!_ncCourses.length){ sel.innerHTML = `<option value="">(sin cursos — corre GCA primero)</option>`; return; }
+  // Group options by category for a cleaner dropdown. The option value carries
+  // the course_id directly so the upload doesn't depend on re-resolving a key.
+  const byCat = {};
+  _ncCourses.forEach(c=>{ const cat=c.category||"Otros"; (byCat[cat]=byCat[cat]||[]).push(c); });
+  let html = `<option value="">— Selecciona coaching —</option>`;
+  Object.keys(byCat).sort().forEach(cat=>{
+    html += `<optgroup label="${esc(cat)}">`;
+    byCat[cat].forEach(c=>{ html += `<option value="${esc(c.course_id)}" data-key="${esc(c.key)}">${esc(c.label)}</option>`; });
+    html += `</optgroup>`;
+  });
+  sel.innerHTML = html;
+}
+async function openNewCoaching(){
+  $("nc-login").value = "";
+  $("nc-notes").value = "";
+  $("nc-result").innerHTML = "";
+  const submit = $("nc-submit");
+  if(submit){ submit.disabled=false; submit.style.opacity="1"; submit.textContent="↑ Upload"; }
+  await _ncLoadCourses();
+  openModal("modalNewCoaching");
+}
+async function _ncSubmit(){
+  const login = $("nc-login").value.trim();
+  const logins = login.split(/[,\s]+/).filter(Boolean);
+  const sel = $("nc-course");
+  const courseId = sel.value;                              // option value = course_id
+  const courseLabel = sel.options[sel.selectedIndex]?.text || "";
+  const notes = $("nc-notes").value.trim();
+  const res = $("nc-result");
+  if(!logins.length){ res.innerHTML = `<span style="color:var(--red,#dc2626)">Login obligatorio.</span>`; $("nc-login").focus(); return; }
+  if(!courseId){ res.innerHTML = `<span style="color:var(--red,#dc2626)">Selecciona un coaching title.</span>`; return; }
+  if(!notes){ res.innerHTML = `<span style="color:var(--red,#dc2626)">Notas obligatorias.</span>`; $("nc-notes").focus(); return; }
+  const submit = $("nc-submit");
+  submit.disabled=true; submit.style.opacity=".6"; submit.textContent="Subiendo…";
+  try{
+    const r = await fetch(`${API}/api/coaching/upload-new`, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ fc: currentFC, login, course_id: courseId, notes }),
+    });
+    const j = await r.json().catch(()=>({}));
+    if(!r.ok || !j.ok) throw new Error((j&&j.detail)||`HTTP ${r.status}`);
+    closeModal("modalNewCoaching");
+    const n = j.count || logins.length;
+    showToast({title:"Coaching subido", body:`${n} asociado${n>1?"s":""} · ${courseLabel}`, type:"ok"});
+    if(window._loadGcaDashboard) window._loadGcaDashboard();
+  }catch(e){
+    res.innerHTML = `<span style="color:var(--red,#dc2626)">No se pudo subir: ${esc(e.message||String(e))}</span>`;
+    submit.disabled=false; submit.style.opacity="1"; submit.textContent="↑ Upload";
+  }
+}
+// Delegated: every ".btn-new-coaching" (Performance, Quality, GCA toolbars)
+// opens the shared modal.
+document.addEventListener("click", (e)=>{
+  if(e.target.closest(".btn-new-coaching")) openNewCoaching();
+});
+$("nc-submit")?.addEventListener("click", _ncSubmit);
+window.openNewCoaching = openNewCoaching;
 
 // ── User auth / Phonetool info ─────────────────────────────
 // ── Auth: called FIRST before anything else ──────────────────
@@ -1375,6 +1525,7 @@ async function loadUserInfo(){
     if(d.admin && d.admin.is_admin){
       window._isAdmin = true;
       window._isSuperAdmin = d.admin.is_super_admin || false;
+      document.body.classList.add("is-admin");
       if($("btnPerfMap")) $("btnPerfMap").style.display = "";
       if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "inline-flex";
@@ -1428,6 +1579,7 @@ async function loadUserInfo(){
     if(d.admin && d.admin.is_admin){
       window._isAdmin = true;
       window._isSuperAdmin = d.admin.is_super_admin || false;
+      document.body.classList.add("is-admin");
       const badge = document.createElement("span");
       badge.className = "admin-badge";
       badge.textContent = d.admin.is_super_admin ? "⚡ SUPER ADMIN" : "★ ADMIN";
@@ -2148,6 +2300,8 @@ function renderTable(){
       if(!r) return;
       openCloseFromRow(r.pending_coachings, {
         fc: currentFC, login: r.login, name: r.name,
+        employee_id: r.employee_id, badge: r.employee_id,
+        process: r.process || r.role, role: r.role,
         onDone: ()=>loadDashboard(),
       });
     })
@@ -2891,6 +3045,7 @@ function renderQuality(){
   body.innerHTML = pageRows.map((r,ri)=>{
     const login = String(qualityValue(r,["login","Login"],"")).trim();
     const fc = String(qualityValue(r,["fc","FC"],"")).trim();
+    const eid = String(qualityValue(r,["employee_id","EmployeeId","Employee Id"],"")).trim();
     const errorType = qualityErrorLabel(r);
     const volume = Number(qualityValue(r,["opportunities","Opportunities"],0));
     const total = qualityValue(r,["total_errors_wk","Total Errors WK","total_errors","Total WK","defectCount"],0);
@@ -2967,13 +3122,13 @@ function renderQuality(){
             // exists (must close that one first). Shown otherwise.
             let html = "";
             if(sameTopic.length){
-              html += `<button class="row-btn q-cc-close pending-close" data-login="${esc(login)}" data-fc="${esc(fc)}" data-pending="${esc(JSON.stringify(sameTopic))}" title="Ya hay un coaching de este topic subido — ciérralo (completar o cancelar)">⏳ ${t("q_pending_close")}</button>`;
+              html += `<button class="row-btn q-cc-close pending-close" data-login="${esc(login)}" data-fc="${esc(fc)}" data-eid="${esc(eid)}" data-pending="${esc(JSON.stringify(sameTopic))}" title="Ya hay un coaching de este topic subido — ciérralo (completar o cancelar)">⏳ ${t("q_pending_close")}</button>`;
             } else {
               html += `<button class="row-btn quality-upload" data-login="${esc(login)}" data-fc="${esc(fc)}" data-course="${esc(courseId)}" data-error="${esc(errorType)}" data-total="${total}" data-sigma="${sigma}" ${coached ? 'disabled style="opacity:.35;cursor:not-allowed"' : !courseId ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>${coached?'✓ Done':!courseId?'No Course':'↑ Upload'}</button>`;
               // Other-topic pendings still get a generic close button.
               const otherPend = pend.filter(p => !sameTopic.includes(p));
               if(otherPend.length){
-                html += `<button class="row-btn q-cc-close pending-close-other" data-login="${esc(login)}" data-fc="${esc(fc)}" data-pending="${esc(JSON.stringify(otherPend))}" title="Cerrar coaching pendiente de otro topic (${otherPend.length})">⏳ ${t("q_pending_other")}${otherPend.length>1?" ("+otherPend.length+")":""}</button>`;
+                html += `<button class="row-btn q-cc-close pending-close-other" data-login="${esc(login)}" data-fc="${esc(fc)}" data-eid="${esc(eid)}" data-pending="${esc(JSON.stringify(otherPend))}" title="Cerrar coaching pendiente de otro topic (${otherPend.length})">⏳ ${t("q_pending_other")}${otherPend.length>1?" ("+otherPend.length+")":""}</button>`;
               }
             }
             return html;
@@ -3247,8 +3402,10 @@ document.addEventListener("click", (e)=>{
   try{ pending = JSON.parse(btn.dataset.pending || "[]"); }catch(_){ pending = []; }
   const login = btn.dataset.login || "";
   const rowFc = btn.dataset.fc || currentFC;
+  const eid = btn.dataset.eid || "";
   openCloseFromRow(pending, {
     fc: rowFc, login, name: login,
+    employee_id: eid, badge: eid, process: "ICQA",
     onDone: ()=>loadQuality(),
   });
 });
@@ -6668,6 +6825,7 @@ document.addEventListener("click",(e)=>{
   const GCA_OWNERS = ["L&D","Team Lead IB","Team Lead OB","ICQA","Area Manager IB","Area Manager OB"];
   let gcaData = null;
   let gcaOwnerFilter = "";
+  let gcaPresentOnly = true;   // Present-only filter ON by default (matches old checkbox)
 
   const $g = id => document.getElementById(id);
 
@@ -6721,8 +6879,8 @@ document.addEventListener("click",(e)=>{
             return `<div class="hd-row">
               <div><b>${who}</b>${what?` · <span style="color:var(--text-secondary)">${what}</span>`:""}${locHtml}</div>
               <div style="display:flex;gap:6px;white-space:nowrap">
-                <button class="row-btn cc-complete" data-iid="${safeId}" data-login="${who}" data-name="${esc(it.name||"")}">✓ Completar</button>
-                <button class="row-btn cc-cancel" data-iid="${safeId}" data-login="${who}" data-name="${esc(it.name||"")}">✗ Cancelar</button>
+                <button class="row-btn cc-complete" data-iid="${safeId}" data-login="${who}" data-name="${esc(it.name||"")}" data-eid="${esc(it.employee_id||"")}" data-process="${esc(it.process_path||it.station||it.course_title||it.insight||"")}">✓ Completar</button>
+                <button class="row-btn cc-cancel" data-iid="${safeId}" data-login="${who}" data-name="${esc(it.name||"")}" data-eid="${esc(it.employee_id||"")}" data-process="${esc(it.process_path||it.station||it.course_title||it.insight||"")}">✗ Cancelar</button>
               </div>
             </div>`;
           }).join("")
@@ -6731,10 +6889,12 @@ document.addEventListener("click",(e)=>{
       listEl.querySelectorAll(".cc-complete").forEach(b=>b.addEventListener("click",()=>
         openCloseCoaching({instanceId:b.dataset.iid, fc:currentFC, action:"complete",
           login:b.dataset.login, name:b.dataset.name,
+          employee_id:b.dataset.eid, badge:b.dataset.eid, process:b.dataset.process,
           onDone:()=>{ closeModal("modalHighDefects"); if(window._loadGcaDashboard) window._loadGcaDashboard(); }})));
       listEl.querySelectorAll(".cc-cancel").forEach(b=>b.addEventListener("click",()=>
         openCloseCoaching({instanceId:b.dataset.iid, fc:currentFC, action:"cancel",
           login:b.dataset.login, name:b.dataset.name,
+          employee_id:b.dataset.eid, badge:b.dataset.eid, process:b.dataset.process,
           onDone:()=>{ closeModal("modalHighDefects"); if(window._loadGcaDashboard) window._loadGcaDashboard(); }})));
     }
     if(!hd.length) return;
@@ -6861,7 +7021,7 @@ document.addEventListener("click",(e)=>{
     if(badge) badge.textContent = items.length > 0 ? items.length+" pending" : "";
     // Don't render DOM if map is collapsed
     if(!floorMapVisible) return;
-    const presenceOn = $g("gcaPresenceToggle") && $g("gcaPresenceToggle").checked;
+    const presenceOn = gcaPresentOnly;
     const filtered = presenceOn ? items.filter(i=>i.presence==="ACTIVE") : items;
 
     // Group by parsed station
@@ -7090,7 +7250,7 @@ document.addEventListener("click",(e)=>{
 
     // Owner filter pills
     const filtersEl = $g("gcaOwnerFilters");
-    const presenceOn = $g("gcaPresenceToggle") && $g("gcaPresenceToggle").checked;
+    const presenceOn = gcaPresentOnly;
     let pending = (gcaData.items||[]).filter(i=>i.status==="PENDING");
     if(presenceOn) pending = pending.filter(i=>i.presence==="ACTIVE");
     const countAll = pending.length;
@@ -7111,6 +7271,15 @@ document.addEventListener("click",(e)=>{
     let items = (gcaData.items||[]).filter(i=>i.status==="PENDING");
     if(presenceOn) items = items.filter(i=>i.presence==="ACTIVE");
     if(gcaOwnerFilter) items = items.filter(i=>i.owner===gcaOwnerFilter);
+    // Login/name search filter.
+    const gcaQuery = ($g("gcaSearchInput")?.value || "").trim().toLowerCase();
+    if(gcaQuery){
+      items = items.filter(i=>{
+        const hay = [i.login, i.name, i.employee_id, i.station, i.insight, i.course_title]
+          .map(x=>String(x||"").toLowerCase()).join(" ");
+        return hay.includes(gcaQuery);
+      });
+    }
 
     const tbody = $g("gcaTbody");
     if(!items.length){
@@ -7139,8 +7308,8 @@ document.addEventListener("click",(e)=>{
           <td>
             <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
               <div style="display:flex;gap:4px">
-                <button class="row-btn cc-complete" data-iid="${esc(it.id||"")}" data-login="${esc(loginDisplay)}" data-name="${esc(it.name||"")}">✓</button>
-                <button class="row-btn cc-cancel" data-iid="${esc(it.id||"")}" data-login="${esc(loginDisplay)}" data-name="${esc(it.name||"")}">✗</button>
+                <button class="row-btn cc-complete" data-iid="${esc(it.id||"")}" data-login="${esc(loginDisplay)}" data-name="${esc(it.name||"")}" data-eid="${esc(it.employee_id||"")}" data-process="${esc(it.process_path||it.station||it.course_title||it.insight||"")}">✓</button>
+                <button class="row-btn cc-cancel" data-iid="${esc(it.id||"")}" data-login="${esc(loginDisplay)}" data-name="${esc(it.name||"")}" data-eid="${esc(it.employee_id||"")}" data-process="${esc(it.process_path||it.station||it.course_title||it.insight||"")}">✗</button>
               </div>
               <a href="${esc(gcaUrl)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-size:10px">Open GCA →</a>
             </div>
@@ -7151,10 +7320,14 @@ document.addEventListener("click",(e)=>{
       const _onClose = ()=>{ if(window._loadGcaDashboard) window._loadGcaDashboard(); };
       tbody.querySelectorAll(".cc-complete").forEach(b=>b.addEventListener("click",()=>
         openCloseCoaching({instanceId:b.dataset.iid, fc:currentFC, action:"complete",
-          login:b.dataset.login, name:b.dataset.name, onDone:_onClose})));
+          login:b.dataset.login, name:b.dataset.name,
+          employee_id:b.dataset.eid, badge:b.dataset.eid, process:b.dataset.process,
+          onDone:_onClose})));
       tbody.querySelectorAll(".cc-cancel").forEach(b=>b.addEventListener("click",()=>
         openCloseCoaching({instanceId:b.dataset.iid, fc:currentFC, action:"cancel",
-          login:b.dataset.login, name:b.dataset.name, onDone:_onClose})));
+          login:b.dataset.login, name:b.dataset.name,
+          employee_id:b.dataset.eid, badge:b.dataset.eid, process:b.dataset.process,
+          onDone:_onClose})));
     }
     const totalPending = (gcaData.items||[]).filter(i=>i.status==="PENDING").length;
     const totalCompleted = (gcaData.items||[]).filter(i=>i.status==="COMPLETED").length;
@@ -7252,29 +7425,18 @@ document.addEventListener("click",(e)=>{
     };
   });
 
-  // Presence toggle → re-render (no re-fetch)
-  $g("gcaPresenceToggle") && $g("gcaPresenceToggle").addEventListener("change", ()=>{
+  // Present-only toggle (pill style, like Quality) → re-render (no re-fetch)
+  const gcaPresentBtn = $g("gcaPresentOnly");
+  if(gcaPresentBtn) gcaPresentBtn.addEventListener("click", ()=>{
+    gcaPresentOnly = !gcaPresentOnly;
+    gcaPresentBtn.classList.toggle("active", gcaPresentOnly);
+    const ic = $g("gcaPresentIcon"); if(ic) ic.textContent = gcaPresentOnly ? "●" : "○";
     renderGca();
   });
 
-  // Auto-refresh GCA pipeline every 90 minutes
-  let _gcaAutoInterval = null;
-  const gcaAutoEl = $g("gcaAutoRefresh");
-  if(gcaAutoEl) gcaAutoEl.addEventListener("change", ()=>{
-    if(gcaAutoEl.checked){
-      // Run immediately + set interval
-      const runPipeline = ()=>{
-        const btn = $g("btnGcaPipeline");
-        if(btn && !btn.disabled) btn.click();
-      };
-      runPipeline();
-      _gcaAutoInterval = setInterval(runPipeline, 90 * 60 * 1000); // 90 min
-      gcaAutoEl.parentElement.style.color = "var(--green)";
-    } else {
-      if(_gcaAutoInterval){ clearInterval(_gcaAutoInterval); _gcaAutoInterval = null; }
-      gcaAutoEl.parentElement.style.color = "var(--text-secondary)";
-    }
-  });
+  // Login/name search → re-render (no re-fetch)
+  const gcaSearchEl = $g("gcaSearchInput");
+  if(gcaSearchEl) gcaSearchEl.addEventListener("input", ()=>{ renderGca(); });
 
 
   // ═══ COACHING PATH OPTIMIZER ═══
@@ -7332,7 +7494,7 @@ document.addEventListener("click",(e)=>{
   window._showCoachingPath = function(){
     if(!gcaData || !gcaData.items) return;
     var items = gcaData.items.filter(function(i){return i.status==="PENDING";});
-    var presenceOn = $g("gcaPresenceToggle") && $g("gcaPresenceToggle").checked;
+    var presenceOn = gcaPresentOnly;
     if(presenceOn) items = items.filter(function(i){return i.presence==="ACTIVE";});
     if(gcaOwnerFilter) items = items.filter(function(i){return i.owner===gcaOwnerFilter;});
 

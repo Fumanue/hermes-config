@@ -634,6 +634,12 @@ async function _ccLoadReasons(){
 // opts: {instanceId, fc, action:"complete"|"cancel", login, name, onDone}
 async function openCloseCoaching(opts){
   const o = opts || {};
+  // Closing coachings is admin-only (the server enforces it too). Non-admins can
+  // still SEE the "⏳ Pending" indicator, but not open the complete/cancel flow.
+  if(!window._isAdmin){
+    showToast({title:"Solo admin", body:"Cerrar coaching es una acción de administrador.", type:"info"});
+    return;
+  }
   if(!o.instanceId){ showToast({title:"Error", body:"Sin instance_id — refresca GCA.", type:"err"}); return; }
   _ccCtx = o;
   const isCancel = o.action === "cancel";

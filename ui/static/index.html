@@ -604,10 +604,13 @@ html.theme-transitioning *::after{
 /* TOGGLE BTN */
 /* Close-coaching + CALM logging are ADMIN-ONLY. Hidden by default; shown only
    when the auth flow adds .is-admin to <body>. The server also enforces admin
-   on these endpoints — this just hides the UI for non-admins. */
-.cc-row-close, .cc-complete, .cc-cancel, .q-cc-close{ display:none !important; }
-body.is-admin .cc-row-close, body.is-admin .cc-complete, body.is-admin .cc-cancel,
-body.is-admin .q-cc-close{ display:inline-flex !important; }
+   on these endpoints — this just hides the UI for non-admins.
+   NOTE: q-cc-close is the "⏳ Pending" indicator that ALL users must see (it
+   tells them a coaching is already uploaded so they don't re-upload). It is NOT
+   gated here — only the actual complete/cancel actions are admin-gated. The
+   close modal itself enforces admin server-side. */
+.cc-row-close, .cc-complete, .cc-cancel{ display:none !important; }
+body.is-admin .cc-row-close, body.is-admin .cc-complete, body.is-admin .cc-cancel{ display:inline-flex !important; }
 .toggle-btn{padding:5px 13px;font-size:11px;border-radius:16px;border:1px solid var(--border-strong);background:var(--bg-input);color:var(--text-muted);cursor:pointer;transition:all .15s}
 .toggle-btn:hover{border-color:var(--accent)}
 .toggle-btn.on,.toggle-btn.active{background:var(--accent-light);border-color:var(--accent-border);color:var(--accent-text);font-weight:700;box-shadow:0 2px 8px var(--shadow)}

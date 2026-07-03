@@ -111,7 +111,7 @@
       "PICK_AR": 5.0,
       "P2R_PICK": 5.0,
       "ICQA_SIMPLE_BIN_COUNT": 5.0,
-      "DEFAULT": 5.0
+      "DEFAULT": 10.0
     },
     "feature_flags": {
       "idle_comment_enabled": false,
@@ -232,7 +232,7 @@
       "PICK_AR": 5.0,
       "P2R_PICK": 5.0,
       "ICQA_SIMPLE_BIN_COUNT": 5.0,
-      "DEFAULT": 5.0
+      "DEFAULT": 10.0
     },
     "feature_flags": {
       "idle_comment_enabled": true,
@@ -363,7 +363,7 @@
       "PICK_AR": 5.0,
       "P2R_PICK": 5.0,
       "ICQA_SIMPLE_BIN_COUNT": 5.0,
-      "DEFAULT": 5.0
+      "DEFAULT": 10.0
     },
     "feature_flags": {
       "idle_comment_enabled": false,
@@ -485,7 +485,7 @@
       "PICK_AR": 5.0,
       "P2R_PICK": 5.0,
       "ICQA_SIMPLE_BIN_COUNT": 5.0,
-      "DEFAULT": 5.0
+      "DEFAULT": 10.0
     },
     "feature_flags": {
       "idle_comment_enabled": false,
@@ -607,7 +607,7 @@
       "PICK_AR": 5.0,
       "P2R_PICK": 5.0,
       "ICQA_SIMPLE_BIN_COUNT": 5.0,
-      "DEFAULT": 5.0
+      "DEFAULT": 10.0
     },
     "feature_flags": {
       "idle_comment_enabled": false,
@@ -729,7 +729,7 @@
       "PICK_AR": 5.0,
       "P2R_PICK": 5.0,
       "ICQA_SIMPLE_BIN_COUNT": 5.0,
-      "DEFAULT": 5.0
+      "DEFAULT": 10.0
     },
     "feature_flags": {
       "idle_comment_enabled": false,

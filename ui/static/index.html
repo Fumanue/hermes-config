@@ -635,12 +635,17 @@ body[data-bl="amzl"] #perfMapWrap{display:none !important}
 /* Delivery mode packs the topbar (manual datetime + shift selector): drop the
    informational poll-countdown pill so the action buttons stay reachable. */
 body[data-bl="amzl"] .t-poll{display:none !important}
-/* Delivery has no Quality data — hide the Quality tab + its multi-site button
-   in AMZL view. Delivery sites get: Performance, Targets, FAQ, GCA only. This
-   CSS wins over any JS that sets display="" on auth, so we don't have to guard
-   every code path. */
+/* Delivery view is intentionally minimal to avoid confusing delivery coaches:
+   only Performance + GCA tabs. Hide Quality (no delivery data), Targets and FAQ
+   (FC concepts). This CSS wins over any JS that sets display="" on auth, so we
+   don't have to guard every code path. */
 body[data-bl="amzl"] #tabQuality,
-body[data-bl="amzl"] #btnQualityMulti{display:none !important}
+body[data-bl="amzl"] #btnQualityMulti,
+body[data-bl="amzl"] .t-tab[data-tab="targets"],
+body[data-bl="amzl"] .t-tab[data-tab="faq"]{display:none !important}
+/* GCA tab is revealed by JS only for alert-group members; in delivery every
+   coach needs it, so force it visible in AMZL view. */
+body[data-bl="amzl"] #tabGca{display:revert !important}
 /* AMZL-only elements: hidden everywhere except the delivery view. Use revert
    so table cells/headers keep their natural table-cell display, not block. */
 .bl-amzl-only{display:none !important}
@@ -832,6 +837,18 @@ body[data-bl="amzl"] .curve-label{font-size:13px}
 .form-hint{font-size:10.5px;color:var(--text-dim);margin-top:3px}
 .bulk-info{font-size:12px;color:var(--text-secondary);margin-bottom:12px;padding:8px 12px;background:var(--bg-body);border-radius:8px;border:1px solid var(--border)}
 .bulk-preview{background:var(--bg-body);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:'SF Mono',monospace;font-size:11px;max-height:150px;overflow-y:auto;white-space:pre-wrap;color:var(--text-secondary)}
+/* Exempt zone rows + process/topic chips (reuse the badge language) */
+.ex-row{display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid var(--border);transition:background .12s}
+.ex-row:last-child{border-bottom:none}
+.ex-row:hover{background:var(--bg-body)}
+.ex-row .ex-login{min-width:120px;font-weight:600;color:var(--text)}
+.ex-row .ex-meta{flex:1;color:var(--text-secondary);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ex-chip{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap}
+.ex-chip.ex-proc{background:var(--accent-light);color:var(--accent-text);border:1px solid var(--accent-border)}
+.ex-chip.ex-all {background:rgba(220,38,38,0.10);color:var(--red);border:1px solid rgba(220,38,38,0.25)}
+.ex-chip.ex-topic{background:rgba(37,99,235,0.10);color:var(--blue);border:1px solid rgba(37,99,235,0.25)}
+.ex-del-btn{font-size:11px;padding:3px 10px;border-radius:8px;border:1px solid var(--border-strong);background:var(--bg-input);color:var(--text-secondary);cursor:pointer;transition:all .12s;flex-shrink:0}
+.ex-del-btn:hover{border-color:var(--red);color:var(--red);background:rgba(220,38,38,0.06)}
 
 /* TARGETS */
 .targets-section-title{font-size:15px;font-weight:700;color:var(--text);margin:20px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
@@ -1516,17 +1533,17 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   <div class="t-infobar">
     <span class="info-label">FCLM</span>
     <span class="info-dates" id="infoFclmDates">—</span>
-    <span class="info-sep">|</span>
-    <span class="tf-label" data-i18n="lbl_process">Process</span>
-    <div class="ms" id="procMs">
+    <span class="info-sep bl-fc-only">|</span>
+    <span class="tf-label bl-fc-only" data-i18n="lbl_process">Process</span>
+    <div class="ms bl-fc-only" id="procMs">
       <button class="ms-btn" id="procMsBtn" type="button" aria-haspopup="listbox" aria-expanded="false">
         <span class="ms-label" id="procMsLabel">All</span>
         <span class="ms-caret">▾</span>
       </button>
       <div class="ms-panel" id="procMsPanel" role="listbox" aria-multiselectable="true"></div>
     </div>
-    <span class="tf-label" data-i18n="lbl_sub">Sub</span>
-    <div class="ms" id="subMs">
+    <span class="tf-label bl-fc-only" data-i18n="lbl_sub">Sub</span>
+    <div class="ms bl-fc-only" id="subMs">
       <button class="ms-btn" id="subMsBtn" type="button" aria-haspopup="listbox" aria-expanded="false" style="min-width:155px">
         <span class="ms-label" id="subMsLabel">All</span>
         <span class="ms-caret">▾</span>
@@ -1653,23 +1670,23 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <button class="pf on-p1" data-p="1" id="fp1">P1</button>
     <div class="sep"></div>
     <div class="max-wrap"><span class="max-lbl">MAX</span><input class="max-input" id="maxInput" type="number" min="1" max="9999" value="50"></div>
-    <div class="sep"></div>
-    <span class="tb-label">Curve</span>
-    <button class="nf on" data-curve="ALL" id="curveAll">ALL</button>
-    <button class="nf" data-curve="NH">NH</button>
-    <button class="nf" data-curve="XT">XT</button>
-    <button class="nf" data-curve="VETERAN">VET</button>
-    <div class="sep"></div>
-    <span class="tb-label">T</span>
-    <select id="tenureFilter" class="tselect" style="height:26px;min-width:60px;font-size:11px;background:#fff;border:1px solid #ccc;color:#111">
+    <div class="sep bl-fc-only"></div>
+    <span class="tb-label bl-fc-only">Curve</span>
+    <button class="nf on bl-fc-only" data-curve="ALL" id="curveAll">ALL</button>
+    <button class="nf bl-fc-only" data-curve="NH">NH</button>
+    <button class="nf bl-fc-only" data-curve="XT">XT</button>
+    <button class="nf bl-fc-only" data-curve="VETERAN">VET</button>
+    <div class="sep bl-fc-only"></div>
+    <span class="tb-label bl-fc-only">T</span>
+    <select id="tenureFilter" class="tselect bl-fc-only" style="height:26px;min-width:60px;font-size:11px;background:#fff;border:1px solid #ccc;color:#111">
       <option value="">All</option>
       <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
       <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
     </select>
-    <div class="sep"></div>
+    <div class="sep bl-fc-only"></div>
     <button class="toggle-btn" id="toggleCoached"><span id="coachToggleIcon">○</span> <span data-i18n="btn_hide_coached">Hide Coached</span></button>
-    <div class="sep"></div>
-    <select id="noteFilterSelect" style="padding:4px 8px;font-size:11px;border-radius:6px;border:1px solid var(--border-strong);background:var(--bg-input);color:var(--text);cursor:pointer">
+    <div class="sep bl-fc-only"></div>
+    <select id="noteFilterSelect" class="bl-fc-only" style="padding:4px 8px;font-size:11px;border-radius:6px;border:1px solid var(--border-strong);background:var(--bg-input);color:var(--text);cursor:pointer">
       <option value="">KPI: All</option>
       <option value="GAP">⏳ Gap</option>
       <option value="IDLE">🕒 Idle</option>
@@ -1679,16 +1696,17 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <option value="MIX">🔀 Mix Share</option>
       <option value="FAST START">🚀 Fast Start</option>
     </select>
-    <div class="sep"></div>
-    <button class="act-btn act-secondary" id="btnUpload" data-i18n="btn_upload_coaching">↑ Upload Coaching</button>
-    <button class="act-btn act-secondary btn-new-coaching">➕ Upload New Coaching</button>
+    <div class="sep bl-fc-only"></div>
+    <button class="act-btn act-secondary bl-fc-only" id="btnUpload" data-i18n="btn_upload_coaching">↑ Upload Coaching</button>
+    <button class="act-btn act-secondary btn-new-coaching bl-fc-only">➕ Upload New Coaching</button>
     <button class="act-btn act-secondary" id="btnBulk" data-i18n="btn_bulk">↑↑ Bulk Upload</button>
     <button class="act-btn act-pipeline" id="btnPipeline" data-i18n="btn_run_pipeline">▶ Start Pipeline</button>
     <button class="act-btn act-csv" id="btnDownloadCSV">↓ CSV</button>
     <button class="act-btn" id="btnPerfMap" style="display:none;background:var(--accent-light);color:var(--accent-text);border:1px solid var(--accent-border)">🗺️ Map</button>
     <button class="act-btn" id="btnAdoption" style="display:none;background:var(--accent-light);color:var(--accent-text);border:1px solid var(--accent-border)" title="Super admin: Argos adoption (DDD)">📊 Adoption</button>
+    <button class="act-btn" id="btnExempt" style="display:none;font-size:11px;padding:7px 12px;background:var(--bg-panel);border:1px solid var(--border)" title="Admin: excluir asociados del coaching (Performance + Calidad)">🚫 Exempt</button>
     <button onclick="if(window.testAlertsNow)window.testAlertsNow()" class="act-btn" id="btnTestAlerts" style="display:none;font-size:11px;padding:7px 12px;background:var(--bg-panel);border:1px solid var(--border)" title="Comprobar coachings manuales pendientes (GCA + Quality) ahora">🔔 Check Coaching Manual</button>
-    <button onclick="if(window._showCoachingPath)window._showCoachingPath()" class="act-btn" style="font-size:11px;padding:7px 14px;background:var(--bg-panel);border:1px solid var(--border)">🧭 Path</button>
+    <button onclick="if(window._showCoachingPath)window._showCoachingPath()" class="act-btn bl-fc-only" style="font-size:11px;padding:7px 14px;background:var(--bg-panel);border:1px solid var(--border)">🧭 Path</button>
 
     <div class="tb-count">Showing <b id="rowCount">0</b> of <b id="totalCount">0</b></div>
   </div>
@@ -1704,6 +1722,13 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
           <th data-k="station" class="bl-fc-only" style="width:135px" data-i18n="th_station">Station</th>
           <th data-k="sigma"   style="width:68px" data-i18n="th_prio">Prio</th>
           <th data-k="rate"    style="width:80px" data-i18n="th_rate">Rate</th>
+          <th data-k="vetrate" class="bl-amzl-only" style="width:85px">
+            Vet Rate<span class="info-ic" tabindex="0">ⓘ<span class="info-pop">
+              <b>Veteran Rate</b><br>
+              <span class="ip-muted">Rate medio de los veteranos en turno para este proceso. Es el baseline 100% del que sale el Target.</span>
+            </span></span>
+          </th>
+          <th data-k="vetpct"  class="bl-amzl-only" style="width:95px">% to Vet Rate</th>
           <th data-k="target"  class="bl-amzl-only" style="width:95px">
             Target<span class="info-ic" tabindex="0">ⓘ<span class="info-pop">
               <b>Objetivo individual</b><br>
@@ -2335,6 +2360,59 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
+<!-- ═══ MODAL: Exempt zone (admin only) ═══ -->
+<div class="modal-overlay" id="modalExempt">
+  <div class="modal" style="width:680px">
+    <div class="modal-header"><span class="modal-title">🚫 Exempt — excluir del coaching</span><button class="modal-close" data-close="modalExempt">×</button></div>
+    <div class="modal-body">
+      <div class="bulk-info">
+        <b>Por proceso:</b> el asociado NO aparece en coaching (Performance <b>y</b> Calidad)
+        para ese proceso (<b>ALL</b> = todos).<br>
+        <b>Por tema de Calidad:</b> sigue en Performance, pero NO aparece para ese tema
+        concreto en Calidad (p.ej. Pick Error Indicator).<br>
+        Uno o varios logins (coma/espacio). Se distribuye a todos en el próximo arranque.
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2"><label class="form-label">Login(s)</label><input class="form-input" id="ex-login" placeholder="sofiane  o  sofiane, otro"></div>
+        <div class="form-group"><label class="form-label">Tipo</label>
+          <select class="form-input" id="ex-scope">
+            <option value="process">Por proceso (Perf + Calidad)</option>
+            <option value="topic">Por tema de Calidad</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" id="ex-process-wrap"><label class="form-label">Proceso</label>
+          <select class="form-input" id="ex-process">
+            <option value="ALL">ALL (todos)</option>
+            <option value="PICK">PICK</option>
+            <option value="PACK">PACK</option>
+            <option value="STOW">STOW</option>
+            <option value="RECEIVE">RECEIVE</option>
+            <option value="ICQA">ICQA</option>
+            <option value="DECANT">DECANT</option>
+          </select>
+        </div>
+        <div class="form-group" id="ex-topic-wrap" style="display:none"><label class="form-label">Tema de Calidad</label>
+          <select class="form-input" id="ex-topic"></select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Motivo (opcional)</label><input class="form-input" id="ex-reason" placeholder="p.ej. baja, formación, no aplica…"></div>
+      <div id="ex-result"></div>
+      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">
+        <label class="form-label">Exenciones actuales (<span id="ex-count">0</span>)</label>
+        <div id="ex-list" style="max-height:260px;overflow-y:auto;font-size:12px">
+          <div class="hmodal-empty">Cargando…</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="act-btn act-secondary" data-close="modalExempt">Cerrar</button>
+      <button class="act-btn act-primary" id="ex-submit">🚫 Añadir exención</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ MODAL: Bulk ═══ -->
 <div class="modal-overlay" id="modalBulk">
   <div class="modal" style="width:620px">
@@ -2543,7 +2621,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
-<script src="/static/app.js?v=v167_admin_gating_20260701" defer></script>
+<script src="/static/app.js?v=v168_release_20260703" defer></script>
 </body>
 </html>
 

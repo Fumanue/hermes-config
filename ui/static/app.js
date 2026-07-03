@@ -571,7 +571,7 @@ function norm(r){
   const idle_pct = (r.idle_pct!=null && r.idle_pct!=="") ? Number(r.idle_pct) : null;
   const idle_min = (r.idle_min!=null && r.idle_min!=="") ? Number(r.idle_min) : null;
   const pending_coachings = Array.isArray(r.pending_coachings) ? r.pending_coachings : [];
-  return{login,name,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,notes,rate,pct,target,vetAvg,course_id,employee_id,transcript_url,photo_url,pending_coachings,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,idle_pct,idle_min,_search};
+  return{login,name,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,coached_label:String(r.coached_label??"").trim(),notes,rate,pct,target,vetAvg,course_id,employee_id,transcript_url,photo_url,pending_coachings,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,idle_pct,idle_min,_search};
 }
 
 // Build the notes string to upload (rate + pct + comments)
@@ -1203,12 +1203,20 @@ function _alertQualityFlagged(newItems, fc){
   _systemNotify(title, notifBody);
 }
 
+// AMZL (Delivery) has no Quality pipeline — only GCA alerts apply. True when
+// the user is a delivery user OR the FC they'd poll is a Delivery Station.
+function _isAmzlContext(){
+  if(String(window._businessLine||"").toUpperCase() === "AMZL") return true;
+  const fc = (localStorage.getItem("argos-default-fc") || currentFC || "");
+  return (typeof siteBL === "function" && siteBL(fc) === "AMZL");
+}
+
 async function _qualityPollOnce(){
+  // Delivery has no Quality: never poll it, and freeze the countdown (null) so
+  // the pill hides the "Q" segment instead of showing a live timer.
+  if(_isAmzlContext()){ _qualityNextRunAt = null; return; }
   _qualityNextRunAt = Date.now() + QUALITY_POLL_MS;
   const fc = (localStorage.getItem("argos-default-fc") || currentFC || "BCN4");
-  // Delivery sites have no Quality — skip the poll (would just error/return
-  // empty). The countdown still advances so the next FC change re-arms it.
-  if(typeof siteBL === "function" && siteBL(fc) === "AMZL") return;
   try{
     const r = await fetch(`${API}/api/quality/poll?fc=${encodeURIComponent(fc)}`, { method:"POST" });
     const j = await r.json().catch(()=>({}));
@@ -1267,8 +1275,15 @@ function _paintPollPill(){
     gEl.classList.toggle("due", gMs != null && gMs <= 0);
   }
   if(qEl){
-    qEl.textContent = `${t("poll_quality")} ${_fmtCountdown(qMs)}`;
-    qEl.classList.toggle("due", qMs != null && qMs <= 0);
+    // Delivery (AMZL) has no Quality poll (_qualityNextRunAt stays null): hide
+    // the "Q" segment entirely so the pill shows GCA only.
+    if(qMs == null){
+      qEl.style.display = "none";
+    }else{
+      qEl.style.display = "";
+      qEl.textContent = `${t("poll_quality")} ${_fmtCountdown(qMs)}`;
+      qEl.classList.toggle("due", qMs <= 0);
+    }
   }
   pill.title = t("poll_tip");
 }
@@ -1287,7 +1302,11 @@ function _applyAlertsAccess(canAlerts){
   if(btn) btn.style.display = canAlerts ? "" : "none";
   if(canAlerts){
     _startGcaBackgroundPoll();
-    _startQualityBackgroundPoll();
+    // Delivery (AMZL) users get GCA alerts only — no Quality pipeline exists
+    // for delivery, so don't arm its 10-min poll at all.
+    if(!_isAmzlContext()){
+      _startQualityBackgroundPoll();
+    }
   }
 }
 
@@ -1534,6 +1553,7 @@ async function loadUserInfo(){
       document.body.classList.add("is-admin");
       if($("btnPerfMap")) $("btnPerfMap").style.display = "";
       if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
+      if($("btnExempt")) $("btnExempt").style.display = "inline-flex";
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "inline-flex";
       if($("tabConfig")) $("tabConfig").style.display = "";
     } else {
@@ -1766,11 +1786,15 @@ async function loadShifts(){
   try{
     const d=await jget(`${API}/api/shifts?fc=${encodeURIComponent(currentFC)}`);
     sel.innerHTML=`<option value="">Auto-detect</option>`;
+    // A restored/user-picked shift wins over auto-detect. Verify it still
+    // exists for this FC (shifts differ per site) before honoring it.
+    const _hasPicked = currentShift && (d.shifts||[]).some(s=>s.key===currentShift);
+    if(currentShift && !_hasPicked) currentShift = "";  // stale for this FC
     (d.shifts||[]).forEach(s=>{
       const opt=document.createElement("option");
       opt.value=s.key;
       opt.textContent=s.label;
-      if(s.is_current && !currentShift) opt.selected=true;
+      if(_hasPicked ? (s.key===currentShift) : (s.is_current && !currentShift)) opt.selected=true;
       sel.appendChild(opt);
     });
     if(!currentShift && d.current){ currentShift=""; }
@@ -2143,16 +2167,31 @@ function renderTable(){
     // Rate — just the number, no label (header says "Rate")
     const rateCell=Number.isFinite(r.rate)
       ?`<span class="td-rate">${Math.round(r.rate)}</span>`
-      :`<span style="color:#ddd">—</span>`;
+      :`<span style="color:var(--text-dim)">—</span>`;
 
     // Target (AMZL only) — Vet_AVG × Factor, the rate expected of THIS associate.
     // Tooltip shows the site veteran average it derives from.
     const targetCell=Number.isFinite(r.target)
       ?`<span class="td-target" title="AVG Vet Rate del turno: ${Number.isFinite(r.vetAvg)?Math.round(r.vetAvg):'—'}">${Math.round(r.target)}</span>`
-      :`<span style="color:#ddd">—</span>`;
+      :`<span style="color:var(--text-dim)">—</span>`;
+
+    // Vet Rate (AMZL only) — the site veteran-average baseline (100% reference).
+    const vetRateCell=Number.isFinite(r.vetAvg)
+      ?`<span class="td-target" title="AVG rate de los veteranos en turno (baseline 100%)">${Math.round(r.vetAvg)}</span>`
+      :`<span style="color:var(--text-dim)">—</span>`;
+
+    // % to Vet Rate (AMZL only) — associate rate vs the veteran baseline, no
+    // curve adjustment (harsher than % to Target, which is curve-adjusted).
+    const vetPct=(Number.isFinite(r.rate)&&Number.isFinite(r.vetAvg)&&r.vetAvg>0)
+      ? (r.rate/r.vetAvg*100) : NaN;
+    let vetPctCell=`<span style="color:var(--text-dim)">—</span>`;
+    if(Number.isFinite(vetPct)){
+      const c=vetPct<65?"c-bad":vetPct<90?"c-warn":"c-ok";
+      vetPctCell=`<span class="td-pct ${c}">${vetPct.toFixed(1)}%</span>`;
+    }
 
     // % to Target — colour coded, no label
-    let pctCell=`<span style="color:#ddd">—</span>`;
+    let pctCell=`<span style="color:var(--text-dim)">—</span>`;
     if(Number.isFinite(r.pct)){
       const c=r.pct<65?"c-bad":r.pct<90?"c-warn":"c-ok";
       const stroke=r.pct<65?"#c0392b":r.pct<90?"#f59e0b":"#16a34a";
@@ -2230,7 +2269,7 @@ function renderTable(){
       : `<span class="notes-empty">—</span>`;
 
     const photoHtml=r.photo_url
-      ?`<img src="${esc(r.photo_url)}" alt="${esc(r.login)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      ?`<img src="${esc(r.photo_url)}" alt="${esc(r.login)}" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
       :"";
 
     return`<tr class="${r.coached?"coached-row":""}">
@@ -2271,6 +2310,8 @@ function renderTable(){
       <td class="bl-fc-only" title="${esc(r.stationRaw||r.station)}"><span class="td-station">${esc(r.station)}</span></td>
       <td><span class="pr ${pr}">${esc(prLbl)}</span></td>
       <td>${rateCell}</td>
+      <td class="bl-amzl-only">${vetRateCell}</td>
+      <td class="bl-amzl-only">${vetPctCell}</td>
       <td class="bl-amzl-only">${targetCell}</td>
       <td>${pctCell}</td>
       <td class="td-notes bl-fc-only">${notesHtml}</td>
@@ -2280,7 +2321,7 @@ function renderTable(){
         const warn = r.idle_pct>=20 ? ' style="color:var(--red,#e53e3e);font-weight:700"' : "";
         return `<span${warn}>${r.idle_pct.toFixed(1)}%${m}</span>`;
       })()}</td>
-      <td>${r.coached?`<span class="coached-chk"><span class="chk-circle">✓</span></span>`:""}</td>
+      <td>${r.coached?(r.coached_label?`<span class="coached-chk" title="Último coaching">${esc(r.coached_label)}</span>`:`<span class="coached-chk"><span class="chk-circle">✓</span></span>`):""}</td>
       <td>
         <div style="display:flex;gap:4px;align-items:center">
           <button class="row-btn" data-upload-login="${esc(r.login)}">↑ Upload</button>
@@ -2494,7 +2535,7 @@ async function loadHistory(){
       const photoUrl=login!=="—"?`https://badgephotos.amazon.com/?Region=Master&FullsizeImage=Yes&uid=${encodeURIComponent(login)}`:"";
       return`<div class="hcard">
         <div class="hcard-photo">
-          ${photoUrl?`<img src="${esc(photoUrl)}" alt="${esc(login)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`:``}
+          ${photoUrl?`<img src="${esc(photoUrl)}" alt="${esc(login)}" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`:``}
           <div class="no-photo" style="${photoUrl?"display:none":""}">?</div>
         </div>
         <div class="hcard-body">
@@ -3068,7 +3109,7 @@ function renderQuality(){
     return `<tr class="${coached?'coached-row':''}">
       <td class="td-assoc" style="text-align:left;padding-left:20px">
         <div class="photo-wrap">
-          <div class="photo-cell"><img src="${esc(photo)}" onerror="this.style.display='none'" /></div>
+          <div class="photo-cell"><img src="${esc(photo)}" loading="lazy" decoding="async" onerror="this.style.display='none'" /></div>
           <div class="ident">
             <a class="login-link" href="${esc(transcriptUrl(login))}" target="_blank">${esc(login)}</a>
           </div>
@@ -3233,9 +3274,9 @@ function _renderQualitySummary(filteredRows){
       <td><span class="qs-badge qs-badge-total">${g.count}</span></td>
       <td><span class="qs-badge qs-badge-pending">${g.pending}</span></td>
       <td><span class="qs-badge qs-badge-coached">${g.coached}</span></td>
-      <td>${g.s3?`<span class="qs-badge qs-badge-s3">${g.s3}</span>`:'<span style="color:#ddd">—</span>'}</td>
-      <td>${g.s2?`<span class="qs-badge qs-badge-s2">${g.s2}</span>`:'<span style="color:#ddd">—</span>'}</td>
-      <td>${g.s1?`<span class="qs-badge qs-badge-s1">${g.s1}</span>`:'<span style="color:#ddd">—</span>'}</td>
+      <td>${g.s3?`<span class="qs-badge qs-badge-s3">${g.s3}</span>`:'<span style="color:var(--text-dim)">—</span>'}</td>
+      <td>${g.s2?`<span class="qs-badge qs-badge-s2">${g.s2}</span>`:'<span style="color:var(--text-dim)">—</span>'}</td>
+      <td>${g.s1?`<span class="qs-badge qs-badge-s1">${g.s1}</span>`:'<span style="color:var(--text-dim)">—</span>'}</td>
       <td><span class="qs-avg">${avgSigma}</span></td>
       <td><div class="qs-bar"><div class="qs-bar-fill" style="width:${pct}%;background:${color}"></div></div></td>
     </tr>`;
@@ -3705,7 +3746,13 @@ async function _initApp(){
   let saved = defaultFc;
   try{
     const done = JSON.parse(localStorage.getItem("argos_pipeline_done") || "null");
-    if(done && done.fc && (Date.now() - (done.at||0) < 5*60*1000)) saved = done.fc;
+    if(done && done.fc && (Date.now() - (done.at||0) < 5*60*1000)){
+      saved = done.fc;
+      // Restore the shift/cycle the user ran so we don't snap back to
+      // Auto-detect after the post-pipeline reload. loadShifts() honors a
+      // non-empty currentShift when selecting the dropdown option.
+      if(done.shift) currentShift = done.shift;
+    }
   }catch(_){}
   currentFC=saved;
   // Persist the default only — do NOT overwrite it with the post-pipeline FC.
@@ -4144,6 +4191,10 @@ $("btnPipeline").addEventListener("click", async ()=>{
                 at: Date.now(),
                 elapsed: elapsedTxt,
                 fc: currentFC,
+                // Remember the shift/cycle the user ran so the post-reload
+                // _initApp can re-select it instead of snapping back to
+                // Auto-detect (delivery coaches pin a cycle, e.g. Cycle 1).
+                shift: manualTimeMode ? "" : currentShift,
               }));
             }catch(ex){}
             // After Performance finishes, kick GCA + Quality so all three are
@@ -6319,7 +6370,7 @@ document.addEventListener("click",(e)=>{
         rowDiv.className = rowCls;
         rowDiv.style.cursor = "pointer";
         rowDiv.innerHTML =
-          (r.photo_url ? '<img src="'+esc(r.photo_url)+'" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.style.display=\'none\'">' : '')
+          (r.photo_url ? '<img src="'+esc(r.photo_url)+'" loading="lazy" decoding="async" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.style.display=\'none\'">' : '')
           +'<span class="ml-login">'+esc(r.login||"—")+'</span>'
           +'<span class="ml-station">'+esc(r.station||"—")+'</span>'
           +'<span class="ml-rate">'+(Number.isFinite(r.rate)?Math.round(r.rate)+' uph':'—')+'</span>'
@@ -6482,7 +6533,7 @@ document.addEventListener("click",(e)=>{
     var card = document.createElement("div");
     card.className = "ib-card " + (it.state || "");
     var photo = r.photo_url
-      ? '<img class="ib-photo" src="'+esc(r.photo_url)+'" onerror="this.outerHTML=\'<div class=&quot;ib-photo-ph&quot;>'+esc((r.login||"?").charAt(0).toUpperCase())+'</div>\'">'
+      ? '<img class="ib-photo" src="'+esc(r.photo_url)+'" loading="lazy" decoding="async" onerror="this.outerHTML=\'<div class=&quot;ib-photo-ph&quot;>'+esc((r.login||"?").charAt(0).toUpperCase())+'</div>\'">'
       : '<div class="ib-photo-ph">'+esc((r.login||"?").charAt(0).toUpperCase())+'</div>';
     var tags = "";
     if(it.state === "gap" || it.state === "below") tags += '<span class="ib-tag tag-gap">Gap</span>';
@@ -6664,7 +6715,7 @@ document.addEventListener("click",(e)=>{
       var pc = Math.round(Number(r.pct)||0);
       var cls = pc >= 100 ? "ok" : pc >= 80 ? "warn" : "bad";
       var photo = r.photo_url
-        ? '<img class="pr-photo" src="'+esc(r.photo_url)+'" onerror="this.outerHTML=\'<div class=&quot;pr-photo-ph&quot;>'+esc((r.login||"?").charAt(0).toUpperCase())+'</div>\'">'
+        ? '<img class="pr-photo" src="'+esc(r.photo_url)+'" loading="lazy" decoding="async" onerror="this.outerHTML=\'<div class=&quot;pr-photo-ph&quot;>'+esc((r.login||"?").charAt(0).toUpperCase())+'</div>\'">'
         : '<div class="pr-photo-ph">'+esc((r.login||"?").charAt(0).toUpperCase())+'</div>';
       return '<div class="fcc-pin-row">'
         + photo
@@ -6773,7 +6824,7 @@ document.addEventListener("click",(e)=>{
       var pc=Math.round(r.pct||0);
       var clr=pc>=100?'#059669':pc>=80?'#d97706':'#dc2626';
       h+='<div style="display:flex;align-items:center;gap:5px;padding:3px 0;border-bottom:1px solid #2a3a4a">';
-      if(r.photo_url)h+='<img src="'+r.photo_url+'" style="width:30px;height:30px;border-radius:50%;object-fit:cover">';
+      if(r.photo_url)h+='<img src="'+r.photo_url+'" loading="lazy" decoding="async" style="width:30px;height:30px;border-radius:50%;object-fit:cover">';
       h+='<b style="min-width:55px">'+(r.login||'--')+'</b>';
       h+='<span style="font-size:13px;color:#e2e8f0">'+Math.round(r.rate||0)+' uph</span>';
       h+='<span style="font-size:13px;font-weight:700;color:'+clr+'">'+pc+'%</span>';
@@ -7205,7 +7256,7 @@ document.addEventListener("click",(e)=>{
     // Associate rows with photos
     const assocRows = items.slice(0,4).map(i=>{
       const login = i.login||i.employee_id||"—";
-      const photo = i.photo_url ? `<img src="${i.photo_url}" style="width:24px;height:24px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">` : `<div style="width:24px;height:24px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px">👤</div>`;
+      const photo = i.photo_url ? `<img src="${i.photo_url}" loading="lazy" decoding="async" style="width:24px;height:24px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">` : `<div style="width:24px;height:24px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px">👤</div>`;
       return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0">${photo}<span style="font-weight:600;font-size:11px">${login}</span></div>`;
     }).join("");
 
@@ -7301,7 +7352,7 @@ document.addEventListener("click",(e)=>{
           ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green)"></span> <span style="font-size:10px">Active</span>${stationInfo ? `<div style="font-size:9.5px;color:var(--text-muted);margin-top:1px">${esc(stationInfo)}</div>` : ""}`
           : `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#cbd5e1"></span> <span style="font-size:10px;color:var(--text-muted)">${esc(it.presence||"Unknown")}</span>${stationInfo ? `<div style="font-size:9.5px;color:var(--text-muted);margin-top:1px">${esc(stationInfo)}</div>` : ""}`;
         const photoHtml = it.photo_url
-          ? `<img src="${esc(it.photo_url)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-right:6px;vertical-align:middle" onerror="this.style.display='none'">`
+          ? `<img src="${esc(it.photo_url)}" loading="lazy" decoding="async" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-right:6px;vertical-align:middle" onerror="this.style.display='none'">`
           : "";
         const isHighDef = it.scenario === "HIGH_DEFECTS";
         const hdBadge = isHighDef ? `<span class="gca-hd-badge" title="High Defects — debe cerrarse">HIGH DEFECTS</span>` : "";
@@ -7610,6 +7661,99 @@ document.addEventListener("click",(e)=>{
   $("adoptWk")?.addEventListener("change", e=>{ _adoptWk = e.target.checked; loadAdoption(); });
   $("adoptionModal")?.addEventListener("click", e=>{ if(e.target.id==="adoptionModal") closeAdoption(); });
   window.closeAdoption = ()=>{ const m=$("adoptionModal"); if(m) m.style.display="none"; };
+
+  // ── Exempt zone (admin) — exclude associates from coaching ──────────────────
+  // Two scopes: "process" (Performance + Quality for a process/ALL) and "topic"
+  // (Quality-only, one error topic — still shows in Performance).
+  let _exTopicsLoaded = false;
+  function _exToggleScope(){
+    const scope = $("ex-scope")?.value || "process";
+    if($("ex-process-wrap")) $("ex-process-wrap").style.display = (scope==="topic") ? "none" : "";
+    if($("ex-topic-wrap"))   $("ex-topic-wrap").style.display   = (scope==="topic") ? "" : "none";
+  }
+  async function _loadExemptList(){
+    const wrap = $("ex-list"); if(!wrap) return;
+    wrap.innerHTML = `<div class="hmodal-empty">Cargando…</div>`;
+    try{
+      const d = await jget(`${API}/api/admin/exemptions`);
+      // Populate the Quality-topic dropdown once (from the server catalog).
+      if(!_exTopicsLoaded && $("ex-topic")){
+        const tops = d.topics || [];
+        $("ex-topic").innerHTML = tops.map(t=>`<option value="${esc(t.key)}">${esc(t.label)}</option>`).join("")
+          || `<option value="">(sin temas)</option>`;
+        _exTopicsLoaded = true;
+      }
+      const items = d.exemptions || [];
+      $("ex-count") && ($("ex-count").textContent = items.length);
+      if(!items.length){ wrap.innerHTML = `<div class="hmodal-empty">Sin exenciones.</div>`; return; }
+      wrap.innerHTML = items.map(e=>{
+        const meta = [e.reason, e.inputer, e.date].filter(Boolean).join(" · ");
+        // Chip: red for ALL, blue for a Quality topic, accent for a process.
+        let chip;
+        if(e.scope === "topic"){
+          chip = `<span class="ex-chip ex-topic" title="Solo Calidad — sigue en Performance">📋 ${esc(e.topic)}</span>`;
+        }else if((e.process||"").toUpperCase() === "ALL"){
+          chip = `<span class="ex-chip ex-all" title="Excluido de todo (Performance + Calidad)">⛔ ALL</span>`;
+        }else{
+          chip = `<span class="ex-chip ex-proc" title="Performance + Calidad de ${esc(e.process)}">${esc(e.process)}</span>`;
+        }
+        return `<div class="ex-row">
+          <span class="ex-login">${esc(e.login)}</span>
+          ${chip}
+          <span class="ex-meta" title="${esc(meta)}">${esc(meta)}</span>
+          <button class="ex-del-btn" data-login="${esc(e.login)}" data-scope="${esc(e.scope||'process')}" data-process="${esc(e.process||'')}" data-topic="${esc(e.topic||'')}">Quitar</button>
+        </div>`;
+      }).join("");
+      wrap.querySelectorAll(".ex-del-btn").forEach(btn=>{
+        btn.addEventListener("click", async ()=>{
+          const {login:lg, scope:sc, process:pr, topic:tp} = btn.dataset;
+          const what = sc === "topic" ? `el tema ${tp}` : pr;
+          if(!confirm(`¿Quitar la exención de ${lg} en ${what}?`)) return;
+          try{
+            const q = `login=${encodeURIComponent(lg)}&scope=${encodeURIComponent(sc)}&process=${encodeURIComponent(pr)}&topic=${encodeURIComponent(tp)}`;
+            const r = await fetch(`${API}/api/admin/exemptions?${q}`, {method:"DELETE"});
+            if(!r.ok){ const j=await r.json().catch(()=>({})); throw new Error(j.detail||r.status); }
+            _loadExemptList();
+          }catch(err){ alert("No se pudo quitar: "+err.message); }
+        });
+      });
+    }catch(err){
+      wrap.innerHTML = `<div class="hmodal-empty" style="color:#e53e3e">Error: ${esc(err.message)}</div>`;
+    }
+  }
+
+  $("ex-scope") && $("ex-scope").addEventListener("change", _exToggleScope);
+
+  if($("btnExempt")) $("btnExempt").addEventListener("click", ()=>{
+    openModal("modalExempt");
+    $("ex-result") && ($("ex-result").innerHTML = "");
+    _exToggleScope();
+    _loadExemptList();
+  });
+
+  if($("ex-submit")) $("ex-submit").addEventListener("click", async ()=>{
+    const login = ($("ex-login")?.value || "").trim();
+    const scope = $("ex-scope")?.value || "process";
+    const process = $("ex-process")?.value || "ALL";
+    const topic = $("ex-topic")?.value || "";
+    const reason = ($("ex-reason")?.value || "").trim();
+    const res = $("ex-result");
+    if(!login){ if(res) res.innerHTML = `<span style="color:#e53e3e">Introduce al menos un login.</span>`; return; }
+    if(scope === "topic" && !topic){ if(res) res.innerHTML = `<span style="color:#e53e3e">Elige un tema de Calidad.</span>`; return; }
+    const btn = $("ex-submit"); btn.disabled = true; const orig = btn.textContent; btn.textContent = "Guardando…";
+    try{
+      const d = await jpost(`${API}/api/admin/exemptions`, {login, scope, process, topic, reason});
+      const n = (d.added||[]).length;
+      if(res) res.innerHTML = `<span style="color:var(--green)">✓ ${n} exención(es) añadida(s). Se aplica en el próximo pipeline.</span>`;
+      $("ex-login") && ($("ex-login").value = "");
+      $("ex-reason") && ($("ex-reason").value = "");
+      _loadExemptList();
+    }catch(err){
+      if(res) res.innerHTML = `<span style="color:#e53e3e">Error: ${esc(err.message)}</span>`;
+    }finally{
+      btn.disabled = false; btn.textContent = orig;
+    }
+  });
 
   async function loadAdoption(){
     const body=$("adoptionBody");

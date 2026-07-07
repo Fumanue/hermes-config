@@ -1,7 +1,7 @@
 {
   "course_base": "https://dub.prod.cms.umbrella.amazon.dev/course/",
   "transcript_base": "https://guided-coaching-dub.corp.amazon.com/#/employee-transcript/",
-  "lookback_days": 3,
+  "lookback_days": 7,
   "role_to_course_uuid": {
     "P2R_PICK": {
       "uuid": "b0e4ccfa-a2d2-54ea-96a4-d4e3660d9079",
@@ -135,5 +135,40 @@
     "DECANT": [
       "DECANT"
     ]
+  },
+  "course_names": {
+    "e0d8939f-79b6-5d2e-b94d-8951ff597918": "EUCF_ PMCA_ALL_PACK_Cycle Time",
+    "9a639d7e-0b7a-5bc3-9402-7989ae335a5d": "EUCF_ PMCA_ALL_Stow Productivity",
+    "74f2884f-6b1a-5123-9970-50f5f76ed60f": "EUCF_ PMCA_ARS_Pack_Induct",
+    "62040a95-c1dc-54ce-8223-6d8e71633148": "EUCF_ PMCA_ARS_Pack_Pack AFE",
+    "ad1ec076-2f47-5250-b0ef-867340918454": "EUCF_CHK_ALL_Instructor/Peer_Audit",
+    "abff0629-9043-500e-8b0e-50e2aac9c7ce": "EUCF_PMCA_ALL_RECEIVE DECANT_PRODUCTIVITY",
+    "bd1353a7-24a6-53d2-8e29-0ad9fce1c9e5": "EUCF_PMCA_ARS_PICK_Takt Time",
+    "b0e4ccfa-a2d2-54ea-96a4-d4e3660d9079": "EUCF_PMCA_ARS_PICK_Time at Bin",
+    "695a1953-2449-502c-b18e-7d461e88c7c0": "EUCF_PMCA_ARS_PICK_Units Per Tote",
+    "9a0d4ba3-188c-5307-be24-56e74979af2e": "EUCF_PMCA_ARS_STOW_Fullness",
+    "eb29ec17-16a0-5707-b8c8-ec91322ea4d4": "EUCF_PMCA_ARS_Sort_Accelerated_AFE_Coaching",
+    "66d5b5b7-1327-5349-9cd5-6ca8bccee173": "EUCF_QGCA_ARS_STOW_Multiple Event Stow Not Scanned",
+    "fb9ad2f5-6a87-507e-b80e-199459de007f": "EUCF_QGCA_ARS_STOW_Multiple Events Defects",
+    "6415e6a2-d72c-5d71-b8ba-6a84a869bbf2": "EUCF_QMCA_ALL_PACK_Pyramid Stacking",
+    "cb7059f5-b0d2-5928-a1e2-322b4aac00b0": "EUCF_QMCA_ALL_PROBLEM SOLVE_POPS Marked Missing Shipment C15",
+    "3682767d-0bca-560e-a2b7-577e0535d673": "EUCF_QMCA_ALL_Pick_Not Using Amnesty",
+    "60eb838e-ecc8-5f43-bb04-7fbe10f9b951": "EUCF_QMCA_ALL_RECEIVE_Wrong ASIN",
+    "3cd64655-daa5-53b3-9ba2-a55119ef037a": "EUCF_QMCA_ALL_STOW_Wrong Quantity",
+    "6d70429a-a623-51dd-a67f-830ad85620a6": "EUCF_QMCA_ARS_STOW Scan Not Stow",
+    "dd1e45bb-31d9-5a33-ad42-8c79e766ce2b": "EUCF_QUALITY_GCAA_ARS/TS/TNS_PICK_Apollo Audit Bin Etiquette",
+    "ee58d67f-d14a-5d5c-8500-43cf682d5fa4": "EUCF_QUALITY_GCAA_ARS/TS/TNS_PICK_FPY Pick Error Indicator",
+    "a0eda47c-90ec-56e7-936c-166191a0d144": "EUCF_QUALITY_GCAA_ARS/TS/TNS_STOW_Apollo Audit Bin Etiquette",
+    "c7421633-2b81-5c59-b685-48c0436f86d0": "EUCF_QUALITY_GCAA_ARS/TS/TNS_STOW_FPY Scan Out Of Sequence",
+    "121d07cf-7b16-54d9-aa7a-bcd47a6c3f22": "EUCF_QUALITY_GCAM_ARS/TS/TNS/IXD_RECEIVE_Decant Error Indicator",
+    "32b8df4d-a5bc-55d5-97d9-e7bee59fe944": "EUCF_QUALITY_GCAM_ARS/TS/TNS_PACK_Wrong Box",
+    "1c245fcf-784c-56b6-9672-f27c287b8200": "EUCF_QUALITY_GCAM_ARS/TS/TNS_PICK_Confirmed False Pick Shortage",
+    "5df3c031-3b38-5141-ac7f-0e5990d8acb2": "EUCF_QUALITY_GCAM_ARS_PACK_Open Box",
+    "dc6a3e9e-83dd-5911-9cb0-4e32ecedf0b9": "EUCF_TCA_ALL_PACK SINGLES_Tenure Coaching",
+    "e414461b-fd8f-5d14-9a37-b818a698c4f7": "EUCF_TCA_ARS_PACK AFE_Tenure Coaching",
+    "bb626590-a65d-58e9-8dbb-09afab72c6a1": "EUCF_TCA_ARS_PICK_Tenure Coaching",
+    "b09aff4f-9be9-5b12-b521-0f286be10db0": "EUCF_TCA_ARS_STOW NIKE LITE _Tenure Coaching",
+    "23ace278-cc2e-51f9-8cf6-449705609213": "EUCF_TCA_ARS_STOW NIKE Tenure Coaching",
+    "b900e1fe-b917-598a-a883-64a701732fbf": "EUZL F2F Coaching Smart Stow"
   }
 }

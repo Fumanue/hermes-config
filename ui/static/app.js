@@ -366,6 +366,19 @@ function inferProcess(role){
   return "OTHER";
 }
 
+// Process groups that actually have associates in the current data — the filter
+// only offers what's present (no empty "Stow" when nobody stowed today). Keeps
+// PROCESS_GROUP_KEYS order. Falls back to all keys if data isn't loaded yet.
+function activeProcessGroups(){
+  const present = new Set();
+  (state.all||[]).forEach(r=>{
+    const g = inferProcess(r.role);
+    if(g && g !== "OTHER") present.add(g);
+  });
+  const keys = PROCESS_GROUP_KEYS.filter(k=>present.has(k));
+  return keys.length ? keys : PROCESS_GROUP_KEYS.slice();
+}
+
 // Best-effort process guess for the CALM dropdown. Tries exact role-group
 // membership first, then substring keywords (covers coaching titles/insights
 // and station names like "PPSingleMedium" -> PACK/STOW that aren't exact roles).
@@ -1554,6 +1567,8 @@ async function loadUserInfo(){
       if($("btnPerfMap")) $("btnPerfMap").style.display = "";
       if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
       if($("btnExempt")) $("btnExempt").style.display = "inline-flex";
+      if($("btnShiftTracker")) $("btnShiftTracker").style.display = "inline-flex";
+      if($("tabShiftTracker")) $("tabShiftTracker").style.display = "";
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "inline-flex";
       if($("tabConfig")) $("tabConfig").style.display = "";
     } else {
@@ -1679,6 +1694,7 @@ function switchTab(name){
   if(name==="quality") loadQuality();
   if(name==="faq") _initFaq();
   if(name==="gca" && window._loadGcaDashboard) window._loadGcaDashboard();
+  if(name==="shifttracker" && window._onShiftTrackerTab) window._onShiftTrackerTab();
 }
 document.querySelectorAll(".t-tab[data-tab]").forEach(tab=>
   tab.addEventListener("click",()=>switchTab(tab.dataset.tab))
@@ -1975,10 +1991,24 @@ function buildSubprocessOptions(){
 }
 
 function initProcessMs(){
-  msRender("procMs", PROCESS_GROUP_KEYS, (state.proc instanceof Set)? state.proc : new Set(), (newSet)=>{
+  // AMZL (Delivery) uses ONE process filter (its Roles ARE the processes:
+  // Stow / ADTA Stow / Pick & Stage) and no Sub — so offer the delivery roles
+  // present in the data directly. FC keeps the grouped PACK/PICK/… keys, and
+  // only the groups that actually have associates today (activeProcessGroups).
+  const isAmzl = (typeof siteBL === "function" && siteBL(currentFC) === "AMZL");
+  let procOptions;
+  if(isAmzl){
+    const roles = new Set();
+    (state.all||[]).forEach(r=>{ if(r.role && r.role!=="—") roles.add(r.role); });
+    procOptions = Array.from(roles).sort();
+  }else{
+    procOptions = activeProcessGroups();
+  }
+
+  msRender("procMs", procOptions, (state.proc instanceof Set)? state.proc : new Set(), (newSet)=>{
     state.proc = newSet;     // empty = ALL
     state.sub  = new Set();  // reset to ALL
-    buildSubprocessOptions();
+    if(!isAmzl) buildSubprocessOptions();
     renderAll();
   });
 
@@ -2103,15 +2133,23 @@ function getFiltered(opts){
     if(tf > 0) rows = rows.filter(r => parseInt(r.tenure_wk||0) === tf);
   }
   // __none__ sentinel = user blanked the filter → show nothing for that dimension
+  const _isAmzlView = (typeof siteBL === "function" && siteBL(currentFC) === "AMZL");
   if(state.proc instanceof Set && state.proc.has("__none__")){
     rows=[];
-  } else {
+  } else if(_isAmzlView && state.proc instanceof Set && state.proc.size){
+    // AMZL: the single process filter holds exact delivery Roles, so match by
+    // role directly (no PACK/PICK grouping).
+    rows=rows.filter(r=>state.proc.has(r.role));
+  } else if(!_isAmzlView){
     rows=rows.filter(r=>roleMatchesProcess(r.role,state.proc));
   }
-  if(state.sub instanceof Set && state.sub.has("__none__")){
-    rows=[];
-  } else if(state.sub instanceof Set && state.sub.size){
-    rows=rows.filter(r=>state.sub.has(r.role));
+  // Sub filter is FC-only (AMZL has no subprocess dimension).
+  if(!_isAmzlView){
+    if(state.sub instanceof Set && state.sub.has("__none__")){
+      rows=[];
+    } else if(state.sub instanceof Set && state.sub.size){
+      rows=rows.filter(r=>state.sub.has(r.role));
+    }
   }
   if(state.q){
     const q=state.q.toLowerCase();
@@ -3064,6 +3102,9 @@ function renderQuality(){
       } else if(qSortKey==="pct_to_target"){
         va = Number(qualityValue(a,["pct_to_target","Pct_to_Target"],0));
         vb = Number(qualityValue(b,["pct_to_target","Pct_to_Target"],0));
+      } else if(qSortKey==="station"){
+        va = String(qualityValue(a,["station","Station","CurrentStationId"],"")).toLowerCase();
+        vb = String(qualityValue(b,["station","Station","CurrentStationId"],"")).toLowerCase();
       } else {
         va = Number(qualityValue(a,["total_errors_wk","Total Errors WK"],0));
         vb = Number(qualityValue(b,["total_errors_wk","Total Errors WK"],0));
@@ -3099,8 +3140,16 @@ function renderQuality(){
     const targetErrors = Number(qualityValue(r,["target_errors","Target_Errors"],0));
     const pctTarget = Number(qualityValue(r,["pct_to_target","Pct_to_Target"],0));
     const sigma = Number(qualityValue(r,["sigma","Sigma","sigma_value","Sigma Value"],0));
-    const mode = qualityValue(r,["mode","Mode"],"");
     const present = qualityPresentValue(r);
+    // Station column — same source + mapping as Performance (abbrevStation +
+    // last-4-digits for STOW/PICK roles). Data from Roster_SCC via the server.
+    const _stationRaw = String(qualityValue(r,["station","Station","CurrentStationId"],"")).trim();
+    const _detRole = String(qualityValue(r,["detected_role","DetectedRole","role","Role"],"")).trim().toUpperCase();
+    let _stationDisp = abbrevStation(_stationRaw)||_stationRaw||"—";
+    if(_detRole==="STOW"||_detRole==="QUANTITY_STOW"||_detRole.startsWith("PICK")||_detRole==="P2R_PICK"){
+      const _m = _stationRaw.match(/(\d{4})(?!.*\d)/);
+      if(_m && _m[1]) _stationDisp = _m[1];
+    }
     const coachedRaw = qualityValue(r,["coached","Coached"],"");
     const coached = String(coachedRaw).toLowerCase()==="true" || String(coachedRaw).toUpperCase()==="YES" || (String(coachedRaw).trim()!=="" && String(coachedRaw).toLowerCase()!=="false" && String(coachedRaw).toLowerCase()!=="nan");
     const courseId = qualityValue(r,["course_id","CourseId","Course ID","course_url"],"") || qualityValue(r,["course_uuid","Course UUID","CourseUUID"],"");
@@ -3132,7 +3181,7 @@ function renderQuality(){
         if(curve==="NH") return `<span class="curve-label curve-nh">NH T${tenure}</span>`;
         return '<span style="color:#ccc">—</span>';
       })()}</td>
-      <td><span class="mode-label mode-${mode.toLowerCase()}">${esc(mode)}</span></td>
+      <td title="${esc(_stationRaw)}"><span class="td-station">${esc(_stationDisp)}</span></td>
       <td>${present?'<span class="present-chk">✓</span>':'<span class="present-dash">—</span>'}</td>
       <td>${coached?'<span class="coached-chk"><span class="chk-circle">✓</span></span>':'—'}</td>
       <td style="text-align:left">${(()=>{
@@ -3555,6 +3604,14 @@ async function openCoachQueue(fc){
     let html = `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px"><b>${queue.length}</b> asociado(s) por coachear · ≥2σ · presentes</div>`;
     html += queue.map(r=>{
       const login = String(r.login||"");
+      // Station (same source + mapping as Performance/Quality table). Queue only
+      // shows present associates, so this is populated when punched in.
+      const _sRaw = String(r.station||r.CurrentStationId||"").trim();
+      const _sRole = String(r.detected_role||r.DetectedRole||r.role||"").trim().toUpperCase();
+      let _sDisp = abbrevStation(_sRaw)||_sRaw||"—";
+      if(_sRole==="STOW"||_sRole==="QUANTITY_STOW"||_sRole.startsWith("PICK")||_sRole==="P2R_PICK"){
+        const _sm = _sRaw.match(/(\d{4})(?!.*\d)/); if(_sm && _sm[1]) _sDisp = _sm[1];
+      }
       const ek = String(r.error_key||r.ErrorKey||"");
       const errLabel = String(r.error_type||ek).replace(/_/g," ");
       const sig = Number(r.sigma||0).toFixed(1);
@@ -3575,7 +3632,7 @@ async function openCoachQueue(fc){
       // action button
       let actionBtn = "";
       if(sameTopic.length){
-        actionBtn = `<button class="row-btn cq-close pending-close" data-login="${esc(login)}" data-fc="${esc(fc)}" data-pending="${esc(JSON.stringify(sameTopic))}" title="Ya hay un coaching de este topic subido — ciérralo (completar o cancelar)">⏳ ${t("q_pending_close")}</button>`;
+        actionBtn = `<button class="row-btn cq-close pending-close" data-login="${esc(login)}" data-fc="${esc(fc)}" data-eid="${esc(String(r.employee_id||""))}" data-process="${esc(errLabel)}" data-pending="${esc(JSON.stringify(sameTopic))}" title="Ya hay un coaching de este topic subido — ciérralo (completar o cancelar)">⏳ ${t("q_pending_close")}</button>`;
       } else if(courseId){
         actionBtn = `<button class="row-btn cq-upload" data-login="${esc(login)}" data-fc="${esc(fc)}" data-course="${esc(courseId)}" data-error="${esc(errLabel)}" data-total="${r.total_errors_wk||0}" data-sigma="${r.sigma||0}">↑ Upload</button>`;
       } else {
@@ -3586,6 +3643,7 @@ async function openCoachQueue(fc){
         <div style="flex:0 0 150px">
           <div style="font-weight:700;font-size:13px">${esc(login)}</div>
           <div style="font-size:10px;color:var(--text-muted)">${esc(errLabel)}</div>
+          <div style="font-size:10px;color:var(--text-secondary)" title="${esc(_sRaw)}">📍 ${esc(_sDisp)}</div>
           <div style="font-size:11px"><span class="pr ${qualitySigmaClass(Number(sig))}">Σ${sig}</span></div>
         </div>
         <div style="flex:1;min-width:0">${bars}</div>
@@ -3599,7 +3657,7 @@ async function openCoachQueue(fc){
     }));
     body.querySelectorAll(".cq-close").forEach(b=>b.addEventListener("click",()=>{
       let pend=[]; try{pend=JSON.parse(b.dataset.pending||"[]");}catch(_){}
-      openCloseFromRow(pend,{fc:b.dataset.fc,login:b.dataset.login,name:b.dataset.login,onDone:()=>{loadQuality&&loadQuality();openCoachQueue(fc);}});
+      openCloseFromRow(pend,{fc:b.dataset.fc,login:b.dataset.login,name:b.dataset.login,employee_id:b.dataset.eid,badge:b.dataset.eid,process:b.dataset.process,onDone:()=>{loadQuality&&loadQuality();openCoachQueue(fc);}});
     }));
   }catch(e){
     body.innerHTML = `<div style="color:var(--red,#dc2626);font-size:13px">Error: ${esc(e.message||String(e))}</div>`;
@@ -3670,7 +3728,7 @@ async function exportQualityCSV(){
     "Sigma": Number(qualityValue(r,["sigma","Sigma"],0)).toFixed(2),
     "Curve": qualityValue(r,["curve","Curve"],""),
     "Tenure": qualityValue(r,["tenure","Tenure"],""),
-    "Mode": qualityValue(r,["mode","Mode"],""),
+    "Station": (()=>{const s=String(qualityValue(r,["station","Station","CurrentStationId"],"")).trim();const dr=String(qualityValue(r,["detected_role","DetectedRole","role","Role"],"")).trim().toUpperCase();let d=abbrevStation(s)||s||"";if(dr==="STOW"||dr==="QUANTITY_STOW"||dr.startsWith("PICK")||dr==="P2R_PICK"){const m=s.match(/(\d{4})(?!.*\d)/);if(m&&m[1])d=m[1];}return d;})(),
     "Present": qualityPresentValue(r)?"YES":"NO",
     "Coached": (()=>{const v=qualityValue(r,["coached","Coached"],"");return String(v).toLowerCase()==="true"?"YES":"NO";})()
   }));
@@ -3818,6 +3876,10 @@ async function loadDashboard(){
   try{
     const d=await jget(`${API}/api/dashboard?fc=${encodeURIComponent(currentFC)}`);
     state.all=(d.data||[]).map(norm);
+    // Rebuild the Process filter for the freshly-loaded data + site: FC shows
+    // only groups with associates present; AMZL shows its delivery roles as the
+    // single process filter. (msRender swaps the panel, so this is safe to redo.)
+    initProcessMs();
     updateKpis();
     buildSubprocessOptions();
     renderAll();
@@ -3893,6 +3955,7 @@ $("btnBulk").addEventListener("click",()=>{
   $("bulk-preview-wrap").style.display="none";
   $("bulk-result").innerHTML="";
   $("bulk-fc").value=currentFC;
+  if($("bulk-dept")) $("bulk-dept").value="";   // default to per-row Dept
   openModal("modalBulk");
 });
 
@@ -3913,6 +3976,7 @@ $("bulk-submit").addEventListener("click",async()=>{
   const lines=parseBulkLines();
   const fc=$("bulk-fc").value.trim()||currentFC;
   const defCourse=$("bulk-course").value.trim();
+  const deptOverride=($("bulk-dept")?$("bulk-dept").value:"").trim();
   const resEl=$("bulk-result");
   if(!lines.length){resEl.innerHTML=`<div class="upload-result err">No valid logins</div>`;return;}
 
@@ -3922,14 +3986,20 @@ $("bulk-submit").addEventListener("click",async()=>{
     const notes=l.notes||(row?buildUploadNotes(row):"");
     return{login:l.login,fc,course_id:row?.course_id||defCourse||"",notes};
   });
-  const missing=entries.filter(e=>!e.course_id).map(e=>e.login);
-  if(missing.length){
-    resEl.innerHTML=`<div class="upload-result err">Missing Course ID for: ${esc(missing.join(", "))}</div>`;return;
+  // When a Dept override is set, the SERVER re-resolves each course_id for that
+  // dept, so a per-row course_id isn't required here. Without an override we
+  // still guard against missing courses (current behavior).
+  if(!deptOverride){
+    const missing=entries.filter(e=>!e.course_id).map(e=>e.login);
+    if(missing.length){
+      resEl.innerHTML=`<div class="upload-result err">Missing Course ID for: ${esc(missing.join(", "))}</div>`;return;
+    }
   }
-  resEl.innerHTML=`<div class="upload-result" style="color:#888;border-color:#ccc">Uploading ${entries.length} entries…</div>`;
+  const deptLabel=deptOverride?` (Dept → ${esc(deptOverride)})`:"";
+  resEl.innerHTML=`<div class="upload-result" style="color:#888;border-color:#ccc">Uploading ${entries.length} entries${deptLabel}…</div>`;
   try{
-    // Server accepts 'entries' key (fixed in BulkUploadRequest)
-    const r=await jpost(`${API}/api/coaching/bulk`,{fc,entries});
+    // Server accepts 'entries' key + optional dept_override (re-resolves course).
+    const r=await jpost(`${API}/api/coaching/bulk`,{fc,entries,dept_override:deptOverride});
     if(r.ok){
       resEl.innerHTML=`<div class="upload-result ok">✓ Uploaded ${r.uploaded??entries.length}${r.failed?` · ${r.failed} failed`:""}</div>`;
       await loadDashboard();
@@ -5344,8 +5414,9 @@ function _cfgRenderQualityCourses(){
 
 function _cfgRenderPerfCourses(){
   const roles = _cfgPCoursesData.role_to_course_uuid || {};
+  const names = _cfgPCoursesData.course_names || {};
   const applyOpts = ["both","ld","ops"].map(v => `<option value="${v}">${v==="both"?"Both":v==="ld"?"L&D":"OPS"}</option>`).join("");
-  let html = `<table class="cfg-table"><thead><tr><th>Role / Key</th><th>Course UUID</th><th>Applies To</th><th></th></tr></thead><tbody>`;
+  let html = `<table class="cfg-table"><thead><tr><th>Role / Key</th><th>Course UUID</th><th>Course Name</th><th>Applies To</th><th></th></tr></thead><tbody>`;
   for(const role of Object.keys(roles).sort()){
     const raw = roles[role];
     const uuid = typeof raw === "string" ? raw : (raw?.uuid || "");
@@ -5353,6 +5424,7 @@ function _cfgRenderPerfCourses(){
     html += `<tr>
       <td style="font-weight:700">${esc(role)}</td>
       <td><input type="text" class="cfg-pcourse-uuid" data-role="${esc(role)}" value="${esc(uuid)}" style="width:280px;font-family:'JetBrains Mono',monospace;font-size:10px"></td>
+      <td><input type="text" class="cfg-pcourse-name" data-role="${esc(role)}" value="${esc((names[uuid]||''))}" placeholder="EUCF_…" title="Nombre oficial del curso (CMS). Se autocompleta al pegar un UUID conocido." style="width:230px;font-size:11px"></td>
       <td><select class="cfg-pcourse-applies" data-role="${esc(role)}">${applyOpts.replace(`value="${appliesTo}"`,`value="${appliesTo}" selected`)}</select></td>
       <td><button class="cfg-del-btn" data-role="${esc(role)}" data-section="pcourse" title="Delete">×</button></td>
     </tr>`;
@@ -5361,10 +5433,28 @@ function _cfgRenderPerfCourses(){
   <div class="cfg-add-row">
     <input id="cfgAddPCourseRole" class="cfg-add-input" placeholder="ROLE_KEY" style="width:140px;text-transform:uppercase">
     <input id="cfgAddPCourseUuid" class="cfg-add-input" placeholder="Course UUID" style="width:260px;font-family:'JetBrains Mono',monospace;font-size:10px">
+    <input id="cfgAddPCourseName" class="cfg-add-input" placeholder="Course Name (EUCF_…)" style="width:200px;font-size:11px">
     <select id="cfgAddPCourseApplies" class="cfg-add-input" style="width:80px">${applyOpts}</select>
     <button class="cfg-add-btn" id="cfgAddPCourseBtn">+ Add</button>
   </div>`;
   $("cfgPerfCoursesArea").innerHTML = html;
+  // Auto-fill the Course Name from the known UUID map when a UUID is typed/pasted.
+  $("cfgPerfCoursesArea").querySelectorAll(".cfg-pcourse-uuid").forEach(el=>{
+    el.addEventListener("input",()=>{
+      const role = el.dataset.role;
+      const nm = names[el.value.trim()];
+      const nameEl = $("cfgPerfCoursesArea").querySelector(`.cfg-pcourse-name[data-role="${role}"]`);
+      if(nameEl && nm && !nameEl.value.trim()) nameEl.value = nm;
+    });
+  });
+  const _addUuidEl = $("cfgAddPCourseUuid");
+  if(_addUuidEl){
+    _addUuidEl.addEventListener("input",()=>{
+      const nm = names[_addUuidEl.value.trim()];
+      const addNameEl = $("cfgAddPCourseName");
+      if(addNameEl && nm && !addNameEl.value.trim()) addNameEl.value = nm;
+    });
+  }
   $("cfgAddPCourseBtn") && $("cfgAddPCourseBtn").addEventListener("click",()=>{
     const role = ($("cfgAddPCourseRole").value||"").trim().toUpperCase().replace(/\s+/g,"_");
     const uuid = ($("cfgAddPCourseUuid").value||"").trim();
@@ -5372,6 +5462,8 @@ function _cfgRenderPerfCourses(){
     if(!role||!uuid){ _cfgToast("Fill Role and UUID",true); return; }
     if(!_cfgPCoursesData.role_to_course_uuid) _cfgPCoursesData.role_to_course_uuid = {};
     _cfgPCoursesData.role_to_course_uuid[role] = {uuid, applies_to:applies};
+    const addName = ($("cfgAddPCourseName") ? $("cfgAddPCourseName").value : "").trim();
+    if(uuid && addName){ if(!_cfgPCoursesData.course_names) _cfgPCoursesData.course_names = {}; _cfgPCoursesData.course_names[uuid] = addName; }
     _cfgRenderPerfCourses();
   });
 }
@@ -5386,12 +5478,16 @@ async function _cfgSaveCourses(){
     if(_cfgQCoursesData.errors) _cfgQCoursesData.errors[key] = {uuid, enabled};
   });
   // Read perf courses
+  if(!_cfgPCoursesData.course_names) _cfgPCoursesData.course_names = {};
   $("cfgPerfCoursesArea").querySelectorAll(".cfg-pcourse-uuid").forEach(el=>{
     const role = el.dataset.role;
     const uuid = el.value.trim();
     const appliesEl = $("cfgPerfCoursesArea").querySelector(`.cfg-pcourse-applies[data-role="${role}"]`);
     const applies = appliesEl ? appliesEl.value : "both";
     if(_cfgPCoursesData.role_to_course_uuid) _cfgPCoursesData.role_to_course_uuid[role] = {uuid, applies_to:applies};
+    const nameEl = $("cfgPerfCoursesArea").querySelector(`.cfg-pcourse-name[data-role="${role}"]`);
+    const nm = nameEl ? nameEl.value.trim() : "";
+    if(uuid && nm) _cfgPCoursesData.course_names[uuid] = nm;
   });
   try{
     await jpost(`${API}/api/admin/config/quality_courses.json`, {data: _cfgQCoursesData});
@@ -7754,6 +7850,494 @@ document.addEventListener("click",(e)=>{
       btn.disabled = false; btn.textContent = orig;
     }
   });
+
+  // ── Shift Tracker (admin) — full tab: 24h chart + insights ────────────────
+  const ST_COLORS = ["#2563eb","#059669","#d97706","#dc2626","#7c3aed","#0891b2","#db2777"];
+  let _stData = null, _stPrevData = null, _stMetric = "plan", _stHidden = new Set(), _stShowPrev = false, _stLoaded = false;
+  let _stShiftKey = "", _stLiveTimer = null;   // intra-shift focus + live auto-refresh
+  let _stMode = "intraday";                    // "intraday" | "weekly"
+  let _stFocus = null;                         // focused process name (single-line view)
+
+  function _stKey(){ return _stMetric === "op2" ? "pct_op2" : "pct_plan"; }
+  function _stColor(pct){ return pct==null?"var(--text-dim)":(pct<80?"#dc2626":pct<100?"#d97706":"#059669"); }
+
+  function _stDayOptions(){
+    const sel = $("st-day"); if(!sel || sel.options.length) return;
+    const opts = []; const now = new Date();
+    const MON=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+    for(let i=0;i<30;i++){   // last 30 days selectable
+      const d = new Date(now); d.setDate(now.getDate()-i);
+      const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      const nice = `${d.getDate()} ${MON[d.getMonth()]}`;
+      const lbl = i===0?`Hoy · ${nice}`:(i===1?`Ayer · ${nice}`:nice);
+      opts.push(`<option value="${iso}">${lbl}</option>`);
+    }
+    sel.innerHTML = opts.join("");
+  }
+
+  async function _stLoad(refresh){
+    const status = $("st-status"), chart = $("st-chart");
+    const weekly = _stMode==="weekly";
+    if(status) status.textContent = refresh ? (weekly?"Descargando 7 días… (~30s)":"Descargando 48 intervalos… (~30s)") : "Cargando…";
+    if(chart && !refresh) chart.innerHTML = `<div class="hmodal-empty" style="padding:40px 0">Cargando…</div>`;
+    try{
+      let url;
+      if(weekly){
+        const wk = $("st-week")?.value || "";
+        url = `${API}/api/admin/shift-tracker?fc=${encodeURIComponent(currentFC)}&mode=weekly&week_start=${encodeURIComponent(wk)}${refresh?"&refresh=true":""}`;
+      }else{
+        const day = $("st-day")?.value || "";
+        url = `${API}/api/admin/shift-tracker?fc=${encodeURIComponent(currentFC)}&day=${encodeURIComponent(day)}${refresh?"&refresh=true":""}`;
+      }
+      const d = await jget(url);
+      if(!d.ok){ throw new Error(d.error||"error"); }
+      _stData = d; _stLoaded = true; _stPrevData = null;
+      if(!weekly) _stPopulateShifts();
+      // "En vivo" + Day-1 overlay only apply to intraday-today.
+      const _now=new Date();
+      const _todayIso=`${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,"0")}-${String(_now.getDate()).padStart(2,"0")}`;
+      const isToday = !weekly && ($("st-day")?.value||"") === _todayIso;
+      if($("st-live-wrap")) $("st-live-wrap").style.display = isToday ? "inline-flex" : "none";
+      if(!isToday && $("st-live")){ $("st-live").checked=false; _stStopLive(); }
+      if(status){
+        const genTxt = String(d.generated_at||"").replace("T"," ").slice(0,16);
+        status.textContent = weekly ? `Semana · ${genTxt}` : `${(d.intervals||[]).length} intervalos · ${genTxt}${d.has_prev?" · Day-1 disponible":""}`;
+      }
+      _stRenderAll();
+    }catch(err){
+      if(chart) chart.innerHTML = `<div class="hmodal-empty" style="color:#e53e3e;padding:40px 0">Error: ${esc(err.message)}</div>`;
+      if(status) status.textContent = "";
+    }
+  }
+
+  function _stRenderAll(){
+    // Ensure a focused process exists (first one with data).
+    const procs=(_stData&&_stData.core_order||[]).filter(p=>_stData.series&&_stData.series[p]);
+    if(!_stFocus || !procs.includes(_stFocus)) _stFocus = procs[0]||null;
+    _stRenderHero(); _stRenderChips(); _stRenderChart(); _stRenderShifts(); _stRenderAlerts();
+  }
+
+  // Color index for a process (stable by core_order position).
+  function _stProcColor(proc){
+    const order=(_stData&&_stData.core_order)||[];
+    return ST_COLORS[Math.max(0,order.indexOf(proc))%ST_COLORS.length];
+  }
+
+  // The headline number for a process. Priority:
+  //  weekly → the WEEK aggregate; closed day → necro day_totals (aligned w/ necro);
+  //  else the current interval %. All fall back to kpis.
+  function _stHeadlineVal(proc){
+    const key=_stKey();
+    if(_stData.mode==="weekly"){
+      const wt=(_stData.week_totals||{})[proc];
+      if(wt && wt[key]!=null) return wt[key];
+    } else if(_stData.day_totals && _stData.day_totals[proc] && _stData.day_totals[proc][key]!=null){
+      return _stData.day_totals[proc][key];   // necro-aligned closed-day number
+    }
+    const k=((_stData.insights||{})[_stMetric]||{}).kpis||{};
+    return (k[proc]||{}).current;
+  }
+
+  // Process selector chips: headline % of every process; click focuses one.
+  function _stRenderChips(){
+    const host=$("st-chips"); if(!host||!_stData) return;
+    const ins=(_stData.insights||{})[_stMetric]||{}; const kpis=ins.kpis||{};
+    const procs=(_stData.core_order||[]).filter(p=>_stData.series&&_stData.series[p]);
+    if(!procs.length){ host.innerHTML=""; return; }
+    const weekly=_stData.mode==="weekly";
+    host.innerHTML=procs.map(proc=>{
+      const k=kpis[proc]||{current:0,trend:0};
+      const cur=_stHeadlineVal(proc), col=_stColor(cur);
+      const on=proc===_stFocus?"on":"";
+      const w=Math.max(4,Math.min(100,cur||0));
+      // Trend arrow only meaningful intraday; weekly shows the week tag.
+      const meta = weekly
+        ? `<span class="c-trend" style="color:var(--text-secondary);font-weight:600">sem</span>`
+        : (()=>{const a=k.trend>0.5?"▲":k.trend<-0.5?"▼":"▬";const c=k.trend>0.5?"#059669":k.trend<-0.5?"#dc2626":"var(--text-secondary)";return `<span class="c-trend" style="color:${c}">${a}${Math.abs(k.trend||0)}</span>`;})();
+      return `<div class="st-chip ${on}" data-proc="${esc(proc)}">
+        <div class="c-name">${esc(proc)}</div>
+        <div><span class="c-val" style="color:${col}">${cur==null?"—":cur+"%"}</span>${meta}</div>
+        <span class="c-bar" style="width:${w}%;background:${col}"></span>
+      </div>`;
+    }).join("");
+    host.querySelectorAll(".st-chip").forEach(el=>el.addEventListener("click",()=>{
+      _stFocus=el.dataset.proc; _stRenderChips(); _stRenderChart();
+    }));
+  }
+
+  function _stRenderHero(){
+    const host=$("st-hero"); if(!host||!_stData) return;
+    const ins=(_stData.insights||{})[_stMetric]||{};
+    const kpis=ins.kpis||{};
+    const procs=(_stData.core_order||[]).filter(p=>_stData.series&&_stData.series[p]);
+    if(!procs.length){ host.innerHTML=""; return; }
+    const weekly=_stData.mode==="weekly";
+    // Headline value per process (weekly=aggregate, intraday=current).
+    const val=p=>{ const v=_stHeadlineVal(p); return v==null?0:v; };
+    const avgAll=Math.round(procs.reduce((s,p)=>s+val(p),0)/procs.length);
+    let leader=procs[0], laggard=procs[0];
+    procs.forEach(p=>{ if(val(p)>val(leader)) leader=p; if(val(p)<val(laggard)) laggard=p; });
+    const metric=_stMetric==="op2"?"OP2":"Plan";
+    const period = weekly
+      ? `${_stData.week_label||"Semana"} · ${($("st-week")?.selectedOptions[0]?.textContent||"")}`
+      : ($("st-day")?($("st-day").selectedOptions[0]?.textContent||_stData.day):_stData.day);
+    const hl=(t,c)=>`<span class="hl" style="background:${c}22;color:${c}">${esc(t)}</span>`;
+    let headline=`${hl(leader,'#059669')} lidera con <b>${val(leader)}%</b>`;
+    // Bottleneck: worst process this period.
+    headline+=` · más bajo: ${hl(laggard,'#dc2626')} <b>${val(laggard)}%</b>`;
+    const alerts=(ins.alerts||[]).length;
+    const alertLbl = weekly ? "días bajos" : "intervalos";
+    host.innerHTML=`
+      <div class="st-hero-headline">
+        <div class="st-hero-eyebrow">${esc(currentFC)} · ${esc(period)} · vs ${metric}</div>
+        <div class="st-hero-title">${headline}</div>
+      </div>
+      <div class="st-hero-macros">
+        <div class="st-macro"><div class="m-lbl">${weekly?"Prom. semana":"Promedio día"}</div><div class="m-val" style="color:${_stColor(avgAll)}">${avgAll}%</div><div class="m-sub">${procs.length} procesos</div></div>
+        <div class="st-macro"><div class="m-lbl">Top</div><div class="m-val" style="color:#059669">${val(leader)}%</div><div class="m-sub">${esc(leader)}</div></div>
+        <div class="st-macro"><div class="m-lbl">Más bajo</div><div class="m-val" style="color:${_stColor(val(laggard))}">${val(laggard)}%</div><div class="m-sub">${esc(laggard)}</div></div>
+        <div class="st-macro"><div class="m-lbl">Caídas &lt;80%</div><div class="m-val" style="color:${alerts?'#dc2626':'#059669'}">${alerts}</div><div class="m-sub">${alertLbl}</div></div>
+      </div>`;
+  }
+
+  function _stRenderChart(){
+    const chart = $("st-chart"); if(!chart || !_stData) return;
+    const data = _stData, allLabels = data.intervals || [];
+    const procs = (data.core_order||[]).filter(p => data.series && data.series[p]);
+    if(!procs.length){ chart.innerHTML = `<div class="hmodal-empty" style="padding:40px 0">Sin datos para este día.</div>`; return; }
+    const key = _stKey();
+    const weekly = data.mode === "weekly";
+    // Intra-shift focus (intraday only): restrict X to the shift's minute range.
+    const lblMin = l => { const p=String(l).split(":"); return p.length>=2?(+p[0]*60+ +p[1]):0; };
+    let xMinM=0, xMaxM=1440;
+    if(!weekly && _stShiftKey){
+      const rng=_stShiftRange(_stShiftKey);
+      if(rng){ xMinM=rng[0]; xMaxM=rng[1]; }
+    }
+    // Weekly: every label (day) is shown; intraday: filter by shift minute range.
+    const labels = weekly ? allLabels.slice()
+                          : allLabels.filter(l=>{ const t=lblMin(l); return t>=xMinM && t<=xMaxM; });
+    if(!labels.length){ chart.innerHTML = `<div class="hmodal-empty" style="padding:40px 0">Sin datos en este turno todavía.</div>`; return; }
+    const W = Math.max(900, (chart.clientWidth || 1200)), H = 420;
+    const padL=48, padR=20, padT=18, padB=44, plotW=W-padL-padR, plotH=H-padT-padB;
+    const yMax = _stMetric==="op2"?200:150, yMin=0;
+    const spanM = Math.max(1, xMaxM-xMinM);
+    const xAt = i => padL + (labels.length<=1?0:(i/(labels.length-1))*plotW);
+    const yAt = v => padT + (1-(Math.max(yMin,Math.min(yMax,v))-yMin)/(yMax-yMin))*plotH;
+    const minToX = m => padL + ((Math.max(xMinM,Math.min(xMaxM,m))-xMinM)/spanM)*plotW;
+    // Catmull-Rom → cubic bezier smoothing for nicer curves.
+    const smooth = (pts)=>{
+      if(pts.length<2) return pts.length?`M${pts[0][0]} ${pts[0][1]}`:"";
+      let d=`M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+      for(let i=0;i<pts.length-1;i++){
+        const p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+        const c1x=p1[0]+(p2[0]-p0[0])/6, c1y=p1[1]+(p2[1]-p0[1])/6;
+        const c2x=p2[0]-(p3[0]-p1[0])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
+        d+=`C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+      }
+      return d;
+    };
+    let svg = `<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="font-family:inherit;display:block">`;
+    // Shift bands (colored bg) + a soft divider + a floating label per band.
+    (data.bands||[]).forEach(b=>{
+      const x1=minToX(b.start_min), x2=minToX(b.end_min);
+      if(x2<=x1+0.5) return;
+      svg += `<rect x="${x1.toFixed(1)}" y="${padT}" width="${(x2-x1).toFixed(1)}" height="${plotH}" fill="${b.color}" opacity="0.09"/>`;
+      svg += `<line x1="${x1.toFixed(1)}" y1="${padT}" x2="${x1.toFixed(1)}" y2="${H-padB}" stroke="${b.color}" stroke-width="1" opacity="0.25"/>`;
+      // Floating label centered in the band (skip tiny slivers).
+      if(x2-x1>50){
+        const cx=(x1+x2)/2;
+        svg += `<text class="st-band-label" x="${cx.toFixed(1)}" y="${(padT+13).toFixed(1)}" text-anchor="middle" fill="${b.color}" opacity="0.85">${esc(String(b.label).toUpperCase())}</text>`;
+      }
+    });
+    const gridVals = _stMetric==="op2"?[0,50,100,150,200]:[0,50,100,150];
+    gridVals.forEach(v=>{
+      const y=yAt(v), is100=v===100;
+      svg += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="${is100?'#64748b':'var(--border-strong)'}" stroke-width="${is100?1.5:1}" stroke-dasharray="${is100?'0':'2 4'}"/>`;
+      svg += `<text x="${padL-8}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--text-secondary)">${v}%</text>`;
+    });
+    // X labels: weekly → each day; intraday → hourly (every 1h focused, else 2h).
+    if(weekly){
+      labels.forEach((lbl,i)=>{ const x=xAt(i); svg += `<text x="${x.toFixed(1)}" y="${H-padB+18}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--text-secondary)">${esc(lbl)}</text>`; });
+    }else{
+      const _every = _stShiftKey ? 1 : 2;
+      labels.forEach((lbl,i)=>{ if(lbl.endsWith(":00") && parseInt(lbl)%_every===0){ const x=xAt(i); svg += `<text x="${x.toFixed(1)}" y="${H-padB+18}" text-anchor="middle" font-size="10" fill="var(--text-secondary)">${lbl}</text>`; }});
+    }
+
+    // SINGLE focused process: build its point series.
+    const proc=_stFocus||procs[0];
+    const color=_stProcColor(proc);
+    const seriesPts=(series)=>{
+      const cells=(series[proc]||{}); const arr=[];
+      labels.forEach((lbl,i)=>{ const c=cells[lbl]; if(!c||c[key]==null) return; const v=c[key]; if(v<=0) return; arr.push([xAt(i),yAt(v),lbl,v]); });
+      return arr;
+    };
+    svg += `<defs><linearGradient id="stgF" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.22"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>`;
+    // Day-1 overlay (faint dashed) behind today.
+    if(_stShowPrev && _stPrevData && _stPrevData.series){
+      const arr=seriesPts(_stPrevData.series);
+      if(arr.length) svg += `<path d="${smooth(arr)}" fill="none" stroke="${color}" stroke-width="1.6" stroke-dasharray="5 4" opacity="0.4"/>`;
+    }
+    const arr=seriesPts(data.series);
+    const isTodayView = data.day === (function(){const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;})();
+    if(arr.length){
+      const line=smooth(arr);
+      const area=`${line}L${arr[arr.length-1][0].toFixed(1)} ${(H-padB).toFixed(1)}L${arr[0][0].toFixed(1)} ${(H-padB).toFixed(1)}Z`;
+      svg += `<path d="${area}" fill="url(#stgF)"/>`;
+      const len=Math.round(plotW*1.6);
+      svg += `<path class="st-line" d="${line}" fill="none" stroke="${color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" style="stroke-dasharray:${len};stroke-dashoffset:${len}"/>`;
+      // Dots at each point (this single-line view can afford them).
+      arr.forEach(p=>{ svg += `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.4" fill="${color}"/>`; });
+      const last=arr[arr.length-1];
+      svg += `<circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="4" fill="${color}"/>`;
+      if(isTodayView && !weekly && !_stShiftKey) svg += `<circle class="st-live-ping" cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="4.5" fill="${color}"/>`;
+    }else{
+      // Distinguish "no OP2 yet" from "no data at all" — OP2 needs a necro pull
+      // (Refrescar on Windows). Don't leave a silent blank chart for the L8.
+      const hasPlan = labels.some(l=>{ const c=(data.series[proc]||{})[l]; return c && c.pct_plan!=null && c.pct_plan>0; });
+      const msg = (_stMetric==="op2" && hasPlan)
+        ? `Sin OP2 para ${esc(proc)} — pulsa «Refrescar» para bajarlo de necro, o usa «vs Plan».`
+        : `Sin datos para ${esc(proc)}`;
+      svg += `<text x="${(W/2).toFixed(0)}" y="${(padT+plotH/2).toFixed(0)}" text-anchor="middle" fill="var(--text-secondary)" font-size="13">${msg}</text>`;
+    }
+    // Hover layer.
+    svg += `<line id="st-cross" x1="0" y1="${padT}" x2="0" y2="${H-padB}" stroke="var(--text-secondary)" stroke-width="1" stroke-dasharray="3 3" opacity="0"/>`;
+    svg += `<circle id="st-mk0" r="5" fill="${color}" stroke="var(--bg-card)" stroke-width="2" opacity="0"/>`;
+    svg += `<rect id="st-capture" x="${padL}" y="${padT}" width="${plotW}" height="${plotH}" fill="transparent" style="cursor:crosshair"/>`;
+    svg += `</svg>`;
+    chart.innerHTML = svg;
+
+    // Focus header + size breakdown. Weekly → the WEEK AGGREGATE cell (matches
+    // necro); intraday → the latest interval cell.
+    const cellsF=(data.series[proc]||{});
+    const lastLbl=labels.filter(l=>cellsF[l]).slice(-1)[0];
+    const dayAgg = (!weekly && data.day_totals && data.day_totals[proc]) ? data.day_totals[proc] : null;
+    const headCell = weekly ? ((data.week_totals||{})[proc] || (lastLbl?cellsF[lastLbl]:null))
+                            : (dayAgg || (lastLbl?cellsF[lastLbl]:null));
+    const curV = _stHeadlineVal(proc);
+    const subTag = weekly ? ` · agregado ${data.week_label||"semana"}`
+                          : (dayAgg ? ` · día (necro)` : (lastLbl?` · último ${lastLbl}`:""));
+    $("st-focus-name") && ($("st-focus-name").textContent=proc);
+    $("st-focus-sub") && ($("st-focus-sub").textContent=` · vs ${_stMetric==="op2"?"OP2":"Plan"}${subTag}`);
+    if($("st-focus-big")){ $("st-focus-big").textContent=(curV!=null?curV+"%":"—"); $("st-focus-big").style.color=_stColor(curV); }
+    const sizesHost=$("st-sizes");
+    if(sizesHost){
+      const SZ=[["Small","S"],["Medium","M"],["Large","L"],["Heavy/Bulky","H"]];
+      const sizes=headCell?(headCell.sizes||{}):{};
+      sizesHost.innerHTML=SZ.map(([full,ab])=>{
+        const sv=sizes[full]; const pv=sv?sv[key]:null;
+        const col=pv==null?"var(--text-dim)":_stColor(pv);
+        return `<div class="st-size-card"><div class="s-lbl">${full}</div><div class="s-val" style="color:${col}">${pv==null?"—":pv+"%"}</div></div>`;
+      }).join("");
+    }
+
+    // ── Hover interaction (single line) ──
+    const svgEl = chart.querySelector("svg");
+    const cap = chart.querySelector("#st-capture");
+    const cross = chart.querySelector("#st-cross");
+    const mk = chart.querySelector("#st-mk0");
+    let tip = $("st-tip");
+    if(!tip){ tip=document.createElement("div"); tip.id="st-tip"; tip.className="st-tip"; document.body.appendChild(tip); }
+    const nLbls = labels.length;
+    const pxToViewX = (clientX)=>{ const r=svgEl.getBoundingClientRect(); return (clientX-r.left)/r.width*W; };
+    const hide=()=>{ cross.setAttribute("opacity","0"); if(mk) mk.setAttribute("opacity","0"); tip.style.display="none"; };
+    cap.addEventListener("mousemove",(ev)=>{
+      const vx=pxToViewX(ev.clientX);
+      let idx=Math.round((vx-padL)/plotW*(nLbls-1)); idx=Math.max(0,Math.min(nLbls-1,idx));
+      const lbl=labels[idx], cx=xAt(idx);
+      cross.setAttribute("x1",cx); cross.setAttribute("x2",cx); cross.setAttribute("opacity","0.55");
+      const cell=cellsF[lbl];
+      if(!cell||cell[key]==null){ if(mk) mk.setAttribute("opacity","0"); tip.style.display="none"; return; }
+      const pt=arr.find(p=>p[2]===lbl);
+      if(pt&&mk){ mk.setAttribute("cx",pt[0]); mk.setAttribute("cy",pt[1]); mk.setAttribute("opacity","1"); }
+      // Tooltip: focused process Total + its sizes at this time.
+      const SZ=[["Small","S"],["Medium","M"],["Large","L"],["Heavy/Bulky","H"]];
+      const sz=cell.sizes||{};
+      let rows=`<div class="st-tip-r"><span class="st-tip-dot" style="background:${color}"></span><span class="st-tip-p"><b>Total</b></span><b style="color:${_stColor(cell[key])}">${cell[key]}%</b></div>`;
+      SZ.forEach(([full])=>{ const sv=sz[full]; if(sv&&sv[key]!=null&&sv[key]>0) rows+=`<div class="st-tip-r"><span class="st-tip-p" style="opacity:.8">${full}</span><b style="color:${_stColor(sv[key])}">${sv[key]}%</b></div>`; });
+      tip.innerHTML=`<div class="st-tip-h">${esc(proc)} · ${esc(lbl)}</div>${rows}`;
+      tip.style.display="block";
+      const tw=tip.offsetWidth, pad=14;
+      let lx=ev.clientX+pad; if(lx+tw>window.innerWidth-8) lx=ev.clientX-tw-pad;
+      tip.style.left=lx+"px"; tip.style.top=(ev.clientY+pad)+"px";
+    });
+    cap.addEventListener("mouseleave", hide);
+  }
+
+  function _stRenderKpis_UNUSED(){
+    const host=$("st-kpis"); if(!host||!_stData) return;
+    const ins=(_stData.insights||{})[_stMetric]||{}; const kpis=ins.kpis||{};
+    const vsPrev=ins.vs_prev||{}, key=_stKey();
+    const keys=Object.keys(kpis);
+    if(!keys.length){ host.innerHTML=`<div class="hmodal-empty" style="grid-column:1/-1;padding:20px">Sin datos${_stMetric==='op2'?' de OP2 (revisa el mapeo)':''}.</div>`; return; }
+    const SZ=[["Small","S"],["Medium","M"],["Large","L"],["Heavy/Bulky","H"]];
+    // Mini sparkline of a process's % series (last ~16 pts), baseline at 100%.
+    const spark=(proc,color)=>{
+      const cells=(_stData.series[proc]||{});
+      const vals=(_stData.intervals||[]).filter(l=>cells[l]&&cells[l][key]>0).slice(-16).map(l=>cells[l][key]);
+      if(vals.length<2) return "";
+      const w=150,h=26,lo=Math.min(80,...vals),hi=Math.max(120,...vals),rng=Math.max(1,hi-lo);
+      const xs=i=>i/(vals.length-1)*w, ys=v=>h-((v-lo)/rng)*h;
+      const d=vals.map((v,i)=>`${i?'L':'M'}${xs(i).toFixed(1)} ${ys(v).toFixed(1)}`).join("");
+      const y100=ys(100).toFixed(1);
+      return `<svg class="st-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" width="100%" height="26">
+        <line x1="0" y1="${y100}" x2="${w}" y2="${y100}" stroke="var(--text-dim)" stroke-width="1" stroke-dasharray="2 3"/>
+        <path d="${d}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round"/>
+        <circle cx="${xs(vals.length-1).toFixed(1)}" cy="${ys(vals[vals.length-1]).toFixed(1)}" r="2.2" fill="${color}"/></svg>`;
+    };
+    host.innerHTML=keys.map((proc,pi)=>{
+      const k=kpis[proc], cur=k.current;
+      const color=ST_COLORS[(_stData.core_order||keys).indexOf(proc)%ST_COLORS.length];
+      const arrow=k.trend>0.5?"▲":k.trend<-0.5?"▼":"▬";
+      const arrowC=k.trend>0.5?"#059669":k.trend<-0.5?"#dc2626":"var(--text-secondary)";
+      const dp=vsPrev[proc];
+      const dpTxt=dp?` · <span title="vs mismo intervalo ayer" style="color:${dp.delta>=0?'#059669':'#dc2626'};font-weight:700">${dp.delta>=0?'▲':'▼'}${Math.abs(dp.delta)} D-1</span>`:"";
+      const cells=(_stData.series[proc]||{});
+      const lastLbl=(_stData.intervals||[]).filter(l=>cells[l]).slice(-1)[0];
+      const sizes=lastLbl?(cells[lastLbl].sizes||{}):{};
+      const chips=SZ.map(([full,ab])=>{
+        const sv=sizes[full];
+        const pv=sv?sv[key]:null;
+        if(pv==null||pv<=0) return `<span class="st-sizechip" style="background:var(--border-strong);color:var(--text-secondary)">${ab}<small>—</small></span>`;
+        return `<span class="st-sizechip" style="background:${_stColor(pv)}" title="${full}: ${pv}%">${ab}<small>${Math.round(pv)}%</small></span>`;
+      }).join("");
+      return `<div class="st-card" style="border-left:3px solid ${_stColor(cur)}">
+        <div class="st-name">${esc(proc)}</div>
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <span class="st-big" style="color:${_stColor(cur)}">${cur}%</span>
+          <span style="color:${arrowC};font-size:12px;font-weight:700">${arrow}${Math.abs(k.trend)}</span>
+        </div>
+        ${spark(proc,color)}
+        <div class="st-sub">avg ${k.avg}% · ↑${k.best.value}@${k.best.label} · ↓${k.worst.value}@${k.worst.label}${dpTxt}</div>
+        <div class="st-sizes">${chips}</div>
+      </div>`;
+    }).join("");
+  }
+
+  function _stRenderShifts(){
+    const host=$("st-shifts"); if(!host||!_stData) return;
+    const ins=(_stData.insights||{})[_stMetric]||{}; const rows=ins.shift_summary||[];
+    if(!rows.length){ host.innerHTML=`<div class="hmodal-empty">Sin datos.</div>`; return; }
+    host.innerHTML=rows.map(s=>`
+      <div class="st-shiftrow" style="border-left-color:${s.color||'#94a3b8'}">
+        <b style="min-width:74px">${esc(s.shift)}</b>
+        <span style="font-size:19px;font-weight:800;color:${_stColor(s.avg)};min-width:64px">${s.avg}%</span>
+        <span style="font-size:11px;font-weight:700;color:${s.met_100?'#059669':'#d97706'}">${s.met_100?'✓ ≥100%':'✗ <100%'}</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--text-secondary)" title="Proceso más bajo del turno">🔻 ${esc(s.bottleneck.process)} <b>${s.bottleneck.value}%</b></span>
+      </div>`).join("");
+  }
+
+  function _stRenderAlerts(){
+    const host=$("st-alerts"); if(!host||!_stData) return;
+    const ins=(_stData.insights||{})[_stMetric]||{}; const al=ins.alerts||[];
+    if(!al.length){ host.innerHTML=`<div class="hmodal-empty" style="color:#059669">Sin caídas bajo ${ins.low_threshold||80}% 🎉</div>`; return; }
+    host.innerHTML=al.map(a=>`
+      <div class="st-alert" style="border-left:3px solid ${_stColor(a.value)}">
+        <span style="min-width:46px;font-weight:700">${esc(a.label)}</span>
+        <span style="flex:1">${esc(a.process)}</span>
+        <span style="font-weight:800;color:${_stColor(a.value)}">${a.value}%</span>
+      </div>`).join("");
+  }
+
+  // Minute range [start,end] of a shift key, from the server bands (merges the
+  // split overnight halves into the widest span so the focus covers the shift).
+  function _stShiftRange(key){
+    const bands=(_stData&&_stData.bands)||[];
+    const mine=bands.filter(b=>String(b.label).toUpperCase()===String(key).toUpperCase()
+                             || String(b.key||"").toUpperCase()===String(key).toUpperCase());
+    if(!mine.length) return null;
+    return [Math.min(...mine.map(b=>b.start_min)), Math.max(...mine.map(b=>b.end_min))];
+  }
+
+  function _stPopulateShifts(){
+    const sel=$("st-shift"); if(!sel||!_stData) return;
+    const bands=_stData.bands||[];
+    // Unique labels in band order.
+    const seen=[]; bands.forEach(b=>{ if(!seen.includes(b.label)) seen.push(b.label); });
+    const cur=sel.value;
+    sel.innerHTML=`<option value="">24h completo</option>`+seen.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join("");
+    if(seen.includes(cur)) sel.value=cur;
+  }
+
+  function _stWeekOptions(){
+    const sel=$("st-week"); if(!sel||sel.options.length) return;
+    const MON=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+    const now=new Date(); const dow=(now.getDay()+6)%7; // 0=Mon
+    const mon=new Date(now); mon.setDate(now.getDate()-dow);
+    const opts=[];
+    for(let i=0;i<13;i++){   // ~1 trimester of weeks
+      const d=new Date(mon); d.setDate(mon.getDate()-i*7);
+      const iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      const end=new Date(d); end.setDate(d.getDate()+6);
+      const rng=`${d.getDate()} ${MON[d.getMonth()]} – ${end.getDate()} ${MON[end.getMonth()]}`;
+      const lbl=i===0?`Esta semana · ${rng}`:(i===1?`Semana pasada · ${rng}`:rng);
+      opts.push(`<option value="${iso}">${lbl}</option>`);
+    }
+    sel.innerHTML=opts.join("");
+  }
+
+  function _stApplyMode(){
+    const weekly=_stMode==="weekly";
+    if($("st-day")) $("st-day").style.display = weekly?"none":"";
+    if($("st-week")) $("st-week").style.display = weekly?"":"none";
+    if($("st-shift")) $("st-shift").style.display = weekly?"none":"";  // shift focus is intraday-only
+    if(weekly){ _stShiftKey=""; _stShowPrev=false; if($("st-showprev")) $("st-showprev").checked=false; _stStopLive(); if($("st-live")) $("st-live").checked=false; }
+  }
+
+  // Load once when the Shift Tracker tab is first opened (switchTab wires the tab).
+  window._onShiftTrackerTab = function(){
+    _stDayOptions(); _stWeekOptions(); _stApplyMode();
+    if(!_stLoaded) _stLoad(false);
+  };
+
+  // Toolbar button = shortcut to the tab.
+  if($("btnShiftTracker")) $("btnShiftTracker").addEventListener("click", ()=>{
+    if(typeof switchTab === "function") switchTab("shifttracker");
+  });
+
+  // ── Intra-shift focus + live auto-refresh ──
+  function _stStopLive(){ if(_stLiveTimer){ clearInterval(_stLiveTimer); _stLiveTimer=null; } }
+  function _stStartLive(){
+    _stStopLive();
+    // Re-download today every 30 min so new intervals appear automatically.
+    _stLiveTimer = setInterval(()=>{ if($("panel-shifttracker")?.classList.contains("active")) _stLoad(true); }, 30*60*1000);
+  }
+  document.querySelectorAll("#st-mode .sp-opt").forEach(b=>b.addEventListener("click",()=>{
+    if(_stMode===b.dataset.mode) return;
+    document.querySelectorAll("#st-mode .sp-opt").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on"); _stMode=b.dataset.mode; _stApplyMode(); _stLoad(false);
+  }));
+  $("st-week") && $("st-week").addEventListener("change", ()=>_stLoad(false));
+  $("st-shift") && $("st-shift").addEventListener("change", e=>{ _stShiftKey=e.target.value||""; _stRenderChart(); });
+  $("st-live") && $("st-live").addEventListener("change", e=>{
+    if(e.target.checked){ _stStartLive(); const s=$("st-status"); if(s) s.textContent="🔴 En vivo — refresco automático cada 30 min"; }
+    else _stStopLive();
+  });
+
+  $("st-day") && $("st-day").addEventListener("change", ()=>_stLoad(false));
+  $("st-refresh") && $("st-refresh").addEventListener("click", ()=>_stLoad(true));
+  $("st-showprev") && $("st-showprev").addEventListener("change", async e=>{
+    _stShowPrev=e.target.checked;
+    if(_stShowPrev && !_stPrevData){
+      // Load the day BEFORE the selected one (cache-only on the server; no fresh
+      // download). Compute its ISO from the current selection.
+      try{
+        const cur=new Date($("st-day").value+"T00:00:00");
+        cur.setDate(cur.getDate()-1);
+        const iso=`${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,"0")}-${String(cur.getDate()).padStart(2,"0")}`;
+        const d=await jget(`${API}/api/admin/shift-tracker?fc=${encodeURIComponent(currentFC)}&day=${iso}`);
+        if(d.ok) _stPrevData=d;
+      }catch(_){}
+    }
+    _stRenderChart();
+  });
+  // Re-render the chart on window resize so it keeps filling the width.
+  let _stRz=null;
+  window.addEventListener("resize", ()=>{ clearTimeout(_stRz); _stRz=setTimeout(()=>{ if($("panel-shifttracker") && $("panel-shifttracker").classList.contains("active")) _stRenderChart(); }, 150); });
+  document.querySelectorAll("#st-metric .sp-opt").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll("#st-metric .sp-opt").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on"); _stMetric=b.dataset.metric; _stRenderAll();
+  }));
 
   async function loadAdoption(){
     const body=$("adoptionBody");

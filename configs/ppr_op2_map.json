@@ -1,0 +1,11 @@
+{
+  "_comment": "Shift Tracker process definitions. Each entry maps a display name to the PPR 'LineItem Name' base (the report breaks each into - Small/Medium/Large/Heavy/Total, EACH unit) and the necro OP2 TPH key for the vs-OP2 line. The tracker charts the '- Total' of each and can drill into sizes. lineitem_base matches the text before ' - <Size>'. op2_key is the necro_op2_daily key (empty = vs-Plan only). Hot-fixable.",
+  "processes": [
+    {"name": "Stow",             "lineitem_base": "Each Transfer In", "op2_key": "transfer_in"},
+    {"name": "Pick",             "lineitem_base": "Pick",             "op2_key": "pick"},
+    {"name": "Pack Singles",     "lineitem_base": "Pack Singles",     "op2_key": "pack_singles"},
+    {"name": "Pack Multis",      "lineitem_base": "Pack Multis",      "op2_key": "pack_multis"},
+    {"name": "Chutings",         "lineitem_base": "Chutings",         "op2_key": "chuting"},
+    {"name": "Transfer In Dock", "lineitem_base": "Transfer In Decant", "op2_key": "decant"}
+  ]
+}

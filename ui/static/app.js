@@ -1634,6 +1634,12 @@ async function loadUserInfo(){
       if($("tabGca")) $("tabGca").style.display = "";
       if($("btnPerfMap")) $("btnPerfMap").style.display = "";
       if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
+      // Exempt + Shift Tracker: keep the LIVE branch in sync with the cached
+      // branch above (these were only added there before, so on the first
+      // load of the day they never appeared).
+      if($("btnExempt")) $("btnExempt").style.display = "inline-flex";
+      if($("btnShiftTracker")) $("btnShiftTracker").style.display = "inline-flex";
+      if($("tabShiftTracker")) $("tabShiftTracker").style.display = "";
     } else {
       // Non-admin: Quality + GCA are now open to any Coaching team member
       // (single-site only — the multi-site button stays admin-only). Map stays

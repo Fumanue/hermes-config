@@ -1,84 +1,98 @@
 {
-  "default_fc": "BCN4",
-  "max_workers": 4,
-  "min_hours_threshold": 1.0,
-  "_amzl_comment": "AMZL (Delivery Station) sources. AMZL uses ONLY Process Inspector (PPA) + Roster. process_id is PER-SITE in delivery (some DS use 100541 'ADTA Stow', others 100021 'Stow'). amzl_process_by_site overrides amzl_default_process for a given DS code.",
-  "amzl_default_process": "100021",
-  "amzl_process_name": "Stow",
-  "_amzl_common_processes_comment": "Processes pulled for EVERY delivery station in addition to its per-site process. Pick & Stage (100407) is common to all DS.",
-  "amzl_common_processes": ["100407"],
-  "_amzl_process_by_site_comment": "PPA process_id per DS. 100021=Stow, 100541=ADTA Stow. To be managed from the admin panel later; hardcoded here for now. Test sites: DMZ2=stow, DMA4=adta.",
-  "amzl_process_by_site": {
-    "DAS1": "100021",
-    "DMZ2": "100021",
-    "DMA4": "100541"
-  },
-  "amzl_role_key": "DELIVERY",
-  "_amzl_curve_proc_comment": "Maps PPA process_id -> Learning Curve process key in amzl_curves.json (so the rate's process picks the right curve). 100021=Stow, 100541=ADTA Stow, 100407=Pick & Stage (P&S).",
-  "amzl_curve_proc_by_id": {
-    "100021": "stow",
-    "100541": "adta",
-    "100407": "P&S"
-  },
-  "_amzl_process_display_comment": "Display name shown in the dashboard Role column per PPA process_id. Distinguishes ADTA Stow from normal Stow and labels Pick & Stage.",
-  "amzl_process_display": {
-    "100021": "Stow",
-    "100541": "ADTA Stow",
-    "100407": "Pick & Stage"
-  },
-  "_amzl_process_windows_comment": "Per-SITE, per-PROCESS time windows (local HH:MM). Normally EMPTY: delivery measures every process over the SELECTED CYCLE's range (see shift_config.json DMA4 Cycle_1/Cycle_2). Only set this to override a single process to a different window than the cycle.",
-  "amzl_process_windows": {},
-  "_amzl_no_min_hours_comment": "PPA process_ids EXEMPT from the 1-hour minimum-hours active filter (short-duration processes where <1h is still valid productivity). Pick & Stage runs in a short cycle.",
-  "amzl_no_min_hours_processes": ["100407"],
-  "fclm_process_ids": [
-    "1002969",
-    "1002976",
-    "1002991",
-    "1002993",
-    "1003001",
-    "1003019",
-    "1003030"
-  ],
-  "icqa_process_ids": [
-    "1003030"
-  ],
-  "icqa_rate_col_index": 13,
-  "location_enrichment_process_ids": [
-    "1003019"
-  ],
-  "process_inspector_processes": {
-    "100008": "Pick",
-    "100032": "Transfer-In-Stow",
-    "100054": "Pack",
-    "100360": "Transfer-In-Stow",
-    "100026": "SBC",
-    "100110": "Decant"
-  },
-  "roboscout_configs": {
-    "11355": {
-      "template": "https://roboscout.amazon.com/view_plot_data/?associateLogin=%25&current_day=false&viz=nvd3Table&mom_ids=301%2C290%2C26%2C313&ofm_ids=&osm_ids=4&oxm_ids=657%2C147&sites=({fc})&instance_id=0&object_id=11355&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
-      "use_datetime": true,
-      "hour_offset": -2
+    "default_fc": "BCN4",
+    "max_workers": 4,
+    "min_hours_threshold": 1.0,
+    "_amzl_comment": "AMZL (Delivery Station) sources. AMZL uses ONLY Process Inspector (PPA) + Roster. process_id is PER-SITE in delivery (some DS use 100541 'ADTA Stow', others 100021 'Stow'). amzl_process_by_site overrides amzl_default_process for a given DS code.",
+    "amzl_default_process": "100021",
+    "amzl_process_name": "Stow",
+    "_amzl_common_processes_comment": "Processes pulled for EVERY delivery station in addition to its per-site process. Pick & Stage (100407) is common to all DS.",
+    "amzl_common_processes": [
+        "100407"
+    ],
+    "_amzl_process_by_site_comment": "PPA process_id per DS. 100021=Stow, 100541=ADTA Stow. To be managed from the admin panel later; hardcoded here for now. Test sites: DMZ2=stow, DMA4=adta.",
+    "amzl_process_by_site": {
+        "DAS1": "100021",
+        "DMZ2": "100021",
+        "DMA4": "100541"
     },
-    "19851": {
-      "template": "https://roboscout.amazon.com/view_plot_data/?sites=({fc})&current_day=false&mom_ids=428%2C2060%2C394%2C321%2C362%2C379%2C426&osm_ids=30&oxm_ids=656%2C442&ofm_ids=&viz=nvd3Table&instance_id=2210&object_id=19851&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
-      "use_datetime": true,
-      "hour_offset": -2
+    "amzl_role_key": "DELIVERY",
+    "_amzl_lc_url_comment": "LC (Learning Curve) source for Delivery Stations. Argos downloads this 'Raw Data - Process Hours' export (drive.corp) each pipeline run and caches it as amzl_lc_cache.csv; amzl_lc.py reads that cache. Header is on row 3; columns include DS, Process, Login, LC, LC Hours. Without it every AA defaults to LC1.",
+    "amzl_lc_url": "https://drive.corp.amazon.com/view/fumanue@/LC%20DS%20Stations/DS%20Data.xlsx?download=true",
+    "_amzl_curve_proc_comment": "Maps PPA process_id -> Learning Curve process key in amzl_curves.json (so the rate's process picks the right curve). 100021=Stow, 100541=ADTA Stow, 100407=Pick & Stage (P&S).",
+    "amzl_curve_proc_by_id": {
+        "100021": "stow",
+        "100541": "adta",
+        "100407": "P&S"
     },
-    "20902": {
-      "template": "https://roboscout.amazon.com/view_plot_data/?sites=({fc})&startDateTime=-1+weeks&endDateTime=today&mom_ids=1184&osm_ids=827&oxm_ids=1703%2C1607%2C1608&ofm_ids=&viz=nvd3Table&instance_id=2359&object_id=20902&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
-      "use_datetime": false,
-      "skip_hours_filter": true
+    "_amzl_process_display_comment": "Display name shown in the dashboard Role column per PPA process_id. Distinguishes ADTA Stow from normal Stow and labels Pick & Stage.",
+    "amzl_process_display": {
+        "100021": "Stow",
+        "100541": "ADTA Stow",
+        "100407": "Pick & Stage"
     },
-    "21628": {
-      "template": "https://roboscout.amazon.com/view_plot_data/?sites=({fc})&mom_ids=&ofm_ids=1017&osm_ids=&oxm_ids=&instance_id=0&object_id=21628&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
-      "use_datetime": true,
-      "hour_offset": -2,
-      "skip_hours_filter": true
-    }
-  },
-  "fast_starts": {
-    "base_url": "https://fc-benchmarking.amazon.com/rest/get_fast_start_moves",
-    "max_tries": 2
-  }
+    "_amzl_process_windows_comment": "Per-SITE, per-PROCESS time windows (local HH:MM). Normally EMPTY: delivery measures every process over the SELECTED CYCLE's range (see shift_config.json DMA4 Cycle_1/Cycle_2). Only set this to override a single process to a different window than the cycle.",
+    "amzl_process_windows": {},
+    "_amzl_no_min_hours_comment": "PPA process_ids EXEMPT from the 1-hour minimum-hours active filter (short-duration processes where <1h is still valid productivity). Pick & Stage runs in a short cycle.",
+    "amzl_no_min_hours_processes": [
+        "100407"
+    ],
+    "fclm_process_ids": [
+        "1002969",
+        "1002976",
+        "1002991",
+        "1002993",
+        "1003001",
+        "1003019",
+        "1003030"
+    ],
+    "icqa_process_ids": [
+        "1003030"
+    ],
+    "icqa_rate_col_index": 13,
+    "location_enrichment_process_ids": [
+        "1003019"
+    ],
+    "process_inspector_processes": {
+        "100008": "Pick",
+        "100032": "Transfer-In-Stow",
+        "100054": "Pack",
+        "100360": "Transfer-In-Stow",
+        "100026": "SBC",
+        "100110": "Decant"
+    },
+    "roboscout_configs": {
+        "11355": {
+            "template": "https://roboscout.amazon.com/view_plot_data/?associateLogin=%25&current_day=false&viz=nvd3Table&mom_ids=301%2C290%2C26%2C313&ofm_ids=&osm_ids=4&oxm_ids=657%2C147&sites=({fc})&instance_id=0&object_id=11355&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
+            "use_datetime": true,
+            "hour_offset": -2
+        },
+        "19851": {
+            "template": "https://roboscout.amazon.com/view_plot_data/?sites=({fc})&current_day=false&mom_ids=428%2C2060%2C394%2C321%2C362%2C379%2C426&osm_ids=30&oxm_ids=656%2C442&ofm_ids=&viz=nvd3Table&instance_id=2210&object_id=19851&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
+            "use_datetime": true,
+            "hour_offset": -2
+        },
+        "20902": {
+            "template": "https://roboscout.amazon.com/view_plot_data/?sites=({fc})&startDateTime=-1+weeks&endDateTime=today&mom_ids=1184&osm_ids=827&oxm_ids=1703%2C1607%2C1608&ofm_ids=&viz=nvd3Table&instance_id=2359&object_id=20902&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
+            "use_datetime": false,
+            "skip_hours_filter": true
+        },
+        "21628": {
+            "template": "https://roboscout.amazon.com/view_plot_data/?sites=({fc})&mom_ids=&ofm_ids=1017&osm_ids=&oxm_ids=&instance_id=0&object_id=21628&BrowserTZ=Europe%2FBerlin&app_name=RoboScout&mode=CSV",
+            "use_datetime": true,
+            "hour_offset": -2,
+            "skip_hours_filter": true
+        }
+    },
+    "fast_starts": {
+        "base_url": "https://fc-benchmarking.amazon.com/rest/get_fast_start_moves",
+        "max_tries": 2
+    },
+    "_amzl_all_processes_comment": "ALL PPA process_ids pulled for EVERY delivery station (each DS runs both stow-types + Pick & Stage). When set, supersedes amzl_process_by_site/amzl_default_process. 100021=Stow, 100541=ADTA Stow, 100407=Pick & Stage.",
+    "amzl_all_processes": [
+        "100021",
+        "100541",
+        "100407"
+    ],
+    "_amzl_min_hours_threshold_comment": "Minimum paid hours to count an associate as active in AMZL only (delivery cycles are short). Independent from the FC min_hours_threshold (1.0).",
+    "amzl_min_hours_threshold": 0.5
 }

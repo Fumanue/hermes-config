@@ -550,12 +550,25 @@ function norm(r){
   const target     = (r.target!=null && r.target!=="") ? Number(r.target) : NaN;
   const vetAvg     = (r.vet_avg!=null && r.vet_avg!=="") ? Number(r.vet_avg) : NaN;
 
-  // Priority thresholds: P3:<80 | P2:80-90 | P1:90-100 | OK:>=100
+  // AMZL TPH Adjusted — the rate the associate WOULD have if their idle time
+  // didn't count. idle_pct = idle hours / total hours (%), so removing idle:
+  //   rate_adj = rate / (1 - idle_pct/100)   and   pct_adj = pct / (1 - idle_pct/100)
+  // In AMZL the P1/P2/P3 flags + coaching are driven by the ADJUSTED %, so idle
+  // time isn't held against the associate. No idle data (or FC site) -> no
+  // adjustment, flags fall back to the raw rate/pct exactly as before.
+  const _isAmzlRow = (typeof siteBL === "function") && siteBL(currentFC) === "AMZL";
+  const _idlePctAdj = (r.idle_pct!=null && r.idle_pct!=="") ? Number(r.idle_pct) : null;
+  const _idleFrac = (_isAmzlRow && _idlePctAdj!=null && Number.isFinite(_idlePctAdj)
+                     && _idlePctAdj > 0 && _idlePctAdj < 100) ? (1 - _idlePctAdj/100) : null;
+  const rateAdj = (Number.isFinite(rate) && _idleFrac) ? (rate / _idleFrac) : rate;
+  const pctAdj  = (Number.isFinite(pct)  && _idleFrac) ? (pct  / _idleFrac) : pct;
+
+  // Priority thresholds (driven by the ADJUSTED % in AMZL): P3:<80 | P2:80-90 | P1:90-100 | OK:>=100
   let prio = 0;
-  if(Number.isFinite(pct)){
-    if(pct < 80)  prio = 3;
-    else if(pct < 90)  prio = 2;
-    else if(pct < 100) prio = 1;
+  if(Number.isFinite(pctAdj)){
+    if(pctAdj < 80)  prio = 3;
+    else if(pctAdj < 90)  prio = 2;
+    else if(pctAdj < 100) prio = 1;
     else prio = 0;
   }
 
@@ -584,7 +597,7 @@ function norm(r){
   const idle_pct = (r.idle_pct!=null && r.idle_pct!=="") ? Number(r.idle_pct) : null;
   const idle_min = (r.idle_min!=null && r.idle_min!=="") ? Number(r.idle_min) : null;
   const pending_coachings = Array.isArray(r.pending_coachings) ? r.pending_coachings : [];
-  return{login,name,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,coached_label:String(r.coached_label??"").trim(),notes,rate,pct,target,vetAvg,course_id,employee_id,transcript_url,photo_url,pending_coachings,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,idle_pct,idle_min,_search};
+  return{login,name,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,coached_label:String(r.coached_label??"").trim(),notes,rate,rateAdj,pct,pctAdj,target,vetAvg,course_id,employee_id,transcript_url,photo_url,pending_coachings,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,idle_pct,idle_min,_search};
 }
 
 // Build the notes string to upload (rate + pct + comments)
@@ -602,7 +615,13 @@ function buildUploadNotes(row){
 
   const parts = [`${deptPrefix} ${process} Performance`];
   if(row.rate != null && Number.isFinite(row.rate)) parts.push(`Rate ${Math.round(row.rate)}`);
-  if(row.pct != null && Number.isFinite(row.pct)) parts.push(`${row.pct.toFixed(1)}% to Target`);
+  // AMZL: include the idle-adjusted TPH (what the flag is based on) when it
+  // actually differs from the raw rate, so the coaching note reflects it.
+  if(row.rateAdj != null && Number.isFinite(row.rateAdj) && Math.round(row.rateAdj) !== Math.round(row.rate)){
+    parts.push(`TPH Adj ${Math.round(row.rateAdj)}`);
+  }
+  const _pctNote = Number.isFinite(row.pctAdj) ? row.pctAdj : row.pct;
+  if(_pctNote != null && Number.isFinite(_pctNote)) parts.push(`${_pctNote.toFixed(1)}% to Target`);
 
   return parts.join(" | ");
 }
@@ -1511,15 +1530,24 @@ function _applySiteBL(){
   if(bl === "AMZL"){
     if(window._hidePerfMap) window._hidePerfMap();
     const mapBtn = $("btnPerfMap"); if(mapBtn) mapBtn.style.display = "none";
+    // Delivery (AMZL) doesn't use Exempt or Shift Tracker — hide both the
+    // toolbar buttons and the Shift Tracker tab.
+    if($("btnExempt")) $("btnExempt").style.display = "none";
+    if($("btnShiftTracker")) $("btnShiftTracker").style.display = "none";
+    if($("tabShiftTracker")) $("tabShiftTracker").style.display = "none";
     // Delivery has no Quality: if the user is sitting on the (now-hidden)
-    // Quality tab, bounce them back to Performance so they don't stare at a
-    // blank panel.
-    const qTab = document.querySelector('.t-tab[data-tab="quality"]');
-    if(qTab && qTab.classList.contains("on") && typeof switchTab === "function"){
+    // Quality or Shift Tracker tab, bounce them back to Performance so they
+    // don't stare at a blank panel.
+    const activeTab = document.querySelector('.t-tab.on');
+    const at = activeTab ? activeTab.getAttribute("data-tab") : "";
+    if((at === "quality" || at === "shifttracker") && typeof switchTab === "function"){
       switchTab("dashboard");
     }
   } else if(window._isAdmin){
     const mapBtn = $("btnPerfMap"); if(mapBtn) mapBtn.style.display = "";
+    // Restore the AMZL-hidden admin controls when switching back to an FC site.
+    if($("btnExempt")) $("btnExempt").style.display = "inline-flex";
+    // Shift Tracker retired — intentionally NOT restored (btn/tab stay hidden).
   }
 }
 window._applySiteBL = _applySiteBL;
@@ -1567,8 +1595,7 @@ async function loadUserInfo(){
       if($("btnPerfMap")) $("btnPerfMap").style.display = "";
       if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
       if($("btnExempt")) $("btnExempt").style.display = "inline-flex";
-      if($("btnShiftTracker")) $("btnShiftTracker").style.display = "inline-flex";
-      if($("tabShiftTracker")) $("tabShiftTracker").style.display = "";
+      // Shift Tracker retired — button + tab stay hidden (code left inert).
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "inline-flex";
       if($("tabConfig")) $("tabConfig").style.display = "";
     } else {
@@ -1634,12 +1661,6 @@ async function loadUserInfo(){
       if($("tabGca")) $("tabGca").style.display = "";
       if($("btnPerfMap")) $("btnPerfMap").style.display = "";
       if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
-      // Exempt + Shift Tracker: keep the LIVE branch in sync with the cached
-      // branch above (these were only added there before, so on the first
-      // load of the day they never appeared).
-      if($("btnExempt")) $("btnExempt").style.display = "inline-flex";
-      if($("btnShiftTracker")) $("btnShiftTracker").style.display = "inline-flex";
-      if($("tabShiftTracker")) $("tabShiftTracker").style.display = "";
     } else {
       // Non-admin: Quality + GCA are now open to any Coaching team member
       // (single-site only — the multi-site button stays admin-only). Map stays
@@ -2167,6 +2188,10 @@ function getFiltered(opts){
       return true;
     });
   }
+  // No default ranking by performance: the table is NOT auto-sorted worst-first.
+  // Sorting is applied ONLY when the user explicitly clicks a column header
+  // (state.sortKey). This keeps the tool a neutral coaching-triage view rather
+  // than a ranked leaderboard of associates.
   const k=state.sortKey;
   if(k){
     rows.sort((a,b)=>{
@@ -2176,13 +2201,6 @@ function getFiltered(opts){
       return state.sortAsc?cmp:-cmp;
     });
   }
-  // Sort by priority: sigma desc (P3 first), then % to target asc (worst first)
-  rows.sort((a,b) => {
-    const sa = Number(a.sigma||0), sb = Number(b.sigma||0);
-    if(sa !== sb) return sb - sa;  // higher sigma first
-    const pa = Number(a.pct_op2||999), pb = Number(b.pct_op2||999);
-    return pa - pb;  // lower % first
-  });
   return{rows: opts.noLimit ? rows : rows.slice(0,state.maxRows), total:rows.length};
 }
 
@@ -2213,6 +2231,14 @@ function renderTable(){
       ?`<span class="td-rate">${Math.round(r.rate)}</span>`
       :`<span style="color:var(--text-dim)">—</span>`;
 
+    // TPH Adjusted (AMZL only) — rate with idle time removed: rate / (1 - idle%).
+    // This is what drives the P1/P2/P3 flags in AMZL. When there's no idle data
+    // it equals the raw rate (shown muted so it's clear no adjustment applied).
+    const _adjusted = Number.isFinite(r.rateAdj) && Number.isFinite(r.rate) && Math.round(r.rateAdj) !== Math.round(r.rate);
+    const tphAdjCell=Number.isFinite(r.rateAdj)
+      ? `<span class="td-rate${_adjusted?' tph-adj':''}" title="TPH sin idle = Rate ÷ (1 − idle%)${r.idle_pct!=null?` · idle ${Number(r.idle_pct).toFixed(1)}%`:''}${_adjusted?` · rate real ${Math.round(r.rate)}`:' · sin idle, = rate'}">${Math.round(r.rateAdj)}</span>`
+      : `<span style="color:var(--text-dim)">—</span>`;
+
     // Target (AMZL only) — Vet_AVG × Factor, the rate expected of THIS associate.
     // Tooltip shows the site veteran average it derives from.
     const targetCell=Number.isFinite(r.target)
@@ -2234,16 +2260,22 @@ function renderTable(){
       vetPctCell=`<span class="td-pct ${c}">${vetPct.toFixed(1)}%</span>`;
     }
 
-    // % to Target — colour coded, no label
+    // % to Target — colour coded, no label. Uses the ADJUSTED % so it stays
+    // consistent with the P1/P2/P3 flag (which is idle-adjusted in AMZL).
+    // pctAdj === pct when there's no idle adjustment (all FC rows), so FC is
+    // unchanged. Tooltip surfaces the raw % when they differ.
+    const _pctShown = Number.isFinite(r.pctAdj) ? r.pctAdj : r.pct;
     let pctCell=`<span style="color:var(--text-dim)">—</span>`;
-    if(Number.isFinite(r.pct)){
-      const c=r.pct<65?"c-bad":r.pct<90?"c-warn":"c-ok";
-      const stroke=r.pct<65?"#c0392b":r.pct<90?"#f59e0b":"#16a34a";
-      const pctClamped=Math.min(100,Math.max(0,r.pct));
+    if(Number.isFinite(_pctShown)){
+      const c=_pctShown<65?"c-bad":_pctShown<90?"c-warn":"c-ok";
+      const stroke=_pctShown<65?"#c0392b":_pctShown<90?"#f59e0b":"#16a34a";
+      const pctClamped=Math.min(100,Math.max(0,_pctShown));
       const dash=(pctClamped/100)*44; // circumference = 2*PI*7 ≈ 44
-      pctCell=`<span class="td-pct ${c}" style="display:inline-flex;align-items:center;gap:4px">
+      const _pctDiff = Number.isFinite(r.pct) && Math.abs(_pctShown - r.pct) >= 0.1;
+      const _tip = _pctDiff ? ` title="Ajustado por idle · % crudo ${r.pct.toFixed(1)}%"` : "";
+      pctCell=`<span class="td-pct ${c}"${_tip} style="display:inline-flex;align-items:center;gap:4px">
         <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="#e5e7eb" stroke-width="2"/><circle cx="8" cy="8" r="7" fill="none" stroke="${stroke}" stroke-width="2" stroke-dasharray="${dash.toFixed(1)} 44" stroke-linecap="round" transform="rotate(-90 8 8)"/></svg>
-        ${r.pct.toFixed(1)}%</span>`;
+        ${_pctShown.toFixed(1)}%</span>`;
     }
 
     // Notes — compact professional rows. NH is displayed under Cohort, not here.
@@ -2354,6 +2386,7 @@ function renderTable(){
       <td class="bl-fc-only" title="${esc(r.stationRaw||r.station)}"><span class="td-station">${esc(r.station)}</span></td>
       <td><span class="pr ${pr}">${esc(prLbl)}</span></td>
       <td>${rateCell}</td>
+      <td class="bl-amzl-only">${tphAdjCell}</td>
       <td class="bl-amzl-only">${vetRateCell}</td>
       <td class="bl-amzl-only">${vetPctCell}</td>
       <td class="bl-amzl-only">${targetCell}</td>
@@ -2493,7 +2526,8 @@ $("btnDownloadCSV").addEventListener("click",async()=>{
       "Cohort":   r.cohort||"",
       "NH_Flag":  r.nhFlag||"",
       "Rate":     Number.isFinite(r.rate)?String(Math.round(r.rate)):"",
-      "% to Target": Number.isFinite(r.pct)?r.pct.toFixed(1):"",
+      "TPH_Adjusted": Number.isFinite(r.rateAdj)?String(Math.round(r.rateAdj)):"",
+      "% to Target": Number.isFinite(r.pctAdj)?r.pctAdj.toFixed(1):(Number.isFinite(r.pct)?r.pct.toFixed(1):""),
       "Priority": String(r.prio),
       "Coached":  r.coached?"Yes":"",
       "GCA_Link": r.transcript_url||"",
@@ -4580,7 +4614,7 @@ if(_spBtn && _spPanel){
   });
 
   // Theme buttons
-  const _themeButtons = ["spThemeLight","spThemeDark","spThemeKokiri","spThemeMidnight","spThemeViolet","spThemeCherry","spThemeAws","spThemeAmber","spThemeAmberDark"].map($).filter(Boolean);
+  const _themeButtons = ["spThemeLight","spThemeDark","spThemeKokiri","spThemeMidnight","spThemeViolet","spThemeCherry","spThemeAws","spThemeAmber","spThemeAmberDark","spThemeGraphite","spThemeGraphiteNoir"].map($).filter(Boolean);
   function _syncThemeButtons(){
     const cur = document.documentElement.getAttribute("data-theme") || "light";
     _themeButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.val === cur));

@@ -89,8 +89,8 @@
       },
       "MULTIPLE_EVENT": {
         "enabled": true,
-        "mode": "maintenance",
-        "sigma_threshold": 3,
+        "mode": "urgent",
+        "sigma_threshold": 1,
         "min_errors": 3
       },
       "SHORT": {

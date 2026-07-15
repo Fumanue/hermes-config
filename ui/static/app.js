@@ -1587,6 +1587,7 @@ async function loadUserInfo(){
     // multi-site and Adoption stay admin-only.
     if($("tabQuality")) $("tabQuality").style.display = "";
     if($("tabGca")) $("tabGca").style.display = "";
+    if($("tabCourses")) $("tabCourses").style.display = "";
     // Restore admin state from cache
     if(d.admin && d.admin.is_admin){
       window._isAdmin = true;
@@ -1659,6 +1660,7 @@ async function loadUserInfo(){
       // Show beta tabs (Quality, GCA, Map) — admin only
       if($("tabQuality")) $("tabQuality").style.display = "";
       if($("tabGca")) $("tabGca").style.display = "";
+      if($("tabCourses")) $("tabCourses").style.display = "";
       if($("btnPerfMap")) $("btnPerfMap").style.display = "";
       if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
     } else {
@@ -1667,6 +1669,7 @@ async function loadUserInfo(){
       // admin-only.
       if($("tabQuality")) $("tabQuality").style.display = "";
       if($("tabGca")) $("tabGca").style.display = "";
+      if($("tabCourses")) $("tabCourses").style.display = "";
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "none";
       if($("btnPerfMap")) $("btnPerfMap").style.display = "none";
     }
@@ -1722,6 +1725,7 @@ function switchTab(name){
   if(name==="faq") _initFaq();
   if(name==="gca" && window._loadGcaDashboard) window._loadGcaDashboard();
   if(name==="shifttracker" && window._onShiftTrackerTab) window._onShiftTrackerTab();
+  if(name==="courses" && window._onCoursesTab) window._onCoursesTab();
 }
 document.querySelectorAll(".t-tab[data-tab]").forEach(tab=>
   tab.addEventListener("click",()=>switchTab(tab.dataset.tab))
@@ -3046,13 +3050,21 @@ function renderQuality(){
   const errorList = $("qFilterErrorList");
   if(errorList && qualityRows.length){
     const errors = [...new Set(qualityRows.map(r => qualityValue(r,["ErrorKey","error_key","errorKey"],"")).filter(Boolean))].sort();
+    // Map each ErrorKey -> its display label (Error Type from the pipeline, e.g.
+    // NIKE_EACH -> "Each Multiple Event") so the filter matches the table column
+    // instead of showing the raw key. The checkbox value stays the ErrorKey.
+    const labelByKey = {};
+    for(const r of qualityRows){
+      const k = qualityValue(r,["ErrorKey","error_key","errorKey"],"");
+      if(k && !labelByKey[k]) labelByKey[k] = qualityErrorLabel(r);
+    }
     // Only rebuild if the error set actually changed (compare keys)
     const existingKeys = [...errorList.querySelectorAll('input[type="checkbox"]:not([value="__ALL__"])')].map(c=>c.value).sort().join(",");
     const newKeys = errors.join(",");
     if(existingKeys !== newKeys){
       errorList.innerHTML = `<label class="q-dd-all"><input type="checkbox" value="__ALL__"> <b>All</b></label>` +
       errors.map(e => {
-        const label = e.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase());
+        const label = labelByKey[e] || e.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase());
         return `<label><input type="checkbox" value="${esc(e)}" ${qFilterError.has(e)?'checked':''}> ${esc(label)}</label>`;
       }).join("");
     }
@@ -5006,96 +5018,88 @@ async function _cfgSaveTargets(){
   }catch(e){ _cfgToast("✗ " + e.message, true); }
 }
 
-// ── Load & Render: Quality Mode ──
+// ── Load & Render: Quality Mode (unified quality_errors.json) ──
+// Structure: {defaults:{mode,sigma_threshold,min_errors,enabled},
+//             errors:{KEY:{enabled,mode,sigma_threshold,min_errors,course_uuid,label?}},
+//             fc_overrides:{FC:{...}}}. This editor manages the GLOBAL defaults +
+// per-error rows (course_uuid/label are preserved untouched). fc_overrides are
+// left as-is (rarely used; today empty since all FCs are identical).
 async function _cfgLoadQuality(){
   try{
-    const res = await jget(`${API}/api/admin/config/quality_mode.json`);
+    const res = await jget(`${API}/api/admin/config/quality_errors.json`);
     _cfgQualityData = res.data || {};
     _cfgRenderQuality();
   }catch(e){ $("cfgQualityBody").innerHTML = `<div class="cfg-loading" style="color:#e53e3e">Error: ${esc(e.message)}</div>`; }
 }
 function _cfgRenderQuality(){
-  const filter = _cfgFcFilter();
-  const fcs = Object.keys(_cfgQualityData).filter(fc => !filter || fc === filter).sort();
   const modeOpts = ["urgent","improvement","maintenance"].map(m => `<option value="${m}">${m}</option>`).join("");
-  const showFcCol = !filter;
-  let html = `<table class="cfg-table"><thead><tr>${showFcCol?'<th>FC</th>':''}<th>Type</th><th class="cfg-enabled-col">Enabled</th><th>Mode</th><th style="width:90px">σ Threshold</th><th style="width:90px">Min Errors</th><th style="width:40px"></th></tr></thead><tbody>`;
-  for(const fc of fcs){
-    if(showFcCol) html += `<tr class="cfg-group-row"><td colspan="7"><span class="cfg-fc-pill">${esc(fc)}</span></td></tr>`;
-    const cfg = _cfgQualityData[fc] || {};
-    const def = cfg.default || {};
+  const def = _cfgQualityData.defaults || {};
+  const errors = _cfgQualityData.errors || {};
+  let html = `<div style="font-size:11px;color:#888;margin-bottom:8px">Config global (aplica a todos los FC). Los cursos y labels no se tocan aquí (usa Courses).</div>`;
+  html += `<table class="cfg-table"><thead><tr><th>Type</th><th class="cfg-enabled-col">Enabled</th><th>Mode</th><th style="width:90px">σ Threshold</th><th style="width:90px">Min Errors</th><th style="width:40px"></th></tr></thead><tbody>`;
+  // DEFAULT row
+  html += `<tr>
+    <td><b>DEFAULT</b></td>
+    <td></td>
+    <td><select data-key="__default__" data-field="mode" class="cfg-qm-sel">${modeOpts.replace(`value="${def.mode||'urgent'}"`, `value="${def.mode||'urgent'}" selected`)}</select></td>
+    <td><input type="number" step="0.5" data-key="__default__" data-field="sigma" class="cfg-qm-num" value="${def.sigma_threshold||1}"></td>
+    <td><input type="number" data-key="__default__" data-field="min_errors" class="cfg-qm-num" value="${def.min_errors||3}"></td>
+    <td></td>
+  </tr>`;
+  for(const ek of Object.keys(errors).sort()){
+    const e = errors[ek] || {};
+    const isEnabled = e.enabled !== false;
+    const label = e.label ? ` <span style="font-size:9px;color:#22c55e" title="Label mostrado">(${esc(e.label)})</span>` : "";
     html += `<tr>
-      <td><b>DEFAULT</b></td>
-      <td></td>
-      <td><select data-fc="${esc(fc)}" data-key="__default__" data-field="mode" class="cfg-qm-sel">${modeOpts.replace(`value="${def.mode||'improvement'}"`, `value="${def.mode||'improvement'}" selected`)}</select></td>
-      <td><input type="number" step="0.5" data-fc="${esc(fc)}" data-key="__default__" data-field="sigma" class="cfg-qm-num" value="${def.sigma_threshold||2}"></td>
-      <td><input type="number" data-fc="${esc(fc)}" data-key="__default__" data-field="min_errors" class="cfg-qm-num" value="${def.min_errors||3}"></td>
-      <td></td>
+      <td>${esc(ek.replace(/_/g," "))}${label}</td>
+      <td><input type="checkbox" data-key="${esc(ek)}" class="cfg-qm-enabled" ${isEnabled?'checked':''}></td>
+      <td><select data-key="${esc(ek)}" data-field="mode" class="cfg-qm-sel">${modeOpts.replace(`value="${e.mode||'urgent'}"`, `value="${e.mode||'urgent'}" selected`)}</select></td>
+      <td><input type="number" step="0.5" data-key="${esc(ek)}" data-field="sigma" class="cfg-qm-num" value="${e.sigma_threshold||1}"></td>
+      <td><input type="number" data-key="${esc(ek)}" data-field="min_errors" class="cfg-qm-num" value="${e.min_errors||3}"></td>
+      <td><button class="cfg-del-btn" data-key="${esc(ek)}" data-section="quality" title="Delete">×</button></td>
     </tr>`;
-    const errors = cfg.errors || {};
-    for(const ek of Object.keys(errors)){
-      const e = errors[ek];
-      const isEnabled = e.enabled !== false;
-      html += `<tr>
-        <td>${esc(ek.replace(/_/g," "))}</td>
-        <td><input type="checkbox" data-fc="${esc(fc)}" data-key="${esc(ek)}" class="cfg-qm-enabled" ${isEnabled?'checked':''}></td>
-        <td><select data-fc="${esc(fc)}" data-key="${esc(ek)}" data-field="mode" class="cfg-qm-sel">${modeOpts.replace(`value="${e.mode||'improvement'}"`, `value="${e.mode||'improvement'}" selected`)}</select></td>
-        <td><input type="number" step="0.5" data-fc="${esc(fc)}" data-key="${esc(ek)}" data-field="sigma" class="cfg-qm-num" value="${e.sigma_threshold||2}"></td>
-        <td><input type="number" data-fc="${esc(fc)}" data-key="${esc(ek)}" data-field="min_errors" class="cfg-qm-num" value="${e.min_errors||3}"></td>
-        <td><button class="cfg-del-btn" data-fc="${esc(fc)}" data-key="${esc(ek)}" data-section="quality" title="Delete">×</button></td>
-      </tr>`;
-    }
   }
   html += `</tbody></table>
   <div class="cfg-add-row">
-    <select id="cfgAddQualityFc" class="cfg-add-input" style="width:70px">
-      ${["BCN1","BCN4","MAD7","OVD1","RMU1","SVQ1"].map(f=>`<option value="${f}" ${f===(filter||"BCN4")?'selected':''}>${f}</option>`).join("")}
-    </select>
     <input id="cfgAddQualityKey" class="cfg-add-input" placeholder="ERROR_KEY" style="width:160px;text-transform:uppercase">
     <select id="cfgAddQualityMode" class="cfg-add-input" style="width:100px">${modeOpts}</select>
-    <input id="cfgAddQualitySigma" type="number" step="0.5" class="cfg-add-input" placeholder="σ" value="2" style="width:50px">
+    <input id="cfgAddQualitySigma" type="number" step="0.5" class="cfg-add-input" placeholder="σ" value="1" style="width:50px">
     <input id="cfgAddQualityMin" type="number" class="cfg-add-input" placeholder="Min" value="3" style="width:50px">
     <button class="cfg-add-btn" id="cfgAddQualityBtn">+ Add</button>
   </div>`;
   $("cfgQualityBody").innerHTML = html;
   $("cfgAddQualityBtn") && $("cfgAddQualityBtn").addEventListener("click",()=>{
-    const fc = $("cfgAddQualityFc").value, key = $("cfgAddQualityKey").value.trim().toUpperCase().replace(/\s+/g,"_");
-    const mode = $("cfgAddQualityMode").value, sigma = parseFloat($("cfgAddQualitySigma").value)||2, minE = parseInt($("cfgAddQualityMin").value)||3;
-    if(!fc||!key){ _cfgToast("Fill FC and Error Key",true); return; }
-    if(!_cfgQualityData[fc]) _cfgQualityData[fc] = {default:{mode:"improvement",sigma_threshold:2,min_errors:3},errors:{}};
-    if(!_cfgQualityData[fc].errors) _cfgQualityData[fc].errors = {};
-    _cfgQualityData[fc].errors[key] = {enabled:true, mode, sigma_threshold:sigma, min_errors:minE};
+    const key = $("cfgAddQualityKey").value.trim().toUpperCase().replace(/\s+/g,"_");
+    const mode = $("cfgAddQualityMode").value, sigma = parseFloat($("cfgAddQualitySigma").value)||1, minE = parseInt($("cfgAddQualityMin").value)||3;
+    if(!key){ _cfgToast("Fill Error Key",true); return; }
+    if(!_cfgQualityData.errors) _cfgQualityData.errors = {};
+    _cfgQualityData.errors[key] = {enabled:true, mode, sigma_threshold:sigma, min_errors:minE, course_uuid:""};
     _cfgRenderQuality();
   });
 }
 
 async function _cfgSaveQuality(){
-  // Read selects and inputs
-  // Read enabled checkboxes first
+  if(!_cfgQualityData.defaults) _cfgQualityData.defaults = {};
+  if(!_cfgQualityData.errors) _cfgQualityData.errors = {};
+  // enabled checkboxes
   $("cfgQualityBody").querySelectorAll(".cfg-qm-enabled").forEach(el => {
-    const fc = el.dataset.fc, key = el.dataset.key;
-    if(key && key !== "__default__" && _cfgQualityData[fc]?.errors?.[key]){
-      _cfgQualityData[fc].errors[key].enabled = el.checked;
+    const key = el.dataset.key;
+    if(key && key !== "__default__" && _cfgQualityData.errors[key]){
+      _cfgQualityData.errors[key].enabled = el.checked;
     }
   });
+  // selects + numbers
   $("cfgQualityBody").querySelectorAll(".cfg-qm-sel, .cfg-qm-num").forEach(el => {
-    const fc = el.dataset.fc, key = el.dataset.key, field = el.dataset.field;
-    const val = field==="sigma" ? parseFloat(el.value)||2 : field==="min_errors" ? parseInt(el.value)||3 : el.value;
-    if(key === "__default__"){
-      if(!_cfgQualityData[fc]) _cfgQualityData[fc] = {default:{},errors:{}};
-      if(!_cfgQualityData[fc].default) _cfgQualityData[fc].default = {};
-      if(field==="mode") _cfgQualityData[fc].default.mode = val;
-      else if(field==="sigma") _cfgQualityData[fc].default.sigma_threshold = val;
-      else if(field==="min_errors") _cfgQualityData[fc].default.min_errors = val;
-    } else {
-      if(!_cfgQualityData[fc]?.errors?.[key]) return;
-      if(field==="mode") _cfgQualityData[fc].errors[key].mode = val;
-      else if(field==="sigma") _cfgQualityData[fc].errors[key].sigma_threshold = val;
-      else if(field==="min_errors") _cfgQualityData[fc].errors[key].min_errors = val;
-    }
+    const key = el.dataset.key, field = el.dataset.field;
+    const val = field==="sigma" ? parseFloat(el.value)||1 : field==="min_errors" ? parseInt(el.value)||3 : el.value;
+    const tgt = (key === "__default__") ? _cfgQualityData.defaults : _cfgQualityData.errors[key];
+    if(!tgt) return;
+    if(field==="mode") tgt.mode = val;
+    else if(field==="sigma") tgt.sigma_threshold = val;
+    else if(field==="min_errors") tgt.min_errors = val;
   });
   try{
-    await jpost(`${API}/api/admin/config/quality_mode.json`, {data: _cfgQualityData});
+    await jpost(`${API}/api/admin/config/quality_errors.json`, {data: _cfgQualityData});
     _cfgToast("✓ Quality mode saved");
   }catch(e){ _cfgToast("✗ " + e.message, true); }
 }
@@ -5371,9 +5375,10 @@ document.addEventListener("click",(e)=>{
       _cfgRenderTargets();
     }
   } else if(section === "quality"){
-    const fc = btn.dataset.fc, key = btn.dataset.key;
-    if(_cfgQualityData[fc]?.errors?.[key]){
-      delete _cfgQualityData[fc].errors[key];
+    // unified quality_errors.json: errors live at top level (no per-FC)
+    const key = btn.dataset.key;
+    if(_cfgQualityData?.errors?.[key]){
+      delete _cfgQualityData.errors[key];
       _cfgRenderQuality();
     }
   }
@@ -5388,6 +5393,7 @@ document.querySelectorAll(".cfg-sidebar-tab").forEach(function(tab){
     document.querySelectorAll(".cfg-section").forEach(function(s){ s.classList.remove("active"); });
     var el = document.getElementById("cfg-section-"+section);
     if(el) el.classList.add("active");
+    if(section === "catalog" && window._onCatalogSection) window._onCatalogSection();
   });
 });
 
@@ -5410,27 +5416,40 @@ let _cfgPCoursesData = null;
 
 async function _cfgLoadCourses(){
   try{
-    const qRes = await jget(`${API}/api/admin/config/quality_courses.json`);
+    // Unified config: Quality course UUIDs now live in quality_errors.json (errors[KEY].course_uuid).
+    const qRes = await jget(`${API}/api/admin/config/quality_errors.json`);
     _cfgQCoursesData = qRes.data || {};
     _cfgRenderQualityCourses();
   }catch(e){ $("cfgQualityCoursesArea").innerHTML = `<div class="cfg-loading" style="color:#e53e3e">Error: ${esc(e.message)}</div>`; }
   try{
     const pRes = await jget(`${API}/api/admin/config/guided_coaching.json`);
     _cfgPCoursesData = pRes.data || {};
+    // Fetch every possible role + auto-detected course titles so the By-Role
+    // editor lists ALL roles (incl. new OVD1 ones), not just those already mapped.
+    try{
+      const allRes = await jget(`${API}/api/admin/all-roles`);
+      _cfgAllRoles = allRes.roles || [];
+      _cfgCourseTitles = allRes.course_titles || {};
+    }catch(_){ _cfgAllRoles = []; _cfgCourseTitles = {}; }
     _cfgRenderPerfCourses();
   }catch(e){ $("cfgPerfCoursesArea").innerHTML = `<div class="cfg-loading" style="color:#e53e3e">Error: ${esc(e.message)}</div>`; }
 }
+let _cfgAllRoles = [];
+let _cfgCourseTitles = {};
 
 function _cfgRenderQualityCourses(){
   const errors = _cfgQCoursesData.errors || {};
-  let html = `<table class="cfg-table"><thead><tr><th>Error Key</th><th>Course UUID</th><th>Enabled</th><th></th></tr></thead><tbody>`;
+  let html = `<table class="cfg-table"><thead><tr><th>Error Key</th><th>Course UUID</th><th>Course Name (auto)</th><th>Enabled</th><th></th></tr></thead><tbody>`;
   for(const ek of Object.keys(errors).sort()){
     const raw = errors[ek];
-    const uuid = typeof raw === "string" ? raw : (raw?.uuid || "");
+    // Unified quality_errors.json uses course_uuid; legacy quality_courses.json used uuid.
+    const uuid = typeof raw === "string" ? raw : (raw?.course_uuid || raw?.uuid || "");
     const enabled = typeof raw === "string" ? true : (raw?.enabled !== false);
+    const cname = _cfgCourseTitles[uuid] || "";
     html += `<tr>
-      <td style="font-weight:700">${esc(ek.replace(/_/g," "))}</td>
+      <td style="font-weight:700">${esc(raw?.label || ek.replace(/_/g," "))}</td>
       <td><input type="text" class="cfg-qcourse-uuid" data-key="${esc(ek)}" value="${esc(uuid)}" style="width:280px;font-family:'JetBrains Mono',monospace;font-size:10px"></td>
+      <td class="cfg-qcourse-name" data-key="${esc(ek)}" style="font-size:10px;color:#888" title="Auto-detected from coaching data">${esc(cname)}</td>
       <td><input type="checkbox" class="cfg-qcourse-enabled" data-key="${esc(ek)}" ${enabled?'checked':''}></td>
       <td><button class="cfg-del-btn" data-key="${esc(ek)}" data-section="qcourse" title="Delete">×</button></td>
     </tr>`;
@@ -5447,7 +5466,7 @@ function _cfgRenderQualityCourses(){
     const uuid = ($("cfgAddQCourseUuid").value||"").trim();
     if(!key||!uuid){ _cfgToast("Fill Error Key and UUID",true); return; }
     if(!_cfgQCoursesData.errors) _cfgQCoursesData.errors = {};
-    _cfgQCoursesData.errors[key] = {uuid, enabled:true};
+    _cfgQCoursesData.errors[key] = {course_uuid:uuid, enabled:true};
     _cfgRenderQualityCourses();
   });
 }
@@ -5455,82 +5474,74 @@ function _cfgRenderQualityCourses(){
 function _cfgRenderPerfCourses(){
   const roles = _cfgPCoursesData.role_to_course_uuid || {};
   const names = _cfgPCoursesData.course_names || {};
+  // Course Name is auto-detected: coaching-data titles first, then the JSON map.
+  const nameFor = (uuid) => (uuid && (_cfgCourseTitles[uuid] || names[uuid])) || "";
   const applyOpts = ["both","ld","ops"].map(v => `<option value="${v}">${v==="both"?"Both":v==="ld"?"L&D":"OPS"}</option>`).join("");
-  let html = `<table class="cfg-table"><thead><tr><th>Role / Key</th><th>Course UUID</th><th>Course Name</th><th>Applies To</th><th></th></tr></thead><tbody>`;
-  for(const role of Object.keys(roles).sort()){
+  // Show ALL possible roles (union of configured + every role detected across FCs),
+  // so newly-mapped roles (e.g. OVD1's Bolsas BP / SM / Sioc/Siob / SNS / SNS2) appear
+  // even before they have a course assigned.
+  const allRoles = Array.from(new Set([...Object.keys(roles), ...(_cfgAllRoles||[])]))
+    .sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
+  let missing = 0;
+  let html = `<table class="cfg-table"><thead><tr><th>Role / Key</th><th>Course UUID</th><th>Course Name (auto)</th><th>Applies To</th><th></th></tr></thead><tbody>`;
+  for(const role of allRoles){
     const raw = roles[role];
-    const uuid = typeof raw === "string" ? raw : (raw?.uuid || "");
-    const appliesTo = typeof raw === "string" ? "both" : (raw?.applies_to || "both");
-    html += `<tr>
-      <td style="font-weight:700">${esc(role)}</td>
-      <td><input type="text" class="cfg-pcourse-uuid" data-role="${esc(role)}" value="${esc(uuid)}" style="width:280px;font-family:'JetBrains Mono',monospace;font-size:10px"></td>
-      <td><input type="text" class="cfg-pcourse-name" data-role="${esc(role)}" value="${esc((names[uuid]||''))}" placeholder="EUCF_…" title="Nombre oficial del curso (CMS). Se autocompleta al pegar un UUID conocido." style="width:230px;font-size:11px"></td>
+    const uuid = raw == null ? "" : (typeof raw === "string" ? raw : (raw?.uuid || ""));
+    const appliesTo = (raw && typeof raw !== "string") ? (raw?.applies_to || "both") : "both";
+    const hasCourse = !!uuid;
+    if(!hasCourse) missing++;
+    const rowStyle = hasCourse ? "" : ' style="background:rgba(245,158,11,.10)"';
+    html += `<tr${rowStyle}>
+      <td style="font-weight:700">${esc(role)}${hasCourse?"":' <span title="Sin curso asignado" style="color:#f59e0b">●</span>'}</td>
+      <td><input type="text" class="cfg-pcourse-uuid" data-role="${esc(role)}" value="${esc(uuid)}" placeholder="paste Course UUID…" style="width:280px;font-family:'JetBrains Mono',monospace;font-size:10px"></td>
+      <td class="cfg-pcourse-name" data-role="${esc(role)}" style="font-size:10px;color:#888" title="Auto-detectado de la data de coaching (uuid→título)">${esc(nameFor(uuid))}</td>
       <td><select class="cfg-pcourse-applies" data-role="${esc(role)}">${applyOpts.replace(`value="${appliesTo}"`,`value="${appliesTo}" selected`)}</select></td>
-      <td><button class="cfg-del-btn" data-role="${esc(role)}" data-section="pcourse" title="Delete">×</button></td>
+      <td><button class="cfg-del-btn" data-role="${esc(role)}" data-section="pcourse" title="Clear course">×</button></td>
     </tr>`;
   }
   html += `</tbody></table>
-  <div class="cfg-add-row">
-    <input id="cfgAddPCourseRole" class="cfg-add-input" placeholder="ROLE_KEY" style="width:140px;text-transform:uppercase">
-    <input id="cfgAddPCourseUuid" class="cfg-add-input" placeholder="Course UUID" style="width:260px;font-family:'JetBrains Mono',monospace;font-size:10px">
-    <input id="cfgAddPCourseName" class="cfg-add-input" placeholder="Course Name (EUCF_…)" style="width:200px;font-size:11px">
-    <select id="cfgAddPCourseApplies" class="cfg-add-input" style="width:80px">${applyOpts}</select>
-    <button class="cfg-add-btn" id="cfgAddPCourseBtn">+ Add</button>
-  </div>`;
+  <div class="cfg-hint" style="font-size:10px;color:#888;margin:6px 2px">${allRoles.length} roles · <span style="color:#f59e0b">${missing} sin curso</span> · el Course Name se detecta solo de la data (solo pega el UUID)</div>`;
   $("cfgPerfCoursesArea").innerHTML = html;
-  // Auto-fill the Course Name from the known UUID map when a UUID is typed/pasted.
+  // Live-update the auto-detected name cell as a UUID is typed/pasted.
   $("cfgPerfCoursesArea").querySelectorAll(".cfg-pcourse-uuid").forEach(el=>{
     el.addEventListener("input",()=>{
       const role = el.dataset.role;
-      const nm = names[el.value.trim()];
       const nameEl = $("cfgPerfCoursesArea").querySelector(`.cfg-pcourse-name[data-role="${role}"]`);
-      if(nameEl && nm && !nameEl.value.trim()) nameEl.value = nm;
+      if(nameEl) nameEl.textContent = nameFor(el.value.trim());
     });
-  });
-  const _addUuidEl = $("cfgAddPCourseUuid");
-  if(_addUuidEl){
-    _addUuidEl.addEventListener("input",()=>{
-      const nm = names[_addUuidEl.value.trim()];
-      const addNameEl = $("cfgAddPCourseName");
-      if(addNameEl && nm && !addNameEl.value.trim()) addNameEl.value = nm;
-    });
-  }
-  $("cfgAddPCourseBtn") && $("cfgAddPCourseBtn").addEventListener("click",()=>{
-    const role = ($("cfgAddPCourseRole").value||"").trim().toUpperCase().replace(/\s+/g,"_");
-    const uuid = ($("cfgAddPCourseUuid").value||"").trim();
-    const applies = $("cfgAddPCourseApplies").value || "both";
-    if(!role||!uuid){ _cfgToast("Fill Role and UUID",true); return; }
-    if(!_cfgPCoursesData.role_to_course_uuid) _cfgPCoursesData.role_to_course_uuid = {};
-    _cfgPCoursesData.role_to_course_uuid[role] = {uuid, applies_to:applies};
-    const addName = ($("cfgAddPCourseName") ? $("cfgAddPCourseName").value : "").trim();
-    if(uuid && addName){ if(!_cfgPCoursesData.course_names) _cfgPCoursesData.course_names = {}; _cfgPCoursesData.course_names[uuid] = addName; }
-    _cfgRenderPerfCourses();
   });
 }
 
 async function _cfgSaveCourses(){
-  // Read quality courses
+  // Read quality courses into the unified quality_errors.json (errors[KEY].course_uuid).
+  // Merge onto the existing per-error object so we never drop mode/sigma/enabled/label.
+  if(!_cfgQCoursesData.errors) _cfgQCoursesData.errors = {};
   $("cfgQualityCoursesArea").querySelectorAll(".cfg-qcourse-uuid").forEach(el=>{
     const key = el.dataset.key;
     const uuid = el.value.trim();
     const enabledEl = $("cfgQualityCoursesArea").querySelector(`.cfg-qcourse-enabled[data-key="${key}"]`);
     const enabled = enabledEl ? enabledEl.checked : true;
-    if(_cfgQCoursesData.errors) _cfgQCoursesData.errors[key] = {uuid, enabled};
+    const prev = (typeof _cfgQCoursesData.errors[key] === "object" && _cfgQCoursesData.errors[key]) || {};
+    _cfgQCoursesData.errors[key] = {...prev, course_uuid: uuid, enabled};
   });
-  // Read perf courses
-  if(!_cfgPCoursesData.course_names) _cfgPCoursesData.course_names = {};
+  // Read perf courses. Only persist roles that actually have a UUID (skip the
+  // empty placeholder rows we render for unmapped roles). Course Name is NOT
+  // written from the UI anymore — it's auto-detected from the data at render time.
+  if(!_cfgPCoursesData.role_to_course_uuid) _cfgPCoursesData.role_to_course_uuid = {};
   $("cfgPerfCoursesArea").querySelectorAll(".cfg-pcourse-uuid").forEach(el=>{
     const role = el.dataset.role;
     const uuid = el.value.trim();
     const appliesEl = $("cfgPerfCoursesArea").querySelector(`.cfg-pcourse-applies[data-role="${role}"]`);
     const applies = appliesEl ? appliesEl.value : "both";
-    if(_cfgPCoursesData.role_to_course_uuid) _cfgPCoursesData.role_to_course_uuid[role] = {uuid, applies_to:applies};
-    const nameEl = $("cfgPerfCoursesArea").querySelector(`.cfg-pcourse-name[data-role="${role}"]`);
-    const nm = nameEl ? nameEl.value.trim() : "";
-    if(uuid && nm) _cfgPCoursesData.course_names[uuid] = nm;
+    if(uuid){
+      _cfgPCoursesData.role_to_course_uuid[role] = {uuid, applies_to:applies};
+    } else if(_cfgPCoursesData.role_to_course_uuid[role]){
+      // cleared -> remove the mapping
+      delete _cfgPCoursesData.role_to_course_uuid[role];
+    }
   });
   try{
-    await jpost(`${API}/api/admin/config/quality_courses.json`, {data: _cfgQCoursesData});
+    await jpost(`${API}/api/admin/config/quality_errors.json`, {data: _cfgQCoursesData});
     await jpost(`${API}/api/admin/config/guided_coaching.json`, {data: _cfgPCoursesData});
     _cfgToast("✓ Coaching courses saved");
   }catch(e){ _cfgToast("✗ " + e.message, true); }
@@ -5543,8 +5554,12 @@ document.addEventListener("click",(e)=>{
   const btn = e.target.closest(".cfg-del-btn[data-section='qcourse']");
   if(!btn) return;
   const key = btn.dataset.key;
-  if(_cfgQCoursesData?.errors?.[key]){
-    delete _cfgQCoursesData.errors[key];
+  const entry = _cfgQCoursesData?.errors?.[key];
+  if(entry){
+    // In the unified config an error carries mode/sigma/enabled too — clearing the
+    // course row should only drop the course_uuid, not delete the whole error type.
+    if(typeof entry === "object"){ entry.course_uuid = ""; }
+    else { _cfgQCoursesData.errors[key] = {course_uuid:""}; }
     _cfgRenderQualityCourses();
   }
 });
@@ -5557,6 +5572,186 @@ document.addEventListener("click",(e)=>{
     _cfgRenderPerfCourses();
   }
 });
+
+// ═══════════════════════════════════════════════════════════════
+// COURSE CATALOG (admin) — full CMS catalog by TYPOLOGY
+// The catalog is identical across FCs of the same typology, so 1 pull covers a
+// whole group. Cache is persistent (no TTL); refresh is manual (may take minutes).
+// ═══════════════════════════════════════════════════════════════
+let _ccData = null;          // {typology, label, fcs, courses:[...], count, assigned_count}
+let _ccTypologies = [];      // [{typology,label,fcs,rep_fc,cached,cached_at,count}]
+let _ccCurrentTyp = "standard";
+
+// Umbrella CMS deep-link for a course UUID. Format matches the real portal URL:
+// the "https:" stays literal and only the part FROM "//" onward is percent-encoded
+// (i.e. "https:" + encoded("//dub.prod.cms...")).
+function _umbrellaLink(uuid){
+  const inner = "https:" + encodeURIComponent(`//dub.prod.cms.umbrella.amazon.dev/course/${uuid}`);
+  return `https://dub.umbrella.amazon.dev/portal/cms/courses/${inner}`;
+}
+function _typeBadge(t){
+  const map = {manual:["Manual","#7c3aed"], auto:["Auto","#0ea5e9"], other:["Otro","#888"]};
+  const [lbl,col] = map[t] || map["manual"];  // unknown/empty -> Manual (the default rule)
+  return `<span style="display:inline-block;background:${col}22;color:${col};border:1px solid ${col}55;border-radius:4px;padding:0 5px;font-size:9px;font-weight:700">${lbl}</span>`;
+}
+function _uuidCell(uuid){
+  return `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#888">${esc(uuid||"")}</span>
+    <a href="${_umbrellaLink(uuid)}" target="_blank" rel="noopener" title="Abrir en Umbrella CMS" style="text-decoration:none;color:#0ea5e9;margin:0 3px">🔗</a>
+    <button class="cc-copy" data-uuid="${esc(uuid||"")}" title="Copiar UUID" style="border:none;background:none;cursor:pointer;color:#7c3aed">⧉</button>`;
+}
+
+// ─── ADMIN: full catalog by typology (Config → Course Catalog section) ───────
+async function _loadTypologies(){
+  try{
+    const d = await jget(`${API}/api/admin/course-typologies`);
+    _ccTypologies = d.typologies || [];
+  }catch(_){ _ccTypologies = []; }
+}
+
+async function _loadCourseCatalog(typ, force){
+  const area = $("cc-area"), status = $("cc-status");
+  _ccCurrentTyp = typ || _ccCurrentTyp;
+  if(area) area.innerHTML = `<div class="cfg-loading">${force?"Re-descargando":"Cargando"} catálogo <b>${esc(_ccCurrentTyp)}</b>…${force?" (pagina el CMS entero, puede tardar unos minutos)":""}</div>`;
+  try{
+    const d = await jget(`${API}/api/admin/course-catalog?typology=${encodeURIComponent(_ccCurrentTyp)}${force?"&force=true":""}`);
+    _ccData = d;
+    await _loadTypologies();
+    _ccRenderTypSelector();
+    _ccRender();
+  }catch(e){
+    if(area) area.innerHTML = `<div class="cfg-loading" style="color:#e53e3e">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+function _ccRenderTypSelector(){
+  const sel = $("cc-fc");
+  if(!sel) return;
+  sel.innerHTML = _ccTypologies.map(t=>{
+    const mark = t.cached ? "✓" : "○";
+    return `<option value="${t.typology}" ${t.typology===_ccCurrentTyp?'selected':''}>${mark} ${esc(t.label)} (${(t.fcs||[]).join("/")})</option>`;
+  }).join("");
+}
+
+function _ccRender(){
+  if(!_ccData){ return; }
+  const area = $("cc-area"), status = $("cc-status");
+  const q = (($("cc-search") && $("cc-search").value) || "").trim().toLowerCase();
+  const typeSel = ($("cc-type") && $("cc-type").value) || "all";
+  let courses = (_ccData.courses || []).slice();
+  if(q) courses = courses.filter(c =>
+    String(c.title||"").toLowerCase().includes(q) || String(c.uuid||"").toLowerCase().includes(q));
+  if(typeSel !== "all") courses = courses.filter(c => (c.type||"manual") === typeSel);
+  const asgSel = ($("cc-assigned") && $("cc-assigned").value) || "all";
+  if(asgSel === "assigned") courses = courses.filter(c => c.assigned);
+  else if(asgSel === "unassigned") courses = courses.filter(c => !c.assigned);
+
+  if(status){
+    const fcs = (_ccData.fcs||[]).join(", ");
+    const when = _ccData.cached_at ? ` · datos: ${esc(String(_ccData.cached_at).replace("T"," "))}` : "";
+    const staleMsg = _ccData.stale ? ' <span style="color:#f59e0b">⚠️ caché (fetch falló)</span>' : "";
+    status.innerHTML = `Tipología <b>${esc(_ccData.label||_ccData.typology||"")}</b> (${esc(fcs)}) · ${_ccData.count||0} cursos · <span style="color:#22c55e">${_ccData.assigned_count||0} asignados</span> · mostrando ${courses.length}${when}${staleMsg}`;
+  }
+
+  const _asgLabel = (a)=>{
+    const icon = a.kind==="quality" ? "🎯" : "👤";
+    return `<span class="cc-tag" title="${a.kind==='quality'?'Quality error type':'Performance role'}" style="display:inline-block;background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;padding:1px 5px;margin:1px;font-size:9px">${icon} ${esc(a.key)}</span>`;
+  };
+
+  let html = `<table class="cfg-table"><thead><tr><th>Course Name</th><th>Tipo</th><th>UUID</th><th>Asignado a</th><th>Descripción</th></tr></thead><tbody>`;
+  for(const c of courses){
+    const asg = c.assigned_to || [];
+    const asgCell = asg.length ? asg.map(_asgLabel).join(" ")
+      : '<span style="color:#f59e0b;font-size:10px">● sin asignar</span>';
+    const rowStyle = c.assigned ? "" : ' style="background:rgba(245,158,11,.06)"';
+    html += `<tr${rowStyle}>
+      <td style="font-weight:700;font-size:11px">${c.assigned?'<span style="color:#22c55e" title="Asignado">✓</span> ':''}${esc(c.title||"—")}</td>
+      <td>${_typeBadge(c.type||"manual")}</td>
+      <td>${_uuidCell(c.uuid)}</td>
+      <td>${asgCell}</td>
+      <td style="font-size:10px;color:#aaa">${esc(c.description||"")}</td>
+    </tr>`;
+  }
+  html += `</tbody></table>`;
+  if(area) area.innerHTML = html;
+  area && area.querySelectorAll(".cc-copy").forEach(b=>{
+    b.addEventListener("click",()=>{ try{ navigator.clipboard.writeText(b.dataset.uuid); _cfgToast&&_cfgToast("UUID copiado"); }catch(_){}} );
+  });
+}
+
+// Called by the Config sidebar when the "Course Catalog" section opens.
+window._onCatalogSection = async function(){
+  const sel = $("cc-fc");
+  if(sel && !sel._wired){
+    sel._wired = true;
+    await _loadTypologies();
+    _ccRenderTypSelector();
+    sel.addEventListener("change", ()=>{ _ccCurrentTyp = sel.value; _loadCourseCatalog(sel.value, false); });
+  }
+  const tEl = $("cc-type"); if(tEl && !tEl._wired){ tEl._wired=true; tEl.addEventListener("change", _ccRender); }
+  const aEl = $("cc-assigned"); if(aEl && !aEl._wired){ aEl._wired=true; aEl.addEventListener("change", _ccRender); }
+  const sEl = $("cc-search"); if(sEl && !sEl._wired){ sEl._wired=true; sEl.addEventListener("input", _ccRender); }
+  const rEl = $("cc-refresh"); if(rEl && !rEl._wired){ rEl._wired=true; rEl.addEventListener("click", ()=>_loadCourseCatalog(_ccCurrentTyp, true)); }
+  const cEl = $("cc-csv"); if(cEl && !cEl._wired){ cEl._wired=true; cEl.addEventListener("click", _ccExportCsv); }
+  if(!_ccData) _loadCourseCatalog(_ccCurrentTyp, false);
+};
+
+function _ccExportCsv(){
+  if(!_ccData) return;
+  const rows = [["Course Name","Type","UUID","Umbrella Link","Assigned","Assigned To","Description","Typology"]];
+  for(const c of (_ccData.courses||[])){
+    const asg = (c.assigned_to||[]).map(a=>`${a.kind}:${a.key}`).join(" | ");
+    rows.push([c.title||"", c.type||"", c.uuid||"", _umbrellaLink(c.uuid), c.assigned?"YES":"NO", asg, (c.description||"").replace(/\n/g," "), _ccData.typology||""]);
+  }
+  const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+  const blob = new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=`course_catalog_${_ccData.typology||"all"}.csv`; a.click();
+}
+
+// ─── EVERYONE: assigned courses (tab 📚 Courses, read-only) ───────────────────
+let _caData = null;   // [{kind,task,uuid,course_title,type,error_key?}]
+window._onCoursesTab = async function(){
+  const kEl = $("ca-kind"); if(kEl && !kEl._wired){ kEl._wired=true; kEl.addEventListener("change", _caRender); }
+  const sEl = $("ca-search"); if(sEl && !sEl._wired){ sEl._wired=true; sEl.addEventListener("input", _caRender); }
+  if(_caData === null){
+    try{
+      const d = await jget(`${API}/api/course-assignments`);
+      _caData = d.assignments || [];
+    }catch(e){
+      const area=$("ca-area"); if(area) area.innerHTML=`<div class="cfg-loading" style="color:#e53e3e">Error: ${esc(e.message)}</div>`;
+      _caData = []; return;
+    }
+  }
+  _caRender();
+};
+
+function _caRender(){
+  const area = $("ca-area"), status = $("ca-status");
+  if(!area) return;
+  const kind = ($("ca-kind") && $("ca-kind").value) || "all";
+  const q = (($("ca-search") && $("ca-search").value) || "").trim().toLowerCase();
+  let rows = (_caData||[]).slice();
+  if(kind !== "all") rows = rows.filter(r => r.kind === kind);
+  if(q) rows = rows.filter(r => String(r.task||"").toLowerCase().includes(q) || String(r.course_title||"").toLowerCase().includes(q));
+  if(status) status.innerHTML = `${rows.length} asignaciones${(_caData||[]).length!==rows.length?` (de ${(_caData||[]).length})`:""}`;
+
+  let html = `<table class="cfg-table"><thead><tr><th>Tarea</th><th>Curso asignado</th><th>Tipo</th><th>UUID</th></tr></thead><tbody>`;
+  for(const r of rows){
+    const icon = r.kind==="quality" ? "🎯" : "👤";
+    const kindLbl = r.kind==="quality" ? "Quality" : "Performance";
+    html += `<tr>
+      <td style="font-weight:700;font-size:11px">${icon} ${esc(r.task||"")} <span style="font-size:9px;color:#888">${kindLbl}</span></td>
+      <td style="font-size:11px">${esc(r.course_title||"—")}</td>
+      <td>${_typeBadge(r.type||"manual")}</td>
+      <td>${_uuidCell(r.uuid)}</td>
+    </tr>`;
+  }
+  html += `</tbody></table>`;
+  area.innerHTML = html;
+  area.querySelectorAll(".cc-copy").forEach(b=>{
+    b.addEventListener("click",()=>{ try{ navigator.clipboard.writeText(b.dataset.uuid); _cfgToast&&_cfgToast("UUID copiado"); }catch(_){}} );
+  });
+}
 
 
 // ═══════════════════════════════════════════════════════════════

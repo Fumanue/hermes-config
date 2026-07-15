@@ -34,7 +34,7 @@
       "enabled": true,
       "mode": "urgent",
       "sigma_threshold": 1,
-      "min_errors": 3,
+      "min_errors": 4,
       "course_uuid": "fb9ad2f5-6a87-507e-b80e-199459de007f",
       "label": "Each Multiple Event"
     },
@@ -42,7 +42,7 @@
       "enabled": true,
       "mode": "urgent",
       "sigma_threshold": 1,
-      "min_errors": 3,
+      "min_errors": 4,
       "course_uuid": "fb9ad2f5-6a87-507e-b80e-199459de007f",
       "label": "Quantity Multiple Event"
     },

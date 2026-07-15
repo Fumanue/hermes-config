@@ -1656,6 +1656,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <div class="t-tab" data-tab="faq" data-i18n="tab_faq">FAQ</div>
     <div class="t-tab" data-tab="gca" id="tabGca" style="display:none">GCA</div>
     <div class="t-tab" data-tab="shifttracker" id="tabShiftTracker" style="display:none">📈 Shift Tracker</div>
+    <div class="t-tab" data-tab="courses" id="tabCourses" style="display:none">📚 Courses</div>
     <div class="t-tab" data-tab="config" id="tabConfig" style="display:none">⚙️ Config</div>
 
   </div>
@@ -2401,6 +2402,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <button class="cfg-sidebar-tab active" data-cfg-tab="targets"><span class="cfg-tab-icon">📊</span>Pack Targets</button>
       <button class="cfg-sidebar-tab" data-cfg-tab="quality"><span class="cfg-tab-icon">🎯</span>Quality Mode</button>
       <button class="cfg-sidebar-tab" data-cfg-tab="courses"><span class="cfg-tab-icon">🎓</span>Courses</button>
+      <button class="cfg-sidebar-tab" data-cfg-tab="catalog"><span class="cfg-tab-icon">📚</span>Course Catalog</button>
       <button class="cfg-sidebar-tab" data-cfg-tab="shifts"><span class="cfg-tab-icon">🕐</span>Shifts</button>
       <button class="cfg-sidebar-tab" data-cfg-tab="stations"><span class="cfg-tab-icon">📍</span>Stations</button>
       <button class="cfg-sidebar-tab" data-cfg-tab="gcamap"><span class="cfg-tab-icon">🗺️</span>GCA Mapping</button>
@@ -2498,6 +2500,34 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
             <button class="act-btn act-primary cfg-save" id="cfgSaveGcaMap" style="font-size:11px;padding:4px 12px">💾 Save</button>
           </div>
           <div class="cfg-card-body" id="cfgGcaLegendBody"><div class="cfg-loading">Loading…</div></div>
+        </div>
+      </div>
+
+      <div class="cfg-section" id="cfg-section-catalog">
+        <div class="cfg-section-title">📚 Course Catalog</div>
+        <div class="cfg-section-sub">Catálogo completo del CMS por tipología (grupo de FCs con catálogo idéntico). 1 pull cubre el grupo. Caché persistente; refresca cuando quieras.</div>
+        <div class="cfg-card">
+          <div class="cfg-card-hdr hdr-courses">
+            <span class="cfg-card-title">Todos los cursos</span>
+            <span style="flex:1"></span>
+            <select class="form-input" id="cc-fc" style="width:auto;min-width:220px;font-size:11px" title="Tipología (grupo de FCs). ✓=cacheado ○=sin descargar"></select>
+            <select class="form-input" id="cc-type" style="width:auto;min-width:120px;font-size:11px" title="Tipo de coaching">
+              <option value="all">Todos los tipos</option>
+              <option value="manual">Manual</option>
+              <option value="auto">Automático</option>
+              <option value="other">Otros</option>
+            </select>
+            <select class="form-input" id="cc-assigned" style="width:auto;min-width:120px;font-size:11px" title="Filtrar por asignación">
+              <option value="all">Todos</option>
+              <option value="assigned">✓ Asignados</option>
+              <option value="unassigned">● Sin asignar</option>
+            </select>
+            <input class="form-input" id="cc-search" placeholder="Buscar…" style="width:auto;min-width:160px;font-size:11px">
+            <button class="act-btn act-secondary" id="cc-refresh" style="font-size:11px;padding:4px 12px" title="Re-descargar (ignora caché, tarda)">↻ Refrescar</button>
+            <button class="act-btn act-secondary" id="cc-csv" style="font-size:11px;padding:4px 12px">↓ CSV</button>
+          </div>
+          <div id="cc-status" style="font-size:11px;color:var(--text-secondary);padding:6px 14px"></div>
+          <div class="cfg-card-body" id="cc-area" style="overflow:auto"><div class="cfg-loading">Abre esta sección para cargar.</div></div>
         </div>
       </div>
 
@@ -2693,6 +2723,23 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
+<!-- ═══ TAB PANEL: Courses — assigned courses (read-only, visible to everyone) ═══ -->
+<div class="tab-panel" id="panel-courses" style="flex-direction:column">
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 4px">
+    <div style="font-weight:800;font-size:15px">📚 Cursos asignados</div>
+    <div style="font-size:11px;color:var(--text-secondary)">Qué curso está asignado a cada tarea (rol de Performance o error type de Quality)</div>
+    <span style="flex:1"></span>
+    <select class="form-input" id="ca-kind" style="width:auto;min-width:140px" title="Filtrar por tipo de asignación">
+      <option value="all">Todas las tareas</option>
+      <option value="role">👤 Performance (rol)</option>
+      <option value="quality">🎯 Quality (error)</option>
+    </select>
+    <input class="form-input" id="ca-search" placeholder="Buscar tarea / curso…" style="width:auto;min-width:220px">
+  </div>
+  <div id="ca-status" style="font-size:11px;color:var(--text-secondary);padding:0 4px 6px"></div>
+  <div id="ca-area" style="overflow:auto"><div class="cfg-loading">Cargando cursos asignados…</div></div>
+</div>
+
 <!-- ═══ MODAL: Close coaching (Complete / Cancel) ═══ -->
 <div class="modal-overlay" id="modalNewCoaching">
   <div class="modal" style="width:560px">
@@ -2879,7 +2926,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
-<script src="/static/app.js?v=v184_no_default_rank_20260714" defer></script>
+<script src="/static/app.js?v=v193_umbrella_link_20260715" defer></script>
 </body>
 </html>
 

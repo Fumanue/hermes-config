@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "status": "up_to_date",
-  "message": "Remote configs are up to date.",
-  "local_version": "2.0.40",
-  "remote_version": "2.0.40",
+  "status": "disabled",
+  "message": "Remote config sync is disabled.",
+  "local_version": null,
+  "remote_version": null,
   "changed_files": [],
-  "checked_at": "2026-06-29T15:07:49",
+  "checked_at": "2026-07-15T11:40:38",
   "error": null
 }

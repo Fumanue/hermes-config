@@ -1,0 +1,86 @@
+{
+  "_comment": "Unified Quality error config. Merges former quality_mode.json + quality_courses.json. 'defaults' apply to every FC; 'fc_overrides' hold only per-FC exceptions (empty today: all FC identical after the 2026-07-15 urgent/1sigma alignment).",
+  "defaults": {
+    "mode": "urgent",
+    "sigma_threshold": 1,
+    "min_errors": 3,
+    "enabled": false
+  },
+  "course_base": "https://dub.prod.cms.umbrella.amazon.dev/course/",
+  "default_course_uuid": "",
+  "errors": {
+    "AFE1_ITEM_MISSING": {
+      "enabled": false,
+      "mode": "urgent",
+      "sigma_threshold": 1,
+      "min_errors": 3,
+      "course_uuid": ""
+    },
+    "BIN_FILTER_VIOLATIONS": {
+      "enabled": true,
+      "mode": "urgent",
+      "sigma_threshold": 1,
+      "min_errors": 3,
+      "course_uuid": "a0eda47c-90ec-56e7-936c-166191a0d144"
+    },
+    "FALSE_PICK_SHORT": {
+      "enabled": true,
+      "mode": "urgent",
+      "sigma_threshold": 1,
+      "min_errors": 3,
+      "course_uuid": "1c245fcf-784c-56b6-9672-f27c287b8200"
+    },
+    "NIKE_EACH": {
+      "enabled": true,
+      "mode": "urgent",
+      "sigma_threshold": 1,
+      "min_errors": 3,
+      "course_uuid": "fb9ad2f5-6a87-507e-b80e-199459de007f",
+      "label": "Each Multiple Event"
+    },
+    "NIKE_QUANTITY": {
+      "enabled": true,
+      "mode": "urgent",
+      "sigma_threshold": 1,
+      "min_errors": 3,
+      "course_uuid": "fb9ad2f5-6a87-507e-b80e-199459de007f",
+      "label": "Quantity Multiple Event"
+    },
+    "OTHER_ITEM_MISSING": {
+      "enabled": false,
+      "mode": "urgent",
+      "sigma_threshold": 1,
+      "min_errors": 3,
+      "course_uuid": ""
+    },
+    "PICK_ERROR_INDICATOR": {
+      "enabled": true,
+      "mode": "urgent",
+      "sigma_threshold": 1,
+      "min_errors": 3,
+      "course_uuid": "ee58d67f-d14a-5d5c-8500-43cf682d5fa4"
+    },
+    "SCAN_OUT_OF_SEQUENCE": {
+      "enabled": false,
+      "mode": "urgent",
+      "sigma_threshold": 1,
+      "min_errors": 3,
+      "course_uuid": ""
+    },
+    "SHORT": {
+      "enabled": false,
+      "mode": "urgent",
+      "sigma_threshold": 1,
+      "min_errors": 3,
+      "course_uuid": ""
+    },
+    "SINGLE_ITEM_MISSING": {
+      "enabled": false,
+      "mode": "urgent",
+      "sigma_threshold": 1,
+      "min_errors": 3,
+      "course_uuid": ""
+    }
+  },
+  "fc_overrides": {}
+}

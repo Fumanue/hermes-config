@@ -553,28 +553,28 @@
     ],
     "pack_line_targets": [
       {
+        "key": "Bolsas BP",
+        "target_uph": 260,
+        "applies_to_role": "Bolsas BP"
+      },
+      {
         "key": "SM",
-        "target_uph": 110,
+        "target_uph": 180,
         "applies_to_role": "SM"
       },
       {
-        "key": "SMMIX",
-        "target_uph": 200,
-        "applies_to_role": "SMMIX"
+        "key": "Sioc/Siob",
+        "target_uph": 300,
+        "applies_to_role": "Sioc/Siob"
       },
       {
-        "key": "SM2",
-        "target_uph": 210,
-        "applies_to_role": "SM2"
-      },
-      {
-        "key": "SNS1",
-        "target_uph": 410,
-        "applies_to_role": "SNS1"
+        "key": "SNS",
+        "target_uph": 400,
+        "applies_to_role": "SNS"
       },
       {
         "key": "SNS2",
-        "target_uph": 280,
+        "target_uph": 300,
         "applies_to_role": "SNS2"
       },
       {

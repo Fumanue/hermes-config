@@ -426,8 +426,8 @@
       {
         "station_contains": "WS11",
         "file": "FCLM_1002993.csv",
-        "function_contains": "Slam at Pack",
-        "role_override": "SNS1",
+        "function_contains": "Slam At Pack",
+        "role_override": "SNS",
         "process_id": "100054"
       },
       {
@@ -440,22 +440,22 @@
       {
         "station_contains": "SINGLES_01",
         "file": "FCLM_1002993.csv",
-        "function_contains": "Scan Verify Large",
-        "role_override": "SM2",
+        "function_contains": "SLAP Mix",
+        "role_override": "Bolsas BP",
         "process_id": "100054"
       },
       {
         "station_contains": "SINGLES_02",
         "file": "FCLM_1002993.csv",
-        "function_contains": "Scan Verify Small",
-        "role_override": "SMMIX",
+        "function_contains": "Scan Verify Large",
+        "role_override": "SM",
         "process_id": "100054"
       },
       {
         "station_contains": "SINGLES_03",
         "file": "FCLM_1002993.csv",
-        "function_contains": "Scan Verify Medium",
-        "role_override": "SM",
+        "function_contains": "Scan Verify SIOC",
+        "role_override": "Sioc/Siob",
         "process_id": "100054"
       },
       {

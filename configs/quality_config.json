@@ -45,8 +45,15 @@
               ]
             },
             {
-              "name": "Nike Multiple Events",
-              "label": "Nike Multiple Events",
+              "name": "Nike Each Multiple Events",
+              "label": "Nike Each Multiple Events",
+              "applies_to_roles": [
+                "STOW"
+              ]
+            },
+            {
+              "name": "Nike Quantity Multiple Events",
+              "label": "Nike Quantity Multiple Events",
               "applies_to_roles": [
                 "STOW"
               ]
@@ -77,8 +84,15 @@
               ]
             },
             {
-              "name": "Nike Multiple Events",
-              "label": "Nike Multiple Events",
+              "name": "Nike Each Multiple Events",
+              "label": "Nike Each Multiple Events",
+              "applies_to_roles": [
+                "STOW"
+              ]
+            },
+            {
+              "name": "Nike Quantity Multiple Events",
+              "label": "Nike Quantity Multiple Events",
               "applies_to_roles": [
                 "STOW"
               ]

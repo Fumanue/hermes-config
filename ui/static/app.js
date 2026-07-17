@@ -400,6 +400,42 @@ function esc(s){ return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
 function transcriptUrl(login){ return `https://guided-coaching-dub.corp.amazon.com/#/employee-transcript/${encodeURIComponent(String(login||"").trim())}`; }
 function badgePhotoUrl(login){ return `https://badgephotos.amazon.com/?Region=Master&FullsizeImage=Yes&uid=${encodeURIComponent(String(login||"").trim())}`; }
 function ts(){ return new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"}); }
+
+// Coaching expiration label: relative days + colour. Uses the expirationTime that
+// already comes in the payload (no extra call). Returns {text, color} or null.
+// Defined here (global scope, early) so every renderer can use it.
+function coachingExpiry(raw){
+  if(!raw) return null;
+  const d = new Date(raw);
+  if(isNaN(d)) return null;
+  const days = Math.floor((d - new Date()) / 86400000);
+  const date = d.toLocaleDateString("en-GB",{day:"2-digit",month:"short"});
+  if(days < 0)  return {text:`Expired ${date} (${-days}d ago)`, color:"var(--red,#dc2626)"};
+  if(days === 0) return {text:`Expires today (${date})`, color:"var(--red,#dc2626)"};
+  if(days <= 2) return {text:`Expires in ${days}d (${date})`, color:"var(--orange,#d97706)"};
+  return {text:`Expires ${date} (${days}d)`, color:"var(--text-muted)"};
+}
+
+// "Last seen" from ELS arrivalTimestamp (epoch MS). Same call that already
+// resolves presence — no extra fetch. For an INACTIVE associate, "last seen N
+// days ago" tells a coach the pending is stale and can likely be cancelled.
+function lastSeen(ms){
+  const n = Number(ms);
+  if(!n || isNaN(n)) return null;
+  const d = new Date(n);
+  if(isNaN(d)) return null;
+  const mins = Math.floor((new Date() - d) / 60000);
+  const date = d.toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+  let rel, color;
+  if(mins < 60)      { rel = `${mins}m ago`;                 color = "var(--text-muted)"; }
+  else if(mins < 1440){ rel = `${Math.floor(mins/60)}h ago`; color = "var(--text-muted)"; }
+  else {
+    const days = Math.floor(mins/1440);
+    rel = `${days}d ago`;
+    color = days >= 3 ? "var(--red,#dc2626)" : days >= 1 ? "var(--orange,#d97706)" : "var(--text-muted)";
+  }
+  return {text:`Last seen ${rel}`, full:`Last seen ${date} (${rel})`, color};
+}
 const $=id=>document.getElementById(id);
 
 // ── Toast (small, ephemeral notifications) ─────────────────
@@ -698,6 +734,14 @@ async function openCloseCoaching(opts){
     if(!isCancel && badge){
       calmWrap.style.display = "";
       $("cc-calm-result").innerHTML = "";
+      // Associate photo next to the CALM controls (login-based badge photo).
+      const photoEl = $("cc-calm-photo");
+      if(photoEl){
+        const purl = o.photo_url || (o.login ? badgePhotoUrl(o.login) : "");
+        photoEl.innerHTML = purl
+          ? `<img src="${esc(purl)}" alt="${esc(o.login||"")}" loading="lazy" decoding="async" style="width:40px;height:40px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">`
+          : "";
+      }
       // Auto-detect the process from the coaching role/title and preselect it
       // in the dropdown; the coach can override (covers names we don't map,
       // e.g. "PPSingleMedium" -> STOW).
@@ -829,15 +873,28 @@ function openCloseFromRow(pending, meta){
                 role:(meta&&meta.role)||"",
                 onDone:(meta&&meta.onDone)||null};
   const pickList = $("ccPickList");
-  $("ccPickWho").innerHTML = `<b>${esc(base.name||base.login)}</b> · ${list.length} coaching${list.length>1?"s":""} pendiente${list.length>1?"s":""}`;
+  // Presence + last-seen banner (from any pending item — it's per-associate).
+  // For an INACTIVE associate not seen in process for days, this signals the
+  // coaching can likely be cancelled.
+  const _pres = String((list.find(c=>c.presence)||{}).presence || "").toUpperCase();
+  const _ls = lastSeen((list.find(c=>c.last_seen_ms)||{}).last_seen_ms);
+  let presBanner = "";
+  if(_pres === "INACTIVE" || _ls){
+    const dot = _pres === "ACTIVE" ? "🟢" : "⚪";
+    const lsTxt = _ls ? ` · <span style="color:${_ls.color};font-weight:700" title="${esc(_ls.full)}">${esc(_ls.text)}</span>` : "";
+    presBanner = `<div style="font-size:11.5px;margin-top:4px">${dot} ${_pres==="ACTIVE"?"In process now":"Not in process"}${lsTxt}</div>`;
+  }
+  $("ccPickWho").innerHTML = `<b>${esc(base.name||base.login)}</b> · ${list.length} coaching${list.length>1?"s":""} pendiente${list.length>1?"s":""}${presBanner}`;
   pickList.innerHTML = list.map((c,i)=>{
     const insight = c.insight || c.course_title || c.reason || "Coaching";
     const course = c.course_title || "";
+    const exp = coachingExpiry(c.expiration);
     return `
     <div style="padding:10px 12px;margin-bottom:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card)">
       <div style="font-weight:700;font-size:15px;line-height:1.25">${esc(insight)}</div>
       ${course && course!==insight ? `<div style="font-size:11px;color:var(--text-secondary);margin-top:3px">${esc(course)}</div>` : ""}
       <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${esc(c.scenario||"")}</div>
+      ${exp ? `<div style="font-size:11px;font-weight:700;color:${exp.color};margin-top:4px">⏳ ${esc(exp.text)}</div>` : ""}
       <div style="display:flex;gap:6px;margin-top:8px">
         <button class="row-btn cc-pick-complete" data-i="${i}">✓ Completar</button>
         <button class="row-btn cc-pick-cancel" data-i="${i}">✗ Cancelar</button>
@@ -2407,7 +2464,14 @@ function renderTable(){
         <div style="display:flex;gap:4px;align-items:center">
           <button class="row-btn" data-upload-login="${esc(r.login)}">↑ Upload</button>
           ${(r.pending_coachings && r.pending_coachings.length)
-            ? `<button class="row-btn cc-row-close" data-ri="${ri}" title="Cerrar coaching pendiente (${r.pending_coachings.length})">✓/✗${r.pending_coachings.length>1?" ("+r.pending_coachings.length+")":""}</button>`
+            ? (()=>{
+                // Soonest expiry across this associate's pending coachings (data
+                // already present — no extra call), shown in the button tooltip.
+                const exps = r.pending_coachings.map(c=>c.expiration).filter(Boolean).sort();
+                const exp = exps.length ? coachingExpiry(exps[0]) : null;
+                const tip = `Cerrar coaching pendiente (${r.pending_coachings.length})${exp?` — ${exp.text}`:""}`;
+                return `<button class="row-btn cc-row-close" data-ri="${ri}" title="${esc(tip)}">✓/✗${r.pending_coachings.length>1?" ("+r.pending_coachings.length+")":""}</button>`;
+              })()
             : ""}
         </div>
       </td>
@@ -7214,8 +7278,21 @@ function _caRender(){
   let gcaData = null;
   let gcaOwnerFilter = "";
   let gcaPresentOnly = true;   // Present-only filter ON by default (matches old checkbox)
+  let gcaSortExp = "";         // "", "asc" (soonest first), "desc" — expiration sort
 
   const $g = id => document.getElementById(id);
+
+  // Expiration header: click cycles off -> asc (expiring first) -> desc.
+  (function wireGcaExpSort(){
+    const th = document.getElementById("gcaThExpiration");
+    if(th && !th._wired){
+      th._wired = true;
+      th.addEventListener("click", ()=>{
+        gcaSortExp = gcaSortExp === "asc" ? "desc" : gcaSortExp === "desc" ? "" : "asc";
+        renderGca();
+      });
+    }
+  })();
 
   // ── Load cached data on tab switch ──
   async function loadGcaDashboard(){
@@ -7669,9 +7746,21 @@ function _caRender(){
       });
     }
 
+    // Sort by expiration when the header is toggled on (soonest-to-expire first
+    // when asc). Items with no expiration sink to the bottom.
+    if(gcaSortExp){
+      const ts = v => { const d = new Date(v); return isNaN(d) ? Infinity : d.getTime(); };
+      items = items.slice().sort((a,b)=>{
+        const cmp = ts(a.expiration) - ts(b.expiration);
+        return gcaSortExp === "asc" ? cmp : -cmp;
+      });
+    }
+    const _arrow = $g("gcaSortArrow");
+    if(_arrow) _arrow.textContent = gcaSortExp === "asc" ? "▲" : gcaSortExp === "desc" ? "▼" : "";
+
     const tbody = $g("gcaTbody");
     if(!items.length){
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);font-size:12px">${t("empty_no_pending_coachings")}${gcaOwnerFilter?" · "+gcaOwnerFilter:""}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);font-size:12px">${t("empty_no_pending_coachings")}${gcaOwnerFilter?" · "+gcaOwnerFilter:""}</td></tr>`;
     } else {
       tbody.innerHTML = items.slice(0, 100).map(it=>{
         const gcaUrl = `https://guided-coaching-dub.corp.amazon.com/#/view-coaching-instance/${it.id}`;
@@ -7679,9 +7768,17 @@ function _caRender(){
         const notes = it.comment ? `<span style="font-size:11px" title="${esc(it.comment)}">${esc(it.comment.length>40?it.comment.slice(0,40)+"…":it.comment)}</span>` : `<span style="color:var(--text-muted)">—</span>`;
         const isActive = it.presence === "ACTIVE";
         const stationInfo = it.station ? (it.process_path ? `${it.station} · ${it.process_path}` : it.station) : "";
+        // Last-seen line (ELS arrivalTimestamp) — only meaningful when NOT active:
+        // "last seen 5d ago" flags a stale pending the coach can likely cancel.
+        const _ls = !isActive ? lastSeen(it.last_seen_ms) : null;
+        const lsLine = _ls ? `<div style="font-size:9.5px;font-weight:700;color:${_ls.color};margin-top:1px" title="${esc(_ls.full)}">${esc(_ls.text)}</div>` : "";
         const presenceDot = isActive
           ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green)"></span> <span style="font-size:10px">Active</span>${stationInfo ? `<div style="font-size:9.5px;color:var(--text-muted);margin-top:1px">${esc(stationInfo)}</div>` : ""}`
-          : `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#cbd5e1"></span> <span style="font-size:10px;color:var(--text-muted)">${esc(it.presence||"Unknown")}</span>${stationInfo ? `<div style="font-size:9.5px;color:var(--text-muted);margin-top:1px">${esc(stationInfo)}</div>` : ""}`;
+          : `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#cbd5e1"></span> <span style="font-size:10px;color:var(--text-muted)">${esc(it.presence||"Unknown")}</span>${stationInfo ? `<div style="font-size:9.5px;color:var(--text-muted);margin-top:1px">${esc(stationInfo)}</div>` : ""}${lsLine}`;
+        const _exp = coachingExpiry(it.expiration);
+        const expCell = _exp
+          ? `<span style="font-size:11px;font-weight:700;color:${_exp.color}">${esc(_exp.text)}</span>`
+          : `<span style="color:var(--text-muted)">—</span>`;
         const photoHtml = it.photo_url
           ? `<img src="${esc(it.photo_url)}" loading="lazy" decoding="async" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-right:6px;vertical-align:middle" onerror="this.style.display='none'">`
           : "";
@@ -7693,6 +7790,7 @@ function _caRender(){
           <td><span style="font-size:11px">${esc(it.owner)}</span></td>
           <td>${notes}</td>
           <td><div style="display:flex;align-items:center;gap:4px">${presenceDot}</div></td>
+          <td>${expCell}</td>
           <td>
             <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
               <div style="display:flex;gap:4px">

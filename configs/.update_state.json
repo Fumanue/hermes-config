@@ -1,6 +1,6 @@
 {
-  "version": "9.9.9",
-  "updated_at": "2026-07-15T09:54:39",
+  "version": "2.0.46",
+  "updated_at": "2026-07-20T10:02:22",
   "changed_files": [
     "config\\argos\\area_roles.json",
     "config\\argos\\cleaning_rules.json",
@@ -15,13 +15,11 @@
     "config\\argos\\ppr_op2_map.json",
     "config\\argos\\process_mapping.json",
     "config\\argos\\quality_config.json",
-    "config\\argos\\quality_courses.json",
-    "config\\argos\\quality_mode.json",
     "config\\argos\\dpmo_targets.json",
     "config\\argos\\shift_config.json",
-    "config\\argos\\sigma_coaching.json",
     "tenure_curves.json",
-    "src\\project_argos\\ui\\static\\app.js",
-    "src\\project_argos\\ui\\static\\index.html"
+    "project_argos\\ui\\static\\app.js",
+    "project_argos\\ui\\static\\index.html",
+    "config\\argos\\quality_errors.json"
   ]
 }

@@ -248,21 +248,6 @@
       "insight": "Ship Failed move",
       "cat": "Shipping",
       "owner": "L&D"
-    },
-    "EUCF_QMCA_ALL_Pick_Not Using Amnesty": {
-      "insight": "AFM Coaching",
-      "cat": "Productivity",
-      "owner": "Team Lead IB"
-    },
-    "EUCF_QUALITY_GCAM_ARS/TS/TNS_PACK_Pack Damage": {
-      "insight": "Damage (Concessions)",
-      "cat": "Concessions",
-      "owner": "L&D"
-    },
-    "EUCF_CHK_ALL_Instructor/Peer_Audit": {
-      "insight": "INCA",
-      "cat": "Productivity",
-      "owner": "L&D"
     }
   },
   "derive_rules": {

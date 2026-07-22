@@ -95,6 +95,16 @@
         "key": "QUANTITY_STOW",
         "target_uph": 450,
         "applies_to_role": "QUANTITY_STOW"
+      },
+      {
+        "key": "INDUCT",
+        "target_uph": 1000,
+        "applies_to_role": "INDUCT"
+      },
+      {
+        "key": "AFE_REBIN",
+        "target_uph": 400,
+        "applies_to_role": "AFE_REBIN"
       }
     ],
     "pack_applies_learning_curve": true,
@@ -216,6 +226,16 @@
         "key": "QUANTITY_STOW",
         "target_uph": 450,
         "applies_to_role": "QUANTITY_STOW"
+      },
+      {
+        "key": "INDUCT",
+        "target_uph": 1000,
+        "applies_to_role": "INDUCT"
+      },
+      {
+        "key": "AFE_REBIN",
+        "target_uph": 400,
+        "applies_to_role": "AFE_REBIN"
       }
     ],
     "pack_applies_learning_curve": true,
@@ -347,6 +367,16 @@
         "key": "QUANTITY_STOW",
         "target_uph": 450,
         "applies_to_role": "QUANTITY_STOW"
+      },
+      {
+        "key": "INDUCT",
+        "target_uph": 1000,
+        "applies_to_role": "INDUCT"
+      },
+      {
+        "key": "AFE_REBIN",
+        "target_uph": 400,
+        "applies_to_role": "AFE_REBIN"
       }
     ],
     "pack_applies_learning_curve": true,
@@ -469,6 +499,16 @@
         "key": "QUANTITY_STOW",
         "target_uph": 450,
         "applies_to_role": "QUANTITY_STOW"
+      },
+      {
+        "key": "INDUCT",
+        "target_uph": 1000,
+        "applies_to_role": "INDUCT"
+      },
+      {
+        "key": "AFE_REBIN",
+        "target_uph": 400,
+        "applies_to_role": "AFE_REBIN"
       }
     ],
     "pack_applies_learning_curve": true,
@@ -553,28 +593,28 @@
     ],
     "pack_line_targets": [
       {
-        "key": "Bolsas BP",
-        "target_uph": 260,
-        "applies_to_role": "Bolsas BP"
-      },
-      {
         "key": "SM",
-        "target_uph": 180,
+        "target_uph": 110,
         "applies_to_role": "SM"
       },
       {
-        "key": "Sioc/Siob",
-        "target_uph": 300,
-        "applies_to_role": "Sioc/Siob"
+        "key": "SMMIX",
+        "target_uph": 200,
+        "applies_to_role": "SMMIX"
       },
       {
-        "key": "SNS",
-        "target_uph": 400,
-        "applies_to_role": "SNS"
+        "key": "SM2",
+        "target_uph": 210,
+        "applies_to_role": "SM2"
+      },
+      {
+        "key": "SNS1",
+        "target_uph": 410,
+        "applies_to_role": "SNS1"
       },
       {
         "key": "SNS2",
-        "target_uph": 300,
+        "target_uph": 280,
         "applies_to_role": "SNS2"
       },
       {
@@ -591,6 +631,16 @@
         "key": "QUANTITY_STOW",
         "target_uph": 450,
         "applies_to_role": "QUANTITY_STOW"
+      },
+      {
+        "key": "INDUCT",
+        "target_uph": 1000,
+        "applies_to_role": "INDUCT"
+      },
+      {
+        "key": "AFE_REBIN",
+        "target_uph": 400,
+        "applies_to_role": "AFE_REBIN"
       }
     ],
     "pack_applies_learning_curve": true,
@@ -713,6 +763,16 @@
         "key": "QUANTITY_STOW",
         "target_uph": 450,
         "applies_to_role": "QUANTITY_STOW"
+      },
+      {
+        "key": "INDUCT",
+        "target_uph": 1000,
+        "applies_to_role": "INDUCT"
+      },
+      {
+        "key": "AFE_REBIN",
+        "target_uph": 400,
+        "applies_to_role": "AFE_REBIN"
       }
     ],
     "pack_applies_learning_curve": true,

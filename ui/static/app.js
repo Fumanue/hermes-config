@@ -18,7 +18,7 @@ const I18N = {
     th_notes: "Notas", th_coached: "Coached", th_action: "Acción",
     // Quality
     q_title: "Quality Coaching",
-    q_subtitle: "Acumulado semanal Atlas · domingo a ahora · detección sigma por Error Type",
+    q_subtitle: "Acumulado Atlas · últimos 7 días · detección sigma por Error Type",
     q_opportunities: "Oportunidades", q_present: "Presentes", q_coached: "Coached", q_pending: "Pendientes",
     btn_present_only: "Solo presentes", btn_hide_coached: "Ocultar coached",
     btn_hide_on_target: "Ocultar on-target", btn_run_pipeline: "▶ Start Pipeline",
@@ -44,7 +44,7 @@ const I18N = {
     faq_feedback_title: "💬 Enviar Feedback", faq_feedback_sub: "Reporta problemas, sugiere mejoras o comparte ideas",
     faq_feedback_lbl: "Feedback", faq_feedback_send: "Enviar Feedback", faq_feedback_ok: "✓ Enviado correctamente", faq_feedback_err: "Error al enviar",
     loading: "Cargando…", close: "Cerrar", cancel: "Cancelar",
-    pipeline_done: "✓ Pipeline completado", lbl_threshold: "Umbral: asociados por encima del σ configurado aparecen aquí",
+    pipeline_done: "✓ Pipeline completado", lbl_threshold: "Todos los asociados con ≥1 defecto · usa el filtro σ para acotar",
     // Update banner / installer
     upd_available: "Hay una versión nueva disponible:",
     upd_yours: "tu versión:",
@@ -70,7 +70,7 @@ const I18N = {
     poll_gca: "GCA",
     poll_quality: "Q",
     poll_due: "ahora…",
-    poll_tip: "Próxima comprobación automática de alertas (GCA y Calidad). Se ejecutan cada 10 min.",
+    poll_tip: "Próxima comprobación automática de alertas (GCA y Calidad). Se ejecutan cada 15 min.",
     // Offline banner
     off_no_network: "Sin conexión a la red",
     off_midway_expired: "Midway expirada",
@@ -164,7 +164,7 @@ const I18N = {
     th_station: "Station", th_prio: "Prio", th_rate: "Rate", th_pct_target: "% Target",
     th_notes: "Notes", th_coached: "Coached", th_action: "Action",
     q_title: "Quality Coaching",
-    q_subtitle: "Weekly cumulative Atlas · Sunday to now · sigma detection by Error Type",
+    q_subtitle: "Cumulative Atlas · last 7 days · sigma detection by Error Type",
     q_opportunities: "Opportunities", q_present: "Present", q_coached: "Coached", q_pending: "Pending",
     btn_present_only: "Present only", btn_hide_coached: "Hide Coached",
     btn_hide_on_target: "Hide On-Target", btn_run_pipeline: "▶ Start Pipeline",
@@ -187,7 +187,7 @@ const I18N = {
     faq_feedback_title: "💬 Send Feedback", faq_feedback_sub: "Report issues, suggest features, or share ideas",
     faq_feedback_lbl: "Feedback", faq_feedback_send: "Send Feedback", faq_feedback_ok: "✓ Sent successfully", faq_feedback_err: "Error sending",
     loading: "Loading…", close: "Close", cancel: "Cancel",
-    pipeline_done: "✓ Pipeline completed", lbl_threshold: "Threshold: associates above configured σ appear here",
+    pipeline_done: "✓ Pipeline completed", lbl_threshold: "All associates with ≥1 defect · use the σ filter to narrow down",
     // Update banner / installer
     upd_available: "A new version is available:",
     upd_yours: "your version:",
@@ -206,7 +206,7 @@ const I18N = {
     poll_gca: "GCA",
     poll_quality: "Q",
     poll_due: "now…",
-    poll_tip: "Next automatic alert check (GCA and Quality). They run every 10 min.",
+    poll_tip: "Next automatic alert check (GCA and Quality). They run every 15 min.",
     mw_expiring_in: "Midway expiring soon (in {x})",
     mw_expired: "Midway expired",
     mw_expired_tip: "Your Midway session has expired. It will renew automatically when you click Run Pipeline.",
@@ -397,9 +397,6 @@ function guessCalmProcess(text){
 
 // ── Utils ──────────────────────────────────────────────────
 function esc(s){ return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
-function transcriptUrl(login){ return `https://guided-coaching-dub.corp.amazon.com/#/employee-transcript/${encodeURIComponent(String(login||"").trim())}`; }
-function badgePhotoUrl(login){ return `https://badgephotos.amazon.com/?Region=Master&FullsizeImage=Yes&uid=${encodeURIComponent(String(login||"").trim())}`; }
-function ts(){ return new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"}); }
 
 // Coaching expiration label: relative days + colour. Uses the expirationTime that
 // already comes in the payload (no extra call). Returns {text, color} or null.
@@ -436,6 +433,9 @@ function lastSeen(ms){
   }
   return {text:`Last seen ${rel}`, full:`Last seen ${date} (${rel})`, color};
 }
+function transcriptUrl(login){ return `https://guided-coaching-dub.corp.amazon.com/#/employee-transcript/${encodeURIComponent(String(login||"").trim())}`; }
+function badgePhotoUrl(login){ return `https://badgephotos.amazon.com/?Region=Master&FullsizeImage=Yes&uid=${encodeURIComponent(String(login||"").trim())}`; }
+function ts(){ return new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"}); }
 const $=id=>document.getElementById(id);
 
 // ── Toast (small, ephemeral notifications) ─────────────────
@@ -747,6 +747,11 @@ async function openCloseCoaching(opts){
       // e.g. "PPSingleMedium" -> STOW).
       const sel = $("cc-calm-process");
       if(sel) sel.value = guessCalmProcess(proc) || "STOW";
+      // Reset the "Other" free-text CALM code (hidden unless re-selected).
+      const codeWrap = $("cc-calm-code-wrap");
+      if(codeWrap) codeWrap.style.display = "none";
+      const codeInp = $("cc-calm-code");
+      if(codeInp) codeInp.value = "";
       const hint = $("cc-calm-hint");
       if(hint) hint.textContent = `Verifica el proceso y pulsa «Logar AA»; usa «Deslogar» al terminar.`;
     } else {
@@ -834,13 +839,25 @@ async function _ccCalm(kind){
   try{
     const url  = kind==="stop" ? `${API}/api/coaching/calm-stop` : `${API}/api/coaching/calm-log`;
     // Use the (possibly coach-corrected) process from the dropdown.
-    const proc = $("cc-calm-process")?.value || String(o.process||o.role||"");
+    let proc = $("cc-calm-process")?.value || String(o.process||o.role||"");
+    // "Other" → the coach types a raw CALM code (e.g. LNTRAIN) which the backend
+    // uses verbatim (req.calm_code takes priority over the process→code mapping).
+    let calmCode = "";
+    if(proc === "__OTHER__"){
+      calmCode = String($("cc-calm-code")?.value || "").trim().toUpperCase();
+      if(kind !== "stop" && !calmCode){
+        if(res) res.innerHTML = `<span style="color:var(--red,#dc2626)">Escribe el CALM code (ej. LNTRAIN).</span>`;
+        if(btn){ btn.disabled=false; btn.style.opacity="1"; btn.textContent=prevTxt; }
+        return;
+      }
+      proc = "";  // let calm_code drive it, not the process mapping
+    }
     // Send the AA login so the server resolves the real badge BARCODE id (the
     // kiosk needs that, not the 9-digit employeeId). badge is a fallback.
     const aaLogin = String(o.login||"");
     const body = kind==="stop"
       ? { fc:o.fc||currentFC, login:aaLogin, badge }
-      : { fc:o.fc||currentFC, login:aaLogin, badge, process:proc };
+      : { fc:o.fc||currentFC, login:aaLogin, badge, process:proc, calm_code:calmCode };
     const r = await fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
     const j = await r.json().catch(()=>({}));
     if(!r.ok || !j.ok) throw new Error((j&&j.detail)||`HTTP ${r.status}`);
@@ -855,6 +872,11 @@ async function _ccCalm(kind){
 }
 $("cc-calm-log")?.addEventListener("click", ()=>_ccCalm("log"));
 $("cc-calm-stop")?.addEventListener("click", ()=>_ccCalm("stop"));
+// "Other" in the CALM process dropdown reveals a free-text CALM-code input.
+$("cc-calm-process")?.addEventListener("change", (e)=>{
+  const wrap = $("cc-calm-code-wrap");
+  if(wrap) wrap.style.display = (e.target.value === "__OTHER__") ? "" : "none";
+});
 
 // Open the close flow from a Performance/Quality row that carries
 // pending_coachings (from the GCA cache). Shows ONE popup listing each pending
@@ -911,6 +933,54 @@ function openCloseFromRow(pending, meta){
   openModal("modalCcPick");
 }
 window.openCloseFromRow = openCloseFromRow;
+
+// ── Courses tab (read-only): which course is bound to each role / error ──────
+// Windows stack (restored 2026-07-22): endpoint returns assignments with
+// {kind,task,uuid,course_title,type,error_key?}; reuses _typeBadge/_uuidCell
+// defined in the Course Catalog block above.
+let _caData = null;   // [{kind,task,uuid,course_title,type,error_key?}]
+window._onCoursesTab = async function(){
+  const kEl = $("ca-kind"); if(kEl && !kEl._wired){ kEl._wired=true; kEl.addEventListener("change", _caRender); }
+  const sEl = $("ca-search"); if(sEl && !sEl._wired){ sEl._wired=true; sEl.addEventListener("input", _caRender); }
+  if(_caData === null){
+    try{
+      const d = await jget(`${API}/api/course-assignments`);
+      _caData = d.assignments || [];
+    }catch(e){
+      const area=$("ca-area"); if(area) area.innerHTML=`<div class="cfg-loading" style="color:#e53e3e">Error: ${esc(e.message)}</div>`;
+      _caData = []; return;
+    }
+  }
+  _caRender();
+};
+
+function _caRender(){
+  const area = $("ca-area"), status = $("ca-status");
+  if(!area) return;
+  const kind = ($("ca-kind") && $("ca-kind").value) || "all";
+  const q = (($("ca-search") && $("ca-search").value) || "").trim().toLowerCase();
+  let rows = (_caData||[]).slice();
+  if(kind !== "all") rows = rows.filter(r => r.kind === kind);
+  if(q) rows = rows.filter(r => String(r.task||"").toLowerCase().includes(q) || String(r.course_title||"").toLowerCase().includes(q));
+  if(status) status.innerHTML = `${rows.length} asignaciones${(_caData||[]).length!==rows.length?` (de ${(_caData||[]).length})`:""}`;
+
+  let html = `<table class="cfg-table"><thead><tr><th>Tarea</th><th>Curso asignado</th><th>Tipo</th><th>UUID</th></tr></thead><tbody>`;
+  for(const r of rows){
+    const icon = r.kind==="quality" ? "🎯" : "👤";
+    const kindLbl = r.kind==="quality" ? "Quality" : "Performance";
+    html += `<tr>
+      <td style="font-weight:700;font-size:11px">${icon} ${esc(r.task||"")} <span style="font-size:9px;color:#888">${kindLbl}</span></td>
+      <td style="font-size:11px">${esc(r.course_title||"—")}</td>
+      <td>${_typeBadge(r.type||"manual")}</td>
+      <td>${_uuidCell(r.uuid)}</td>
+    </tr>`;
+  }
+  html += `</tbody></table>`;
+  area.innerHTML = html;
+  area.querySelectorAll(".cc-copy").forEach(b=>{
+    b.addEventListener("click",()=>{ try{ navigator.clipboard.writeText(b.dataset.uuid); _cfgToast&&_cfgToast("UUID copiado"); }catch(_){}} );
+  });
+}
 
 // ── Upload New Coaching (GCA tab) ──────────────────────────
 // Pick a login, a coaching title/insight (course dropdown), and notes, then
@@ -1123,7 +1193,7 @@ async function checkForUpdate(){
 // and check the pending-reactivo count. When a NEW pending HIGH_DEFECTS
 // reactivo appears (count went up vs. last seen), alert the user: sound +
 // in-app toast + Windows system notification, and jump to the GCA tab.
-const GCA_POLL_MS = 10 * 60 * 1000;  // 10 min (aligned with Quality poll = same trigger cadence)
+const GCA_POLL_MS = 15 * 60 * 1000;  // 15 min (aligned with Quality poll + map refresh)
 let _gcaPollTimer = null;
 let _gcaSeenHdIds = null;   // null = first run (baseline set, no alert)
 // Timestamp (ms epoch) of the NEXT scheduled GCA/Quality poll, so the topbar
@@ -1267,7 +1337,7 @@ function _startGcaBackgroundPoll(){
 // FC and alert when an associate is >=2 Sigma AND present on site. Diffs by
 // login so it only alerts on associates newly crossing the bar (not the same
 // ones every tick). Fires from any tab (sound + toast + Windows notification).
-const QUALITY_POLL_MS = 10 * 60 * 1000;  // 10 min
+const QUALITY_POLL_MS = 15 * 60 * 1000;  // 15 min
 let _qualityPollTimer = null;
 let _qualitySeenLogins = null;   // null = first run (baseline, no alert)
 
@@ -1399,6 +1469,23 @@ function _applyAlertsAccess(canAlerts){
   }
 }
 
+// ── Map auto-refresh (15 min, background) ──────────────────────────────
+// Keeps the floor map fresh without a manual reload: every 15 min it re-pulls
+// the GCA pending badges and, if the map tab is open, re-renders it so the
+// image reflects the latest data. Runs in the background (armed at boot) so the
+// map is already current when the user opens it. Never triggers a pipeline.
+const MAP_REFRESH_MS = 15 * 60 * 1000;  // 15 min
+let _mapRefreshTimer = null;
+function _startMapAutoRefresh(){
+  if(_mapRefreshTimer) return;
+  _mapRefreshTimer = setInterval(()=>{
+    try{ if(window._refreshMapGcaPending) window._refreshMapGcaPending(); }catch(_){}
+    // If the map is on screen, re-render so the fresh badges/states show.
+    try{ if(window._renderPerfMap && document.getElementById("panel-map")?.classList.contains("active")) window._renderPerfMap(); }catch(_){}
+  }, MAP_REFRESH_MS);
+}
+_startMapAutoRefresh();
+
 // (Removed the auto-run-on-startup: it could stall the boot. Instead the
 // "Start Pipeline" button runs Performance and, on finish, kicks off GCA +
 // Quality in the background — see the btnPipeline handler.)
@@ -1434,7 +1521,7 @@ window.testAlertsNow = testAlertsNow;
 // The pill polls /api/auth/midway-status every 10 minutes (read-only, never
 // triggers mwinit). When the user clicks Run Pipeline we switch the poll to
 // 1s so we can detect mwinit_active and show the YubiKey toast quickly.
-const MIDWAY_POLL_SLOW_MS = 10 * 60 * 1000;  // 10 min
+const MIDWAY_POLL_SLOW_MS = 15 * 60 * 1000;  // 15 min
 const MIDWAY_POLL_FAST_MS = 1000;
 let _midwayPollTimer = null;
 let _midwayPollMode  = "slow";
@@ -1586,22 +1673,21 @@ function _applySiteBL(){
   document.body.setAttribute("data-bl", bl.toLowerCase());
   if(bl === "AMZL"){
     if(window._hidePerfMap) window._hidePerfMap();
-    const mapBtn = $("btnPerfMap"); if(mapBtn) mapBtn.style.display = "none";
+    if($("tabMap")) $("tabMap").style.display = "none";   // no station map for DS
     // Delivery (AMZL) doesn't use Exempt or Shift Tracker — hide both the
     // toolbar buttons and the Shift Tracker tab.
     if($("btnExempt")) $("btnExempt").style.display = "none";
     if($("btnShiftTracker")) $("btnShiftTracker").style.display = "none";
     if($("tabShiftTracker")) $("tabShiftTracker").style.display = "none";
-    // Delivery has no Quality: if the user is sitting on the (now-hidden)
-    // Quality or Shift Tracker tab, bounce them back to Performance so they
-    // don't stare at a blank panel.
+    // Delivery has no Quality/Map: if the user is sitting on a now-hidden tab,
+    // bounce them back to Performance so they don't stare at a blank panel.
     const activeTab = document.querySelector('.t-tab.on');
     const at = activeTab ? activeTab.getAttribute("data-tab") : "";
-    if((at === "quality" || at === "shifttracker") && typeof switchTab === "function"){
+    if((at === "quality" || at === "shifttracker" || at === "map") && typeof switchTab === "function"){
       switchTab("dashboard");
     }
   } else if(window._isAdmin){
-    const mapBtn = $("btnPerfMap"); if(mapBtn) mapBtn.style.display = "";
+    if($("tabMap")) $("tabMap").style.display = "";       // FC site: map tab back
     // Restore the AMZL-hidden admin controls when switching back to an FC site.
     if($("btnExempt")) $("btnExempt").style.display = "inline-flex";
     // Shift Tracker retired — intentionally NOT restored (btn/tab stay hidden).
@@ -1644,13 +1730,12 @@ async function loadUserInfo(){
     // multi-site and Adoption stay admin-only.
     if($("tabQuality")) $("tabQuality").style.display = "";
     if($("tabGca")) $("tabGca").style.display = "";
-    if($("tabCourses")) $("tabCourses").style.display = "";
     // Restore admin state from cache
     if(d.admin && d.admin.is_admin){
       window._isAdmin = true;
       window._isSuperAdmin = d.admin.is_super_admin || false;
       document.body.classList.add("is-admin");
-      if($("btnPerfMap")) $("btnPerfMap").style.display = "";
+      if($("tabMap")) $("tabMap").style.display = "";   // map tab (admin); _applySiteBL hides it for DS
       if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
       if($("btnExempt")) $("btnExempt").style.display = "inline-flex";
       // Shift Tracker retired — button + tab stay hidden (code left inert).
@@ -1658,7 +1743,7 @@ async function loadUserInfo(){
       if($("tabConfig")) $("tabConfig").style.display = "";
     } else {
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "none";
-      if($("btnPerfMap")) $("btnPerfMap").style.display = "none";
+      if($("tabMap")) $("tabMap").style.display = "none";
     }
     _unblockUI();
     _applyAlertsAccess(d.can_alerts);
@@ -1717,8 +1802,7 @@ async function loadUserInfo(){
       // Show beta tabs (Quality, GCA, Map) — admin only
       if($("tabQuality")) $("tabQuality").style.display = "";
       if($("tabGca")) $("tabGca").style.display = "";
-      if($("tabCourses")) $("tabCourses").style.display = "";
-      if($("btnPerfMap")) $("btnPerfMap").style.display = "";
+      if($("tabMap")) $("tabMap").style.display = "";   // _applySiteBL hides it for DS
       if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
     } else {
       // Non-admin: Quality + GCA are now open to any Coaching team member
@@ -1726,9 +1810,8 @@ async function loadUserInfo(){
       // admin-only.
       if($("tabQuality")) $("tabQuality").style.display = "";
       if($("tabGca")) $("tabGca").style.display = "";
-      if($("tabCourses")) $("tabCourses").style.display = "";
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "none";
-      if($("btnPerfMap")) $("btnPerfMap").style.display = "none";
+      if($("tabMap")) $("tabMap").style.display = "none";
     }
     // Alerts (GCA reactivo + Quality) run only for the curated alerts group.
     _applyAlertsAccess(d.can_alerts);
@@ -1781,8 +1864,9 @@ function switchTab(name){
   if(name==="quality") loadQuality();
   if(name==="faq") _initFaq();
   if(name==="gca" && window._loadGcaDashboard) window._loadGcaDashboard();
-  if(name==="shifttracker" && window._onShiftTrackerTab) window._onShiftTrackerTab();
   if(name==="courses" && window._onCoursesTab) window._onCoursesTab();
+  if(name==="shifttracker" && window._onShiftTrackerTab) window._onShiftTrackerTab();
+  if(name==="map" && window._onMapTab) window._onMapTab();
 }
 document.querySelectorAll(".t-tab[data-tab]").forEach(tab=>
   tab.addEventListener("click",()=>switchTab(tab.dataset.tab))
@@ -2383,8 +2467,6 @@ function renderTable(){
         text = raw.replace(/^.*?IDLE\s*:?\s*/i, "").trim();
       } else if (/Bin\s*Filter|Multiple\s*Event|Pick.*Short|Error\s*Indicator|Scan.*Sequence/i.test(raw)) {
         return ""; // Skip quality notes in Performance view
-        const m = raw.match(/^(.+?)\s*:\s*(\d+)/);
-        text = m ? `${m[1].trim()} (${m[2]})` : raw;
       }
 
       // Safety cleanup if an old renderer concatenated label+text.
@@ -3083,6 +3165,16 @@ function qualitySigmaClass(v){
   return "ok";
 }
 
+// Display-only overrides for error names shown in the dashboard. Keeps the raw
+// Atlas defectType / ErrorKey intact for matching; only the visible label changes.
+// Atlas split "Nike Multiple Events" into Each/Quantity (2026-07); coaches asked
+// to show them as "Each Multiple Event" / "Quantity Multiple Event".
+const QUALITY_LABEL_OVERRIDES = {
+  "nike each multiple events": "Each Multiple Event",
+  "nike quantity multiple events": "Quantity Multiple Event",
+  "nike each": "Each Multiple Event",
+  "nike quantity": "Quantity Multiple Event",
+};
 function qualityErrorLabel(row){
   // Prefer text error fields. If the pipeline/CSV sends a numeric support column,
   // fallback to ErrorKey so the UI never shows Error Type = "3".
@@ -3094,6 +3186,8 @@ function qualityErrorLabel(row){
     const val = String(raw || "").trim();
     if(!val) continue;
     if(!/^\d+(\.\d+)?$/.test(val)){
+      const override = QUALITY_LABEL_OVERRIDES[val.toLowerCase().replace(/_/g," ")];
+      if(override) return override;
       return val.replace(/_/g," ").replace(/\b\w/g, c=>c.toUpperCase());
     }
   }
@@ -3114,21 +3208,13 @@ function renderQuality(){
   const errorList = $("qFilterErrorList");
   if(errorList && qualityRows.length){
     const errors = [...new Set(qualityRows.map(r => qualityValue(r,["ErrorKey","error_key","errorKey"],"")).filter(Boolean))].sort();
-    // Map each ErrorKey -> its display label (Error Type from the pipeline, e.g.
-    // NIKE_EACH -> "Each Multiple Event") so the filter matches the table column
-    // instead of showing the raw key. The checkbox value stays the ErrorKey.
-    const labelByKey = {};
-    for(const r of qualityRows){
-      const k = qualityValue(r,["ErrorKey","error_key","errorKey"],"");
-      if(k && !labelByKey[k]) labelByKey[k] = qualityErrorLabel(r);
-    }
     // Only rebuild if the error set actually changed (compare keys)
     const existingKeys = [...errorList.querySelectorAll('input[type="checkbox"]:not([value="__ALL__"])')].map(c=>c.value).sort().join(",");
     const newKeys = errors.join(",");
     if(existingKeys !== newKeys){
       errorList.innerHTML = `<label class="q-dd-all"><input type="checkbox" value="__ALL__"> <b>All</b></label>` +
       errors.map(e => {
-        const label = labelByKey[e] || e.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase());
+        const label = e.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase());
         return `<label><input type="checkbox" value="${esc(e)}" ${qFilterError.has(e)?'checked':''}> ${esc(label)}</label>`;
       }).join("");
     }
@@ -3408,7 +3494,7 @@ function _renderQualitySummary(filteredRows){
 
   // Color map for error types
   const errorColors = {
-    "FALSE_PICK_SHORT":"#8b5cf6","MULTIPLE_EVENT":"#2563eb","PICK_ERROR_INDICATOR":"#dc2626",
+    "FALSE_PICK_SHORT":"#8b5cf6","NIKE_EACH":"#2563eb","NIKE_QUANTITY":"#0ea5e9","PICK_ERROR_INDICATOR":"#dc2626",
     "BIN_FILTER_VIOLATIONS":"#ea580c","SHORT":"#d97706","SINGLE_ITEM_MISSING":"#0891b2",
     "AFE1_ITEM_MISSING":"#4f46e5","SCAN_OUT_OF_SEQUENCE":"#059669","OTHER_ITEM_MISSING":"#6b7280"
   };
@@ -4132,16 +4218,27 @@ $("bulk-submit").addEventListener("click",async()=>{
 // can take 4+ minutes. Returns a reason string if blocked, "" if all green.
 async function pipelinePreflight(){
   if(!navigator.onLine) return t("mw_no_internet");
+  let d;
   try{
-    const d = await jget(`${API}/api/auth/midway-status`);
-    if(!d) return t("mw_no_status");
-    if(d.state === "missing")  return t("mw_state_missing");
-    if(d.state === "expired")  return t("mw_state_expired");
-    // "expiring" (< 5 min left) is allowed — the lock-protected mwinit will refresh inline.
-    return "";
+    d = await jget(`${API}/api/auth/midway-status`);
   }catch(_){
     return "";  // server check failed, but don't block — rare race during boot
   }
+  if(!d) return t("mw_no_status");
+  // "ok" and "expiring" (<5 min) are allowed — the lock-protected mwinit
+  // refreshes inline if needed during the run.
+  if(d.state === "ok" || d.state === "expiring") return "";
+
+  // state is "missing" or "expired". The common case is that the ~20h session
+  // is still alive and only the ~2h AEA posture cookie lapsed — that renews
+  // SILENTLY via `mwinit --refresh-aea` (no YubiKey). Try that FIRST; only
+  // surface the manual FIDO2 "Renovar Midway" button if the silent refresh
+  // can't fix it (session genuinely dead, or old binary without the endpoint).
+  try{
+    const r = await jpost(`${API}/api/auth/midway-refresh-aea`, {});
+    if(r && r.ok && (r.state === "ok" || r.state === "expiring")) return "";
+  }catch(_){ /* endpoint missing or refresh errored → fall through to manual button */ }
+  return d.state === "missing" ? t("mw_state_missing") : t("mw_state_expired");
 }
 
 // Custom toast with an inline "Renovar Midway" button. Different from the
@@ -4921,7 +5018,7 @@ function _faqHtml(key){
       <p style="margin-top:8px"><b>Quality:</b></p>
       <table>
         <tr><th>Columna</th><th>Descripción</th></tr>
-        <tr><td>Errors WK</td><td>Total errores esta semana (domingo→ahora)</td></tr>
+        <tr><td>Errors WK</td><td>Total errores en los últimos 7 días</td></tr>
         <tr><td>Target</td><td>Target Errors calculado por DPMO</td></tr>
         <tr><td>% Target</td><td>(Target / Errors) × 100</td></tr>
         <tr><td>σ Score</td><td>Desviación sigma vs media del site</td></tr>
@@ -4980,7 +5077,7 @@ function _faqHtml(key){
       <p style="margin-top:8px"><b>Quality:</b></p>
       <table>
         <tr><th>Column</th><th>Description</th></tr>
-        <tr><td>Errors WK</td><td>Total errors this week (Sunday→now)</td></tr>
+        <tr><td>Errors WK</td><td>Total errors in the last 7 days</td></tr>
         <tr><td>Target</td><td>Target Errors calculated by DPMO</td></tr>
         <tr><td>% Target</td><td>(Target / Errors) × 100</td></tr>
         <tr><td>σ Score</td><td>Sigma deviation vs site average</td></tr>
@@ -5082,88 +5179,96 @@ async function _cfgSaveTargets(){
   }catch(e){ _cfgToast("✗ " + e.message, true); }
 }
 
-// ── Load & Render: Quality Mode (unified quality_errors.json) ──
-// Structure: {defaults:{mode,sigma_threshold,min_errors,enabled},
-//             errors:{KEY:{enabled,mode,sigma_threshold,min_errors,course_uuid,label?}},
-//             fc_overrides:{FC:{...}}}. This editor manages the GLOBAL defaults +
-// per-error rows (course_uuid/label are preserved untouched). fc_overrides are
-// left as-is (rarely used; today empty since all FCs are identical).
+// ── Load & Render: Quality Mode ──
 async function _cfgLoadQuality(){
   try{
-    const res = await jget(`${API}/api/admin/config/quality_errors.json`);
+    const res = await jget(`${API}/api/admin/config/quality_mode.json`);
     _cfgQualityData = res.data || {};
     _cfgRenderQuality();
   }catch(e){ $("cfgQualityBody").innerHTML = `<div class="cfg-loading" style="color:#e53e3e">Error: ${esc(e.message)}</div>`; }
 }
 function _cfgRenderQuality(){
+  const filter = _cfgFcFilter();
+  const fcs = Object.keys(_cfgQualityData).filter(fc => !filter || fc === filter).sort();
   const modeOpts = ["urgent","improvement","maintenance"].map(m => `<option value="${m}">${m}</option>`).join("");
-  const def = _cfgQualityData.defaults || {};
-  const errors = _cfgQualityData.errors || {};
-  let html = `<div style="font-size:11px;color:#888;margin-bottom:8px">Config global (aplica a todos los FC). Los cursos y labels no se tocan aquí (usa Courses).</div>`;
-  html += `<table class="cfg-table"><thead><tr><th>Type</th><th class="cfg-enabled-col">Enabled</th><th>Mode</th><th style="width:90px">σ Threshold</th><th style="width:90px">Min Errors</th><th style="width:40px"></th></tr></thead><tbody>`;
-  // DEFAULT row
-  html += `<tr>
-    <td><b>DEFAULT</b></td>
-    <td></td>
-    <td><select data-key="__default__" data-field="mode" class="cfg-qm-sel">${modeOpts.replace(`value="${def.mode||'urgent'}"`, `value="${def.mode||'urgent'}" selected`)}</select></td>
-    <td><input type="number" step="0.5" data-key="__default__" data-field="sigma" class="cfg-qm-num" value="${def.sigma_threshold||1}"></td>
-    <td><input type="number" data-key="__default__" data-field="min_errors" class="cfg-qm-num" value="${def.min_errors||3}"></td>
-    <td></td>
-  </tr>`;
-  for(const ek of Object.keys(errors).sort()){
-    const e = errors[ek] || {};
-    const isEnabled = e.enabled !== false;
-    const label = e.label ? ` <span style="font-size:9px;color:#22c55e" title="Label mostrado">(${esc(e.label)})</span>` : "";
+  const showFcCol = !filter;
+  let html = `<table class="cfg-table"><thead><tr>${showFcCol?'<th>FC</th>':''}<th>Type</th><th class="cfg-enabled-col">Enabled</th><th>Mode</th><th style="width:90px">σ Threshold</th><th style="width:90px">Min Errors</th><th style="width:40px"></th></tr></thead><tbody>`;
+  for(const fc of fcs){
+    if(showFcCol) html += `<tr class="cfg-group-row"><td colspan="7"><span class="cfg-fc-pill">${esc(fc)}</span></td></tr>`;
+    const cfg = _cfgQualityData[fc] || {};
+    const def = cfg.default || {};
     html += `<tr>
-      <td>${esc(ek.replace(/_/g," "))}${label}</td>
-      <td><input type="checkbox" data-key="${esc(ek)}" class="cfg-qm-enabled" ${isEnabled?'checked':''}></td>
-      <td><select data-key="${esc(ek)}" data-field="mode" class="cfg-qm-sel">${modeOpts.replace(`value="${e.mode||'urgent'}"`, `value="${e.mode||'urgent'}" selected`)}</select></td>
-      <td><input type="number" step="0.5" data-key="${esc(ek)}" data-field="sigma" class="cfg-qm-num" value="${e.sigma_threshold||1}"></td>
-      <td><input type="number" data-key="${esc(ek)}" data-field="min_errors" class="cfg-qm-num" value="${e.min_errors||3}"></td>
-      <td><button class="cfg-del-btn" data-key="${esc(ek)}" data-section="quality" title="Delete">×</button></td>
+      <td><b>DEFAULT</b></td>
+      <td></td>
+      <td><select data-fc="${esc(fc)}" data-key="__default__" data-field="mode" class="cfg-qm-sel">${modeOpts.replace(`value="${def.mode||'improvement'}"`, `value="${def.mode||'improvement'}" selected`)}</select></td>
+      <td><input type="number" step="0.5" data-fc="${esc(fc)}" data-key="__default__" data-field="sigma" class="cfg-qm-num" value="${def.sigma_threshold||2}"></td>
+      <td><input type="number" data-fc="${esc(fc)}" data-key="__default__" data-field="min_errors" class="cfg-qm-num" value="${def.min_errors||3}"></td>
+      <td></td>
     </tr>`;
+    const errors = cfg.errors || {};
+    for(const ek of Object.keys(errors)){
+      const e = errors[ek];
+      const isEnabled = e.enabled !== false;
+      html += `<tr>
+        <td>${esc(ek.replace(/_/g," "))}</td>
+        <td><input type="checkbox" data-fc="${esc(fc)}" data-key="${esc(ek)}" class="cfg-qm-enabled" ${isEnabled?'checked':''}></td>
+        <td><select data-fc="${esc(fc)}" data-key="${esc(ek)}" data-field="mode" class="cfg-qm-sel">${modeOpts.replace(`value="${e.mode||'improvement'}"`, `value="${e.mode||'improvement'}" selected`)}</select></td>
+        <td><input type="number" step="0.5" data-fc="${esc(fc)}" data-key="${esc(ek)}" data-field="sigma" class="cfg-qm-num" value="${e.sigma_threshold||2}"></td>
+        <td><input type="number" data-fc="${esc(fc)}" data-key="${esc(ek)}" data-field="min_errors" class="cfg-qm-num" value="${e.min_errors||3}"></td>
+        <td><button class="cfg-del-btn" data-fc="${esc(fc)}" data-key="${esc(ek)}" data-section="quality" title="Delete">×</button></td>
+      </tr>`;
+    }
   }
   html += `</tbody></table>
   <div class="cfg-add-row">
+    <select id="cfgAddQualityFc" class="cfg-add-input" style="width:70px">
+      ${["BCN1","BCN4","MAD7","OVD1","RMU1","SVQ1"].map(f=>`<option value="${f}" ${f===(filter||"BCN4")?'selected':''}>${f}</option>`).join("")}
+    </select>
     <input id="cfgAddQualityKey" class="cfg-add-input" placeholder="ERROR_KEY" style="width:160px;text-transform:uppercase">
     <select id="cfgAddQualityMode" class="cfg-add-input" style="width:100px">${modeOpts}</select>
-    <input id="cfgAddQualitySigma" type="number" step="0.5" class="cfg-add-input" placeholder="σ" value="1" style="width:50px">
+    <input id="cfgAddQualitySigma" type="number" step="0.5" class="cfg-add-input" placeholder="σ" value="2" style="width:50px">
     <input id="cfgAddQualityMin" type="number" class="cfg-add-input" placeholder="Min" value="3" style="width:50px">
     <button class="cfg-add-btn" id="cfgAddQualityBtn">+ Add</button>
   </div>`;
   $("cfgQualityBody").innerHTML = html;
   $("cfgAddQualityBtn") && $("cfgAddQualityBtn").addEventListener("click",()=>{
-    const key = $("cfgAddQualityKey").value.trim().toUpperCase().replace(/\s+/g,"_");
-    const mode = $("cfgAddQualityMode").value, sigma = parseFloat($("cfgAddQualitySigma").value)||1, minE = parseInt($("cfgAddQualityMin").value)||3;
-    if(!key){ _cfgToast("Fill Error Key",true); return; }
-    if(!_cfgQualityData.errors) _cfgQualityData.errors = {};
-    _cfgQualityData.errors[key] = {enabled:true, mode, sigma_threshold:sigma, min_errors:minE, course_uuid:""};
+    const fc = $("cfgAddQualityFc").value, key = $("cfgAddQualityKey").value.trim().toUpperCase().replace(/\s+/g,"_");
+    const mode = $("cfgAddQualityMode").value, sigma = parseFloat($("cfgAddQualitySigma").value)||2, minE = parseInt($("cfgAddQualityMin").value)||3;
+    if(!fc||!key){ _cfgToast("Fill FC and Error Key",true); return; }
+    if(!_cfgQualityData[fc]) _cfgQualityData[fc] = {default:{mode:"improvement",sigma_threshold:2,min_errors:3},errors:{}};
+    if(!_cfgQualityData[fc].errors) _cfgQualityData[fc].errors = {};
+    _cfgQualityData[fc].errors[key] = {enabled:true, mode, sigma_threshold:sigma, min_errors:minE};
     _cfgRenderQuality();
   });
 }
 
 async function _cfgSaveQuality(){
-  if(!_cfgQualityData.defaults) _cfgQualityData.defaults = {};
-  if(!_cfgQualityData.errors) _cfgQualityData.errors = {};
-  // enabled checkboxes
+  // Read selects and inputs
+  // Read enabled checkboxes first
   $("cfgQualityBody").querySelectorAll(".cfg-qm-enabled").forEach(el => {
-    const key = el.dataset.key;
-    if(key && key !== "__default__" && _cfgQualityData.errors[key]){
-      _cfgQualityData.errors[key].enabled = el.checked;
+    const fc = el.dataset.fc, key = el.dataset.key;
+    if(key && key !== "__default__" && _cfgQualityData[fc]?.errors?.[key]){
+      _cfgQualityData[fc].errors[key].enabled = el.checked;
     }
   });
-  // selects + numbers
   $("cfgQualityBody").querySelectorAll(".cfg-qm-sel, .cfg-qm-num").forEach(el => {
-    const key = el.dataset.key, field = el.dataset.field;
-    const val = field==="sigma" ? parseFloat(el.value)||1 : field==="min_errors" ? parseInt(el.value)||3 : el.value;
-    const tgt = (key === "__default__") ? _cfgQualityData.defaults : _cfgQualityData.errors[key];
-    if(!tgt) return;
-    if(field==="mode") tgt.mode = val;
-    else if(field==="sigma") tgt.sigma_threshold = val;
-    else if(field==="min_errors") tgt.min_errors = val;
+    const fc = el.dataset.fc, key = el.dataset.key, field = el.dataset.field;
+    const val = field==="sigma" ? parseFloat(el.value)||2 : field==="min_errors" ? parseInt(el.value)||3 : el.value;
+    if(key === "__default__"){
+      if(!_cfgQualityData[fc]) _cfgQualityData[fc] = {default:{},errors:{}};
+      if(!_cfgQualityData[fc].default) _cfgQualityData[fc].default = {};
+      if(field==="mode") _cfgQualityData[fc].default.mode = val;
+      else if(field==="sigma") _cfgQualityData[fc].default.sigma_threshold = val;
+      else if(field==="min_errors") _cfgQualityData[fc].default.min_errors = val;
+    } else {
+      if(!_cfgQualityData[fc]?.errors?.[key]) return;
+      if(field==="mode") _cfgQualityData[fc].errors[key].mode = val;
+      else if(field==="sigma") _cfgQualityData[fc].errors[key].sigma_threshold = val;
+      else if(field==="min_errors") _cfgQualityData[fc].errors[key].min_errors = val;
+    }
   });
   try{
-    await jpost(`${API}/api/admin/config/quality_errors.json`, {data: _cfgQualityData});
+    await jpost(`${API}/api/admin/config/quality_mode.json`, {data: _cfgQualityData});
     _cfgToast("✓ Quality mode saved");
   }catch(e){ _cfgToast("✗ " + e.message, true); }
 }
@@ -5226,6 +5331,48 @@ async function _cfgSaveShifts(){
 
 // ── Config panel init ──
 // ── Load & Render: Station Map ──
+// ── Min Hours in Role (per-site active filter threshold) ──
+// Reads/writes downloader_sources.json: default `min_hours_threshold` (1.0) +
+// per-site overrides `min_hours_threshold_by_site` (e.g. {MAD7: 0.5}).
+let _cfgMinHoursData = null;
+// Sites offered as rows (default + known robotic FCs). Admin can also add ad-hoc.
+const _CFG_MIN_HOURS_SITES = ["BCN4","BCN1","MAD7","RMU1","OVD1","SVQ1"];
+async function _cfgLoadMinHours(){
+  try{
+    const res = await jget(`${API}/api/admin/config/downloader_sources.json`);
+    _cfgMinHoursData = res.data || {};
+    _cfgRenderMinHours();
+  }catch(e){ const b=$("cfgMinHoursBody"); if(b) b.innerHTML = `<div class="cfg-loading" style="color:#e53e3e">Error: ${esc(e.message)}</div>`; }
+}
+function _cfgRenderMinHours(){
+  const def = _cfgMinHoursData.min_hours_threshold != null ? _cfgMinHoursData.min_hours_threshold : 1.0;
+  const bySite = _cfgMinHoursData.min_hours_threshold_by_site || {};
+  let html = `<table class="cfg-table"><thead><tr><th>Site</th><th>Min hours</th><th></th></tr></thead><tbody>`;
+  html += `<tr><td><b>Default (todos)</b></td><td><input type="number" step="0.5" min="0" class="cfg-minh-default" value="${esc(String(def))}" style="width:70px;font-size:11px"></td><td><span style="font-size:10px;color:var(--text-muted)">aplica a sites sin override</span></td></tr>`;
+  const sites = Array.from(new Set([..._CFG_MIN_HOURS_SITES, ...Object.keys(bySite)]));
+  for(const s of sites){
+    const v = bySite[s] != null ? bySite[s] : "";
+    html += `<tr><td>${esc(s)}</td><td><input type="number" step="0.5" min="0" class="cfg-minh-site" data-site="${esc(s)}" value="${esc(String(v))}" placeholder="(default)" style="width:70px;font-size:11px"></td><td><span style="font-size:10px;color:var(--text-muted)">vacío = usa default</span></td></tr>`;
+  }
+  html += `</tbody></table>`;
+  const b=$("cfgMinHoursBody"); if(b) b.innerHTML = html;
+}
+async function _cfgSaveMinHours(){
+  if(!_cfgMinHoursData) return;
+  const defInp = document.querySelector(".cfg-minh-default");
+  if(defInp){ const d=parseFloat(defInp.value); if(!isNaN(d)) _cfgMinHoursData.min_hours_threshold = d; }
+  const bySite = {};
+  document.querySelectorAll(".cfg-minh-site").forEach(inp=>{
+    const v = inp.value.trim();
+    if(v !== ""){ const n=parseFloat(v); if(!isNaN(n)) bySite[inp.dataset.site] = n; }
+  });
+  _cfgMinHoursData.min_hours_threshold_by_site = bySite;
+  try{
+    await jpost(`${API}/api/admin/config/downloader_sources.json`, {data: _cfgMinHoursData});
+    _cfgToast("✓ Min-hours guardado (aplica en el próximo pipeline)");
+  }catch(e){ _cfgToast("✗ " + e.message, true); }
+}
+
 let _cfgStationsData = null;
 async function _cfgLoadStations(){
   try{
@@ -5237,17 +5384,22 @@ async function _cfgLoadStations(){
 function _cfgRenderStations(){
   const filter = _cfgFcFilter();
   const fcs = Object.keys(_cfgStationsData).filter(fc => !filter || fc === filter).sort();
-  let html = `<table class="cfg-table"><thead><tr><th>Station</th><th>Role Override</th><th>Function</th></tr></thead><tbody>`;
+  // Parity column exposes station_parity (odd/even) — used by sites like MAD7
+  // where SINGLES_01/02 split into odd/even sub-lines with different roles.
+  let html = `<table class="cfg-table"><thead><tr><th>Station</th><th>Parity</th><th>Role Override</th><th>Function</th></tr></thead><tbody>`;
   for(const fc of fcs){
     const overrides = (_cfgStationsData[fc]||{}).station_overrides || [];
     if(!overrides.length) continue;
     if(!filter){
-      html += `<tr class="cfg-group-row"><td colspan="3"><span class="cfg-fc-pill">${esc(fc)}</span></td></tr>`;
+      html += `<tr class="cfg-group-row"><td colspan="4"><span class="cfg-fc-pill">${esc(fc)}</span></td></tr>`;
     }
     for(let i=0; i<overrides.length; i++){
       const o = overrides[i];
+      const par = String(o.station_parity||"");
+      const opt = (v,lbl)=>`<option value="${v}" ${par===v?"selected":""}>${lbl}</option>`;
       html += `<tr>
         <td><input type="text" class="cfg-station-input" data-fc="${esc(fc)}" data-idx="${i}" data-field="station_contains" value="${esc(o.station_contains||"")}" style="width:100px;font-size:11px"></td>
+        <td><select class="cfg-station-parity" data-fc="${esc(fc)}" data-idx="${i}" style="width:70px;font-size:11px">${opt("","—")}${opt("odd","odd")}${opt("even","even")}</select></td>
         <td><input type="text" class="cfg-station-input" data-fc="${esc(fc)}" data-idx="${i}" data-field="role_override" value="${esc(o.role_override||"")}" style="width:90px;font-size:11px"></td>
         <td><input type="text" class="cfg-station-input" data-fc="${esc(fc)}" data-idx="${i}" data-field="function_contains" value="${esc(o.function_contains||"")}" style="width:140px;font-size:11px"></td>
       </tr>`;
@@ -5265,6 +5417,18 @@ async function _cfgSaveStations(){
       _cfgStationsData[fc].station_overrides[i][field] = inp.value.trim();
     }
   }
+  // Persist the parity dropdowns. Empty → drop the two parity fields so the
+  // override goes back to matching the whole station (no odd/even split).
+  const parities = $("cfgStationsBody").querySelectorAll(".cfg-station-parity");
+  for(const sel of parities){
+    const {fc, idx} = sel.dataset;
+    const i = parseInt(idx);
+    const ov = _cfgStationsData[fc]?.station_overrides?.[i];
+    if(!ov) continue;
+    const v = sel.value.trim();
+    if(v){ ov.station_parity = v; ov.station_parity_mode = true; }
+    else { delete ov.station_parity; delete ov.station_parity_mode; }
+  }
   try{
     await jpost(`${API}/api/admin/config/fclm_mapping.json`, {data: _cfgStationsData});
     _cfgToast("✓ Station map saved");
@@ -5276,7 +5440,9 @@ function _cfgInit(){
   _cfgLoadTargets();
   _cfgLoadQuality();
   _cfgLoadCourses();
+  _ccInitCatalog();
   _cfgLoadShifts();
+  _cfgLoadMinHours();
   _cfgLoadStations();
   _cfgLoadGcaMapping();
 }
@@ -5419,6 +5585,7 @@ $("cfgSaveTargets") && $("cfgSaveTargets").addEventListener("click", _cfgSaveTar
 $("cfgSaveQuality") && $("cfgSaveQuality").addEventListener("click", _cfgSaveQuality);
 $("cfgSaveShifts") && $("cfgSaveShifts").addEventListener("click", _cfgSaveShifts);
 $("cfgSaveStations") && $("cfgSaveStations").addEventListener("click", _cfgSaveStations);
+$("cfgSaveMinHours") && $("cfgSaveMinHours").addEventListener("click", _cfgSaveMinHours);
 
 // Load config when tab is clicked
 document.addEventListener("click",(e)=>{
@@ -5439,10 +5606,9 @@ document.addEventListener("click",(e)=>{
       _cfgRenderTargets();
     }
   } else if(section === "quality"){
-    // unified quality_errors.json: errors live at top level (no per-FC)
-    const key = btn.dataset.key;
-    if(_cfgQualityData?.errors?.[key]){
-      delete _cfgQualityData.errors[key];
+    const fc = btn.dataset.fc, key = btn.dataset.key;
+    if(_cfgQualityData[fc]?.errors?.[key]){
+      delete _cfgQualityData[fc].errors[key];
       _cfgRenderQuality();
     }
   }
@@ -5457,7 +5623,6 @@ document.querySelectorAll(".cfg-sidebar-tab").forEach(function(tab){
     document.querySelectorAll(".cfg-section").forEach(function(s){ s.classList.remove("active"); });
     var el = document.getElementById("cfg-section-"+section);
     if(el) el.classList.add("active");
-    if(section === "catalog" && window._onCatalogSection) window._onCatalogSection();
   });
 });
 
@@ -5477,43 +5642,41 @@ $("cfgPushBtn") && $("cfgPushBtn").addEventListener("click", async ()=>{
 // ── Load & Render: Coaching Courses ──
 let _cfgQCoursesData = null;
 let _cfgPCoursesData = null;
+// Which quality config file/uuid-key we're editing (unified vs legacy).
+let _cfgQCoursesFile = "quality_errors.json";
+let _cfgQCoursesUuidKey = "course_uuid";
 
 async function _cfgLoadCourses(){
   try{
-    // Unified config: Quality course UUIDs now live in quality_errors.json (errors[KEY].course_uuid).
-    const qRes = await jget(`${API}/api/admin/config/quality_errors.json`);
+    // Unified quality_errors.json is the source now (course_uuid lives inside
+    // each error). Fall back to legacy quality_courses.json if empty.
+    let qRes = await jget(`${API}/api/admin/config/quality_errors.json`);
+    if(!qRes.data || !qRes.data.errors){
+      qRes = await jget(`${API}/api/admin/config/quality_courses.json`);
+      _cfgQCoursesFile = "quality_courses.json"; _cfgQCoursesUuidKey = "uuid";
+    } else {
+      _cfgQCoursesFile = "quality_errors.json"; _cfgQCoursesUuidKey = "course_uuid";
+    }
     _cfgQCoursesData = qRes.data || {};
     _cfgRenderQualityCourses();
   }catch(e){ $("cfgQualityCoursesArea").innerHTML = `<div class="cfg-loading" style="color:#e53e3e">Error: ${esc(e.message)}</div>`; }
   try{
     const pRes = await jget(`${API}/api/admin/config/guided_coaching.json`);
     _cfgPCoursesData = pRes.data || {};
-    // Fetch every possible role + auto-detected course titles so the By-Role
-    // editor lists ALL roles (incl. new OVD1 ones), not just those already mapped.
-    try{
-      const allRes = await jget(`${API}/api/admin/all-roles`);
-      _cfgAllRoles = allRes.roles || [];
-      _cfgCourseTitles = allRes.course_titles || {};
-    }catch(_){ _cfgAllRoles = []; _cfgCourseTitles = {}; }
     _cfgRenderPerfCourses();
   }catch(e){ $("cfgPerfCoursesArea").innerHTML = `<div class="cfg-loading" style="color:#e53e3e">Error: ${esc(e.message)}</div>`; }
 }
-let _cfgAllRoles = [];
-let _cfgCourseTitles = {};
 
 function _cfgRenderQualityCourses(){
   const errors = _cfgQCoursesData.errors || {};
-  let html = `<table class="cfg-table"><thead><tr><th>Error Key</th><th>Course UUID</th><th>Course Name (auto)</th><th>Enabled</th><th></th></tr></thead><tbody>`;
+  let html = `<table class="cfg-table"><thead><tr><th>Error Key</th><th>Course UUID</th><th>Enabled</th><th></th></tr></thead><tbody>`;
   for(const ek of Object.keys(errors).sort()){
     const raw = errors[ek];
-    // Unified quality_errors.json uses course_uuid; legacy quality_courses.json used uuid.
-    const uuid = typeof raw === "string" ? raw : (raw?.course_uuid || raw?.uuid || "");
+    const uuid = typeof raw === "string" ? raw : (raw?.[_cfgQCoursesUuidKey] || raw?.uuid || raw?.course_uuid || "");
     const enabled = typeof raw === "string" ? true : (raw?.enabled !== false);
-    const cname = _cfgCourseTitles[uuid] || "";
     html += `<tr>
-      <td style="font-weight:700">${esc(raw?.label || ek.replace(/_/g," "))}</td>
+      <td style="font-weight:700">${esc(ek.replace(/_/g," "))}</td>
       <td><input type="text" class="cfg-qcourse-uuid" data-key="${esc(ek)}" value="${esc(uuid)}" style="width:280px;font-family:'JetBrains Mono',monospace;font-size:10px"></td>
-      <td class="cfg-qcourse-name" data-key="${esc(ek)}" style="font-size:10px;color:#888" title="Auto-detected from coaching data">${esc(cname)}</td>
       <td><input type="checkbox" class="cfg-qcourse-enabled" data-key="${esc(ek)}" ${enabled?'checked':''}></td>
       <td><button class="cfg-del-btn" data-key="${esc(ek)}" data-section="qcourse" title="Delete">×</button></td>
     </tr>`;
@@ -5530,7 +5693,11 @@ function _cfgRenderQualityCourses(){
     const uuid = ($("cfgAddQCourseUuid").value||"").trim();
     if(!key||!uuid){ _cfgToast("Fill Error Key and UUID",true); return; }
     if(!_cfgQCoursesData.errors) _cfgQCoursesData.errors = {};
-    _cfgQCoursesData.errors[key] = {course_uuid:uuid, enabled:true};
+    // Preserve existing mode/threshold fields; set the uuid under the right key.
+    var prev = _cfgQCoursesData.errors[key] || {enabled:true};
+    if(typeof prev !== "object") prev = {enabled:true};
+    prev[_cfgQCoursesUuidKey] = uuid;
+    _cfgQCoursesData.errors[key] = prev;
     _cfgRenderQualityCourses();
   });
 }
@@ -5538,74 +5705,91 @@ function _cfgRenderQualityCourses(){
 function _cfgRenderPerfCourses(){
   const roles = _cfgPCoursesData.role_to_course_uuid || {};
   const names = _cfgPCoursesData.course_names || {};
-  // Course Name is auto-detected: coaching-data titles first, then the JSON map.
-  const nameFor = (uuid) => (uuid && (_cfgCourseTitles[uuid] || names[uuid])) || "";
   const applyOpts = ["both","ld","ops"].map(v => `<option value="${v}">${v==="both"?"Both":v==="ld"?"L&D":"OPS"}</option>`).join("");
-  // Show ALL possible roles (union of configured + every role detected across FCs),
-  // so newly-mapped roles (e.g. OVD1's Bolsas BP / SM / Sioc/Siob / SNS / SNS2) appear
-  // even before they have a course assigned.
-  const allRoles = Array.from(new Set([...Object.keys(roles), ...(_cfgAllRoles||[])]))
-    .sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
-  let missing = 0;
-  let html = `<table class="cfg-table"><thead><tr><th>Role / Key</th><th>Course UUID</th><th>Course Name (auto)</th><th>Applies To</th><th></th></tr></thead><tbody>`;
-  for(const role of allRoles){
+  let html = `<table class="cfg-table"><thead><tr><th>Role / Key</th><th>Course UUID</th><th>Course Name</th><th>Applies To</th><th></th></tr></thead><tbody>`;
+  for(const role of Object.keys(roles).sort()){
     const raw = roles[role];
-    const uuid = raw == null ? "" : (typeof raw === "string" ? raw : (raw?.uuid || ""));
-    const appliesTo = (raw && typeof raw !== "string") ? (raw?.applies_to || "both") : "both";
-    const hasCourse = !!uuid;
-    if(!hasCourse) missing++;
-    const rowStyle = hasCourse ? "" : ' style="background:rgba(245,158,11,.10)"';
-    html += `<tr${rowStyle}>
-      <td style="font-weight:700">${esc(role)}${hasCourse?"":' <span title="Sin curso asignado" style="color:#f59e0b">●</span>'}</td>
-      <td><input type="text" class="cfg-pcourse-uuid" data-role="${esc(role)}" value="${esc(uuid)}" placeholder="paste Course UUID…" style="width:280px;font-family:'JetBrains Mono',monospace;font-size:10px"></td>
-      <td class="cfg-pcourse-name" data-role="${esc(role)}" style="font-size:10px;color:#888" title="Auto-detectado de la data de coaching (uuid→título)">${esc(nameFor(uuid))}</td>
+    const uuid = typeof raw === "string" ? raw : (raw?.uuid || "");
+    const appliesTo = typeof raw === "string" ? "both" : (raw?.applies_to || "both");
+    html += `<tr>
+      <td style="font-weight:700">${esc(role)}</td>
+      <td><input type="text" class="cfg-pcourse-uuid" data-role="${esc(role)}" value="${esc(uuid)}" style="width:280px;font-family:'JetBrains Mono',monospace;font-size:10px"></td>
+      <td><input type="text" class="cfg-pcourse-name" data-role="${esc(role)}" value="${esc((names[uuid]||''))}" placeholder="EUCF_…" title="Nombre oficial del curso (CMS). Se autocompleta al pegar un UUID conocido." style="width:230px;font-size:11px"></td>
       <td><select class="cfg-pcourse-applies" data-role="${esc(role)}">${applyOpts.replace(`value="${appliesTo}"`,`value="${appliesTo}" selected`)}</select></td>
-      <td><button class="cfg-del-btn" data-role="${esc(role)}" data-section="pcourse" title="Clear course">×</button></td>
+      <td><button class="cfg-del-btn" data-role="${esc(role)}" data-section="pcourse" title="Delete">×</button></td>
     </tr>`;
   }
   html += `</tbody></table>
-  <div class="cfg-hint" style="font-size:10px;color:#888;margin:6px 2px">${allRoles.length} roles · <span style="color:#f59e0b">${missing} sin curso</span> · el Course Name se detecta solo de la data (solo pega el UUID)</div>`;
+  <div class="cfg-add-row">
+    <input id="cfgAddPCourseRole" class="cfg-add-input" placeholder="ROLE_KEY" style="width:140px;text-transform:uppercase">
+    <input id="cfgAddPCourseUuid" class="cfg-add-input" placeholder="Course UUID" style="width:260px;font-family:'JetBrains Mono',monospace;font-size:10px">
+    <input id="cfgAddPCourseName" class="cfg-add-input" placeholder="Course Name (EUCF_…)" style="width:200px;font-size:11px">
+    <select id="cfgAddPCourseApplies" class="cfg-add-input" style="width:80px">${applyOpts}</select>
+    <button class="cfg-add-btn" id="cfgAddPCourseBtn">+ Add</button>
+  </div>`;
   $("cfgPerfCoursesArea").innerHTML = html;
-  // Live-update the auto-detected name cell as a UUID is typed/pasted.
+  // Auto-fill the Course Name from the known UUID map when a UUID is typed/pasted.
   $("cfgPerfCoursesArea").querySelectorAll(".cfg-pcourse-uuid").forEach(el=>{
     el.addEventListener("input",()=>{
       const role = el.dataset.role;
+      const nm = names[el.value.trim()];
       const nameEl = $("cfgPerfCoursesArea").querySelector(`.cfg-pcourse-name[data-role="${role}"]`);
-      if(nameEl) nameEl.textContent = nameFor(el.value.trim());
+      if(nameEl && nm && !nameEl.value.trim()) nameEl.value = nm;
     });
+  });
+  const _addUuidEl = $("cfgAddPCourseUuid");
+  if(_addUuidEl){
+    _addUuidEl.addEventListener("input",()=>{
+      const nm = names[_addUuidEl.value.trim()];
+      const addNameEl = $("cfgAddPCourseName");
+      if(addNameEl && nm && !addNameEl.value.trim()) addNameEl.value = nm;
+    });
+  }
+  $("cfgAddPCourseBtn") && $("cfgAddPCourseBtn").addEventListener("click",()=>{
+    const role = ($("cfgAddPCourseRole").value||"").trim().toUpperCase().replace(/\s+/g,"_");
+    const uuid = ($("cfgAddPCourseUuid").value||"").trim();
+    const applies = $("cfgAddPCourseApplies").value || "both";
+    if(!role||!uuid){ _cfgToast("Fill Role and UUID",true); return; }
+    if(!_cfgPCoursesData.role_to_course_uuid) _cfgPCoursesData.role_to_course_uuid = {};
+    _cfgPCoursesData.role_to_course_uuid[role] = {uuid, applies_to:applies};
+    const addName = ($("cfgAddPCourseName") ? $("cfgAddPCourseName").value : "").trim();
+    if(uuid && addName){ if(!_cfgPCoursesData.course_names) _cfgPCoursesData.course_names = {}; _cfgPCoursesData.course_names[uuid] = addName; }
+    _cfgRenderPerfCourses();
   });
 }
 
 async function _cfgSaveCourses(){
-  // Read quality courses into the unified quality_errors.json (errors[KEY].course_uuid).
-  // Merge onto the existing per-error object so we never drop mode/sigma/enabled/label.
-  if(!_cfgQCoursesData.errors) _cfgQCoursesData.errors = {};
+  // Read quality courses. MERGE onto existing error entries so we don't wipe
+  // the unified file's mode/sigma_threshold/min_errors fields — only set the
+  // course uuid (under the right key) + enabled.
   $("cfgQualityCoursesArea").querySelectorAll(".cfg-qcourse-uuid").forEach(el=>{
     const key = el.dataset.key;
     const uuid = el.value.trim();
     const enabledEl = $("cfgQualityCoursesArea").querySelector(`.cfg-qcourse-enabled[data-key="${key}"]`);
     const enabled = enabledEl ? enabledEl.checked : true;
-    const prev = (typeof _cfgQCoursesData.errors[key] === "object" && _cfgQCoursesData.errors[key]) || {};
-    _cfgQCoursesData.errors[key] = {...prev, course_uuid: uuid, enabled};
+    if(!_cfgQCoursesData.errors) return;
+    let prev = _cfgQCoursesData.errors[key];
+    if(typeof prev !== "object" || prev === null) prev = {};
+    prev[_cfgQCoursesUuidKey] = uuid;
+    prev.enabled = enabled;
+    _cfgQCoursesData.errors[key] = prev;
   });
-  // Read perf courses. Only persist roles that actually have a UUID (skip the
-  // empty placeholder rows we render for unmapped roles). Course Name is NOT
-  // written from the UI anymore — it's auto-detected from the data at render time.
-  if(!_cfgPCoursesData.role_to_course_uuid) _cfgPCoursesData.role_to_course_uuid = {};
+  // Read perf courses
+  if(!_cfgPCoursesData.course_names) _cfgPCoursesData.course_names = {};
   $("cfgPerfCoursesArea").querySelectorAll(".cfg-pcourse-uuid").forEach(el=>{
     const role = el.dataset.role;
     const uuid = el.value.trim();
     const appliesEl = $("cfgPerfCoursesArea").querySelector(`.cfg-pcourse-applies[data-role="${role}"]`);
     const applies = appliesEl ? appliesEl.value : "both";
-    if(uuid){
-      _cfgPCoursesData.role_to_course_uuid[role] = {uuid, applies_to:applies};
-    } else if(_cfgPCoursesData.role_to_course_uuid[role]){
-      // cleared -> remove the mapping
-      delete _cfgPCoursesData.role_to_course_uuid[role];
-    }
+    if(_cfgPCoursesData.role_to_course_uuid) _cfgPCoursesData.role_to_course_uuid[role] = {uuid, applies_to:applies};
+    const nameEl = $("cfgPerfCoursesArea").querySelector(`.cfg-pcourse-name[data-role="${role}"]`);
+    const nm = nameEl ? nameEl.value.trim() : "";
+    if(uuid && nm) _cfgPCoursesData.course_names[uuid] = nm;
   });
   try{
-    await jpost(`${API}/api/admin/config/quality_errors.json`, {data: _cfgQCoursesData});
+    // Write back to whichever file we loaded (unified quality_errors.json or
+    // legacy quality_courses.json).
+    await jpost(`${API}/api/admin/config/${_cfgQCoursesFile}`, {data: _cfgQCoursesData});
     await jpost(`${API}/api/admin/config/guided_coaching.json`, {data: _cfgPCoursesData});
     _cfgToast("✓ Coaching courses saved");
   }catch(e){ _cfgToast("✗ " + e.message, true); }
@@ -5613,35 +5797,12 @@ async function _cfgSaveCourses(){
 
 $("cfgSaveCourses") && $("cfgSaveCourses").addEventListener("click", _cfgSaveCourses);
 
-// Delete handlers for courses
-document.addEventListener("click",(e)=>{
-  const btn = e.target.closest(".cfg-del-btn[data-section='qcourse']");
-  if(!btn) return;
-  const key = btn.dataset.key;
-  const entry = _cfgQCoursesData?.errors?.[key];
-  if(entry){
-    // In the unified config an error carries mode/sigma/enabled too — clearing the
-    // course row should only drop the course_uuid, not delete the whole error type.
-    if(typeof entry === "object"){ entry.course_uuid = ""; }
-    else { _cfgQCoursesData.errors[key] = {course_uuid:""}; }
-    _cfgRenderQualityCourses();
-  }
-});
-document.addEventListener("click",(e)=>{
-  const btn = e.target.closest(".cfg-del-btn[data-section='pcourse']");
-  if(!btn) return;
-  const role = btn.dataset.role;
-  if(_cfgPCoursesData?.role_to_course_uuid?.[role]){
-    delete _cfgPCoursesData.role_to_course_uuid[role];
-    _cfgRenderPerfCourses();
-  }
-});
-
-// ═══════════════════════════════════════════════════════════════
-// COURSE CATALOG (admin) — full CMS catalog by TYPOLOGY
-// The catalog is identical across FCs of the same typology, so 1 pull covers a
-// whole group. Cache is persistent (no TTL); refresh is manual (may take minutes).
-// ═══════════════════════════════════════════════════════════════
+// ── Course Catalog (CMS browser, admin) ──────────────────────────────────
+// Windows Courses stack (restored 2026-07-22 during the v1.1.17 merge): the
+// backend /api/admin/course-catalog returns a DICT {typology,label,fcs,courses,
+// count,cached_at,stale,assigned_count} — NOT a flat list. These renderers match
+// that contract (course_id/description/typology selector), which is the richer,
+// tested Windows implementation.
 let _ccData = null;          // {typology, label, fcs, courses:[...], count, assigned_count}
 let _ccTypologies = [];      // [{typology,label,fcs,rep_fc,cached,cached_at,count}]
 let _ccCurrentTyp = "standard";
@@ -5742,8 +5903,9 @@ function _ccRender(){
   });
 }
 
-// Called by the Config sidebar when the "Course Catalog" section opens.
-window._onCatalogSection = async function(){
+// Init entry point called from _cfgInit(). Wires the Course Catalog section and
+// does the first load. (Named _ccInitCatalog to match the _cfgInit caller.)
+async function _ccInitCatalog(){
   const sel = $("cc-fc");
   if(sel && !sel._wired){
     sel._wired = true;
@@ -5757,7 +5919,8 @@ window._onCatalogSection = async function(){
   const rEl = $("cc-refresh"); if(rEl && !rEl._wired){ rEl._wired=true; rEl.addEventListener("click", ()=>_loadCourseCatalog(_ccCurrentTyp, true)); }
   const cEl = $("cc-csv"); if(cEl && !cEl._wired){ cEl._wired=true; cEl.addEventListener("click", _ccExportCsv); }
   if(!_ccData) _loadCourseCatalog(_ccCurrentTyp, false);
-};
+}
+window._onCatalogSection = _ccInitCatalog;
 
 function _ccExportCsv(){
   if(!_ccData) return;
@@ -5772,50 +5935,25 @@ function _ccExportCsv(){
   a.download=`course_catalog_${_ccData.typology||"all"}.csv`; a.click();
 }
 
-// ─── EVERYONE: assigned courses (tab 📚 Courses, read-only) ───────────────────
-let _caData = null;   // [{kind,task,uuid,course_title,type,error_key?}]
-window._onCoursesTab = async function(){
-  const kEl = $("ca-kind"); if(kEl && !kEl._wired){ kEl._wired=true; kEl.addEventListener("change", _caRender); }
-  const sEl = $("ca-search"); if(sEl && !sEl._wired){ sEl._wired=true; sEl.addEventListener("input", _caRender); }
-  if(_caData === null){
-    try{
-      const d = await jget(`${API}/api/course-assignments`);
-      _caData = d.assignments || [];
-    }catch(e){
-      const area=$("ca-area"); if(area) area.innerHTML=`<div class="cfg-loading" style="color:#e53e3e">Error: ${esc(e.message)}</div>`;
-      _caData = []; return;
-    }
+// Delete handlers for courses
+document.addEventListener("click",(e)=>{
+  const btn = e.target.closest(".cfg-del-btn[data-section='qcourse']");
+  if(!btn) return;
+  const key = btn.dataset.key;
+  if(_cfgQCoursesData?.errors?.[key]){
+    delete _cfgQCoursesData.errors[key];
+    _cfgRenderQualityCourses();
   }
-  _caRender();
-};
-
-function _caRender(){
-  const area = $("ca-area"), status = $("ca-status");
-  if(!area) return;
-  const kind = ($("ca-kind") && $("ca-kind").value) || "all";
-  const q = (($("ca-search") && $("ca-search").value) || "").trim().toLowerCase();
-  let rows = (_caData||[]).slice();
-  if(kind !== "all") rows = rows.filter(r => r.kind === kind);
-  if(q) rows = rows.filter(r => String(r.task||"").toLowerCase().includes(q) || String(r.course_title||"").toLowerCase().includes(q));
-  if(status) status.innerHTML = `${rows.length} asignaciones${(_caData||[]).length!==rows.length?` (de ${(_caData||[]).length})`:""}`;
-
-  let html = `<table class="cfg-table"><thead><tr><th>Tarea</th><th>Curso asignado</th><th>Tipo</th><th>UUID</th></tr></thead><tbody>`;
-  for(const r of rows){
-    const icon = r.kind==="quality" ? "🎯" : "👤";
-    const kindLbl = r.kind==="quality" ? "Quality" : "Performance";
-    html += `<tr>
-      <td style="font-weight:700;font-size:11px">${icon} ${esc(r.task||"")} <span style="font-size:9px;color:#888">${kindLbl}</span></td>
-      <td style="font-size:11px">${esc(r.course_title||"—")}</td>
-      <td>${_typeBadge(r.type||"manual")}</td>
-      <td>${_uuidCell(r.uuid)}</td>
-    </tr>`;
+});
+document.addEventListener("click",(e)=>{
+  const btn = e.target.closest(".cfg-del-btn[data-section='pcourse']");
+  if(!btn) return;
+  const role = btn.dataset.role;
+  if(_cfgPCoursesData?.role_to_course_uuid?.[role]){
+    delete _cfgPCoursesData.role_to_course_uuid[role];
+    _cfgRenderPerfCourses();
   }
-  html += `</tbody></table>`;
-  area.innerHTML = html;
-  area.querySelectorAll(".cc-copy").forEach(b=>{
-    b.addEventListener("click",()=>{ try{ navigator.clipboard.writeText(b.dataset.uuid); _cfgToast&&_cfgToast("UUID copiado"); }catch(_){}} );
-  });
-}
+});
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -5826,25 +5964,80 @@ function _caRender(){
   let perfActiveFloor = "p2";
   let perfMapHighlight = "";  // "gap" | "idle" | "gca" | ""
 
-  // Toggle map
-  const btnMap = $("btnPerfMap");
-  if(btnMap) btnMap.addEventListener("click",()=>{
-    // Delivery (AMZL) has no station map — never open it for DS sites.
-    if(typeof siteBL === "function" && siteBL(currentFC) === "AMZL") return;
-    perfMapVisible = !perfMapVisible;
-    const wrap = $("perfMapWrap");
-    if(wrap) wrap.style.display = perfMapVisible ? "" : "none";
-    btnMap.textContent = perfMapVisible ? "🗺️ Hide" : "🗺️ Map";
-    if(perfMapVisible){ renderPerfMap(); loadPprRates(); }
+  // Map now lives in its own top tab (panel-map). switchTab("map") calls this to
+  // render it. Kept perfMapVisible in sync so downstream renders still gate on it.
+  window._onMapTab = function(){
+    // Delivery (AMZL) has no station map — bounce back to Performance for DS.
+    if(typeof siteBL === "function" && siteBL(currentFC) === "AMZL"){
+      if(typeof switchTab === "function") switchTab("dashboard");
+      return;
+    }
+    perfMapVisible = true;
+    // The Map tab is the physical floor-map view: always open in GRID (the AR-ring
+    // station map + Floor Command Center). This is the map visualization we want
+    // on this sheet.
+    if(_mapView !== "grid"){
+      _mapView = "grid";
+      try{ localStorage.setItem("argos_map_view", "grid"); }catch(_){}
+      if(typeof _syncMapViewBtns === "function") _syncMapViewBtns();
+    }
+    // The map reads dashboard rows (state.all). As its own tab it can be opened
+    // WITHOUT visiting Performance first, so load the dashboard if empty, then
+    // (re)build floor tabs + render. Otherwise render straight away.
+    const _draw = ()=>{
+      try{ _buildFloorTabs(); }catch(_){}
+      renderPerfMap(); loadPprRates();
+      // Always load GCA pending badges so the map marks who has a pending
+      // coaching (no manual button anymore).
+      try{ if(window._refreshMapGcaPending) window._refreshMapGcaPending(); }catch(_){}
+      // Fit the whole map into the viewport (no scroll) once it has rendered.
+      // Two rAFs so layout/paint settles before we measure.
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{ try{ _fitMapToScreen(); }catch(_){} }));
+    };
+    if(!state || !state.all || !state.all.length){
+      const box = $("perfFloorWrap");
+      if(box) box.innerHTML = `<div class="ppr-loading" style="padding:24px;text-align:center">Loading floor data…</div>`;
+      Promise.resolve(typeof loadDashboard === "function" ? loadDashboard() : null)
+        .then(_draw).catch(_draw);
+    } else {
+      _draw();
+    }
+  };
+
+  // Auto-fit: scale the floor map down so the whole thing fits in the viewport
+  // without scrolling (great for presenting). Only scales DOWN (never up past
+  // 100%). Sets transform on perfFloorWrap, matching the manual zoom mechanism.
+  window._fitMapToScreen = function(){
+    const wrap = $("perfFloorWrap");
+    const active = document.getElementById("perfFloor_"+perfActiveFloor);
+    if(!wrap || !active) return;
+    // Reset any prior scale/centering to measure the natural size.
+    wrap.style.transform = ""; wrap.style.width = ""; wrap.style.marginLeft = ""; wrap.style.marginRight = "";
+    wrap.style.transformOrigin = "top center";
+    const natW = active.scrollWidth, natH = active.scrollHeight;
+    if(!natW || !natH) return;
+    const top = wrap.getBoundingClientRect().top;
+    const availH = window.innerHeight - top - 24;
+    // Available width = the PARENT's inner width (the wrap is fit-content now,
+    // so its own clientWidth == content width, which would defeat the fit).
+    const parent = wrap.parentElement;
+    const availW = (parent ? parent.clientWidth : window.innerWidth) - 8;
+    const scale = Math.min(availW / natW, availH / natH, 1);  // never upscale
+    if(scale < 0.999){
+      // Scale from top-center so the shrunk map stays centered in the viewport.
+      wrap.style.transform = "scale(" + scale.toFixed(3) + ")";
+    }
+    wrap.style.margin = "0 auto";
+  };
+  // Re-fit on window resize while the map tab is open.
+  window.addEventListener("resize", function(){
+    const pm = document.getElementById("panel-map");
+    if(pm && pm.classList.contains("active")){ try{ _fitMapToScreen(); }catch(_){} }
   });
 
-  // Allow other code to force-close the map (e.g. when switching to a DS site).
-  window._hidePerfMap = function(){
-    perfMapVisible = false;
-    const wrap = $("perfMapWrap");
-    if(wrap) wrap.style.display = "none";
-    if(btnMap) btnMap.textContent = "🗺️ Map";
-  };
+  // Force-close: when leaving the map (or switching to a DS site), just mark it
+  // hidden so background renders skip it. The tab machinery handles the DOM.
+  window._hidePerfMap = function(){ perfMapVisible = false; };
 
   // PPR rate KPIs (centre of map): real (FCLM) vs OP2 daily target.
   // Cards are shown for the ACTIVE floor only and clicking one filters the map
@@ -5915,19 +6108,18 @@ function _caRender(){
   window._loadPprRates = loadPprRates;
   window._renderPprRates = renderPprRates;
 
-  // Show All toggle
+  // On-Target is now the DEFAULT (always show all active stations with colour).
+  // These flags stay defined for back-compat with older render branches.
   window._perfShowAll = false;
-  var perfShowAllCb = document.getElementById("perfShowAll");
-  if(perfShowAllCb) perfShowAllCb.addEventListener("change", function(){
-    window._perfShowAll = this.checked;
-    if(perfMapVisible) renderPerfMap();
-  });
+  window._perfShowOnTarget = true;
 
-  // On-Target toggle — include at/above-target stations for the real-situation view
-  window._perfShowOnTarget = false;
-  var perfShowOnTargetCb = document.getElementById("perfShowOnTarget");
-  if(perfShowOnTargetCb) perfShowOnTargetCb.addEventListener("change", function(){
-    window._perfShowOnTarget = this.checked;
+  // "See opportunities" toggle — when ON, dim every station EXCEPT coaching
+  // opportunities (gap / below / idle / fast start). Default OFF = show all
+  // active stations in their real colour (On-Target view).
+  window._mapSeeOpps = false;
+  var seeOppsCb = document.getElementById("mapSeeOpps");
+  if(seeOppsCb) seeOppsCb.addEventListener("change", function(){
+    window._mapSeeOpps = this.checked;
     if(perfMapVisible) renderPerfMap();
   });
 
@@ -5943,23 +6135,7 @@ function _caRender(){
     });
   });
 
-  // Zoom slider: scale the floor wrapper visually
-  (function(){
-    var slider = $("mapZoom"), valEl = $("mapZoomVal"), wrap = $("perfFloorWrap");
-    if(!slider || !wrap) return;
-    var saved = parseInt(localStorage.getItem("argos_map_zoom") || "100", 10);
-    if(saved >= 80 && saved <= 160){ slider.value = String(saved); }
-    function apply(){
-      var v = parseInt(slider.value || "100", 10);
-      wrap.style.transform = v === 100 ? "" : ("scale(" + (v/100) + ")");
-      // Compensate height so other content doesn't get pushed when zooming.
-      wrap.style.width = v === 100 ? "" : (10000/v + "%");
-      if(valEl) valEl.textContent = v + "%";
-      try{ localStorage.setItem("argos_map_zoom", String(v)); }catch(_){}
-    }
-    slider.addEventListener("input", apply);
-    apply();
-  })();
+  // (Zoom slider removed — scaling the floor wrapper distorted the whole view.)
 
   // Process filter buttons
   var perfMapProc = "ALL";
@@ -5980,16 +6156,13 @@ function _caRender(){
   });
   window._perfMapProc = "ALL";
 
-  // Refresh GCA pending badges without running full pipeline
-  var mapRefreshGcaBtn = $("mapRefreshGca");
-  if(mapRefreshGcaBtn) mapRefreshGcaBtn.addEventListener("click", function(){
-    mapRefreshGcaBtn.textContent = "⟳ …";
-    mapRefreshGcaBtn.disabled = true;
+  // GCA pending badges load AUTOMATICALLY (no manual button) — the map always
+  // marks who has a pending coaching. Called when the map opens and on each
+  // auto-refresh tick. Never triggers a pipeline/mwinit; pure read of the cache.
+  window._refreshMapGcaPending = function(){
     var xhr = new XMLHttpRequest();
     xhr.open("GET", API+"/api/gca/dashboard?fc="+encodeURIComponent(currentFC)+"&_t="+Date.now(), true);
     xhr.onload = function(){
-      mapRefreshGcaBtn.textContent = "⟳ GCA";
-      mapRefreshGcaBtn.disabled = false;
       if(xhr.status !== 200) return;
       try{
         var d = JSON.parse(xhr.responseText);
@@ -6005,13 +6178,11 @@ function _caRender(){
         window._gcaPendingLogins = pSet;
         window._gcaPendingMap = pMap;
         if(perfMapVisible) renderPerfMap();
-        // Update counter badge
         var cc = $("mapCntGca"); if(cc) cc.textContent = pSet.size;
       }catch(ex){}
     };
-    xhr.onerror = function(){ mapRefreshGcaBtn.textContent = "⟳ GCA"; mapRefreshGcaBtn.disabled = false; };
     xhr.send();
-  });
+  };
   
 
   // Floor tab switching is handled dynamically by _buildFloorTabs()
@@ -6060,7 +6231,10 @@ function _caRender(){
       var div = document.createElement("div");
       div.id = "perfFloor_"+fl.id;
       div.className = "perf-floor-container";
-      div.style.cssText = "padding:16px;position:relative;min-height:300px;overflow:auto;"+(i>0?"display:none":"");
+      // Center the floor content; fit-content so the box hugs the content width
+      // (not stretch full-width, which left everything glued to the left with a
+      // big gap on the right). overflow-x auto keeps wide floors scrollable.
+      div.style.cssText = "padding:16px;position:relative;min-height:300px;overflow-x:auto;width:fit-content;max-width:100%;margin:0 auto;"+(i>0?"display:none":"");
       floorWrap.appendChild(div);
     });
 
@@ -6128,16 +6302,30 @@ function _caRender(){
     return "pick";
   }
 
+  // Derive the AR floor id ("p2","p3","p4",…) from a 4-digit station number by
+  // its thousands digit: 2xxx→p2, 3xxx→p3, 4xxx→p4, 5xxx→p5. This generalises
+  // the map to any robotic site with >2 AR floors (e.g. MAD7 has P2/P3/P4);
+  // previously the parser hardcoded p2/p3 and dropped everything ≥4000.
+  function _arFloorOf(n){
+    var k = Math.floor(n / 1000);
+    return (k >= 2 && k <= 9) ? ("p" + k) : "p2";
+  }
   // Parse station from performance data (stationRaw field)
   function parsePerfStation(raw){
     if(!raw) return null;
     const s = String(raw).trim();
-    // AR: dz-P-A2311 or dz-P-A3429
+    // AR: dz-P-A2311 or dz-P-A3429 or dz-P-A4386
     let m = s.match(/dz-P-A(\d{4})/);
-    if(m) return {floor: parseInt(m[1])>=3000?"p3":"p2", num:parseInt(m[1])};
-    // AR: ws-k-A-02-2133 or k-A-02-2133
-    m = s.match(/k-A-0([23])-(\d{4})/);
-    if(m) return {floor: m[1]==="3"?"p3":"p2", num:parseInt(m[2])};
+    if(m) return {floor: _arFloorOf(parseInt(m[1])), num:parseInt(m[1])};
+    // AR: ws-k-A-02-2133 or k-A-04-4386 (floor prefix 02..09)
+    m = s.match(/k-A-0(\d)-(\d{4})/);
+    if(m) return {floor: "p"+m[1], num:parseInt(m[2])};
+    // P1: AFE Induct — "in101" → constant "in1" + muro (01/03/05/07). Station 1
+    // of induct = in101, station 2 = in103… Each induct muro pairs with an AFE
+    // wall + its 4 rebins (A-D). Matched BEFORE the 4-digit AR fallback so it
+    // isn't mis-read as a station number.
+    m = s.match(/^(?:ws)?in1(\d{2})$/i);
+    if(m) return {floor:"p1", type:"induct", wall:parseInt(m[1])};
     // P1: AFE — "wsAFE1_101_03" or "AFE1-101-03"
     m = s.match(/AFE(\d+)[_-](\d+)[_-](\d+)/);
     if(m) return {floor:"p1", type:"afe", id:parseInt(m[1]), wall:parseInt(m[2]), pos:parseInt(m[3])};
@@ -6156,31 +6344,31 @@ function _caRender(){
     if(m){
       var fl=parseInt(m[1]); var muro=parseInt(m[2]); var pos2=parseInt(m[3]);
       var muroBase = muro % 100 + 200;            // 302 -> 202, 216 -> 216
-      return {floor: fl>=3?"p3":"p2", num: fl*1000+50+(muroBase-202)*2+pos2};
+      return {floor: "p"+fl, num: fl*1000+50+(muroBase-202)*2+pos2};
     }
-    // P1: Sobres — "ws1102" or "1102" (11xx=line1, 12xx=line2)
-    m = s.match(/^(?:ws)?(1[12]\d{2})$/);
-    if(m){ const n=parseInt(m[1]); const line=Math.floor(n/100)-10; return {floor:"p1", type:"sobres", id:line, pos:n%100}; }
+    // P1: WS lines — "ws1117", "ws1209", "ws1412" → these are LINES (like
+    // Singles), NOT walls. Line = the 11/12/14 group, pos = last 2 digits.
+    // Rendered as lateral lines alongside Singles.
+    m = s.match(/^(?:ws)?(1[124])(\d{2})$/);
+    if(m){ return {floor:"p1", type:"ws", line:parseInt(m[1]), pos:parseInt(m[2])}; }
     // P1: Decant — "ws-rcv-03-19"
     m = s.match(/rcv[_-](\d+)[_-](\d+)/);
     if(m) return {floor:"p1", type:"decant", id:parseInt(m[1]), pos:parseInt(m[2])};
-    // AR: any 4-digit number 2000-3999 (fallback)
+    // AR: any 4-digit number 2000-9999 (fallback) — floor from thousands digit
+    // so 4xxx→p4, 5xxx→p5, etc. (was capped at 3999 → P4 stations were dropped).
     m = s.match(/(\d{4})/);
-    if(m){ const n=parseInt(m[1]); if(n>=2000 && n<=3999) return {floor: n>=3000?"p3":"p2", num:n}; }
+    if(m){ const n=parseInt(m[1]); if(n>=2000 && n<=9999) return {floor: _arFloorOf(n), num:n}; }
     return null;
   }
 
   function renderPerfMap(){
     if(!state || !state.all || !state.all.length) return;
 
-    // Use filtered rows so map respects active dashboard filters.
-    // On-Target toggle: bypass priority bucket + row cap so at/above-target
-    // stations also appear (real-situation view), keeping dimension filters.
-    var rows = getFiltered(window._perfShowOnTarget ? {ignorePrio:true, noLimit:true} : {}).rows;
-    // But always include all rows for stations — use state.all so unfiltered associates
-    // still appear on the map (greyed out), while filtered ones drive the state color.
-    // Actually: use only filtered rows so the map is a true reflection of current view.
-    if(!rows || !rows.length) rows = state.all;
+    // The MAP is INDEPENDENT of the Performance-tab filters (sigma / curve /
+    // present-only / hide-coached). It always reflects the whole floor from
+    // state.all, so switching Performance filters never changes the map. The
+    // map's own controls (proc buttons + See-Opportunities) drive what's dimmed.
+    var rows = state.all;
 
     var gcaPending = window._gcaPendingLogins || new Set();
 
@@ -6191,15 +6379,49 @@ function _caRender(){
       var parsed = _stationParseCache.has(rawSt) ? _stationParseCache.get(rawSt) : (function(){ var p = parsePerfStation(rawSt); _stationParseCache.set(rawSt, p); return p; })();
       if(!parsed) return;
       var wallPart = parsed.wall ? "_"+parsed.wall : "";
-      var key = parsed.num ? parsed.floor+"_"+parsed.num : parsed.floor+"_"+parsed.type+"_"+parsed.id+wallPart+"_"+parsed.pos;
-      if(!stationData[key]) stationData[key] = {rows:[], state:"normal"};
-      stationData[key].rows.push(r);
-      var curState = stationData[key].state;
+      var key;
+      if(parsed.num){
+        key = parsed.floor+"_"+parsed.num;
+      } else if(parsed.type==="induct"){
+        // Induct has only {type,wall} — key must match the P1 render lookup
+        // "p1_induct_<wall>" (else the induct cells never populate).
+        key = parsed.floor+"_induct_"+parsed.wall;
+      } else if(parsed.type==="rebin"){
+        // Rebin: {type,wall,pos} (no id) → "p1_rebin_0_<wall>_<pos>".
+        key = parsed.floor+"_rebin_0_"+parsed.wall+"_"+parsed.pos;
+      } else if(parsed.type==="ws"){
+        // WS lines: {type,line,pos} → "p1_ws_<line>_<pos>".
+        key = parsed.floor+"_ws_"+parsed.line+"_"+parsed.pos;
+      } else if(parsed.type==="singles"){
+        // Singles: parser gives {type,line,pos} in one path and {type,id,pos}
+        // in another — normalise to "p1_singles_<line>_<pos>".
+        key = parsed.floor+"_singles_"+(parsed.line!=null?parsed.line:parsed.id)+"_"+parsed.pos;
+      } else {
+        key = parsed.floor+"_"+parsed.type+"_"+parsed.id+wallPart+"_"+parsed.pos;
+      }
+      if(!stationData[key]) stationData[key] = {rows:[], state:"normal", hasGap:false, hasIdle:false, hasBelow:false, hasFs:false};
+      var sdk = stationData[key];
+      sdk.rows.push(r);
+      // Independent condition flags — a person can be BOTH below-target AND in
+      // fast start (or gap + fast start, etc.). Track each condition separately
+      // so filters/counters (e.g. Fast Start) catch everyone who matches, not
+      // just those whose single dominant `state` happens to be that condition.
+      var hasGapNote  = String(r.notes||"").indexOf("Gap") !== -1;
+      var hasIdleNote = String(r.notes||"").indexOf("IDLE") !== -1;
+      if(r.pct < 100){
+        if(hasGapNote)  sdk.hasGap  = true;
+        if(hasIdleNote) sdk.hasIdle = true;
+        if(r.pct < 80)  sdk.hasBelow = true;
+        if(r.nhFlag)    sdk.hasFs   = true;
+      }
+      // Dominant `state` still drives the station's single COLOR (priority
+      // gap > idle > below > faststart). Flags above drive filter membership.
+      var curState = sdk.state;
       if(r.pct >= 100){/* at/above target */}
-      else if(String(r.notes||"").indexOf("Gap") !== -1 && curState !== "gap") stationData[key].state = "gap";
-      else if(String(r.notes||"").indexOf("IDLE") !== -1 && curState !== "gap") stationData[key].state = "idle";
-      else if(r.pct < 80 && curState !== "gap" && curState !== "idle") stationData[key].state = "below";
-      else if(r.nhFlag && curState !== "gap" && curState !== "idle" && curState !== "below") stationData[key].state = "faststart";
+      else if(hasGapNote && curState !== "gap") sdk.state = "gap";
+      else if(hasIdleNote && curState !== "gap") sdk.state = "idle";
+      else if(r.pct < 80 && curState !== "gap" && curState !== "idle") sdk.state = "below";
+      else if(r.nhFlag && curState !== "gap" && curState !== "idle" && curState !== "below") sdk.state = "faststart";
     });
 
     // Post-process: all at/above target → ontarget
@@ -6209,14 +6431,16 @@ function _caRender(){
         sd.state = "ontarget";
     });
 
-    // Live counters
+    // Live counters — count by INDEPENDENT flags so a station with e.g. both a
+    // below-target and a fast-start associate is counted in BOTH Fast Start and
+    // the below tally (not forced into one bucket by the dominant state).
     var cntGap=0, cntIdle=0, cntGca=0, cntOk=0, cntBelow=0, cntFs=0;
     Object.values(stationData).forEach(function(sd){
-      if(sd.state === "gap") cntGap++;
-      else if(sd.state === "below") cntBelow++;
-      else if(sd.state === "idle") cntIdle++;
-      else if(sd.state === "faststart") cntFs++;
-      else if(sd.state === "ontarget" || sd.state === "normal") cntOk++;
+      if(sd.hasGap)   cntGap++;
+      if(sd.hasIdle)  cntIdle++;
+      if(sd.hasBelow) cntBelow++;
+      if(sd.hasFs)    cntFs++;
+      if(sd.state === "ontarget" || sd.state === "normal") cntOk++;
       if(sd.rows.some(function(r){ return gcaPending.has((r.login||"").toLowerCase()); })) cntGca++;
     });
     var cg=$("mapCntGap"); if(cg) cg.textContent = cntGap;
@@ -6300,8 +6524,8 @@ function _caRender(){
     function stateClass(data){
       if(!data) return 'sm-empty';
       var s = data.state || 'normal';
-      if(s === 'gap') return 'sm-danger';
-      if(s === 'below') return 'sm-danger';
+      if(s === 'gap') return 'sm-danger';        // gap = intense red (critical)
+      if(s === 'below') return 'sm-below';       // bad performance (<80%) = lighter red
       if(s === 'idle') return 'sm-idle';
       if(s === 'faststart') return 'sm-faststart';
       if(s === 'ontarget') return 'sm-ontarget';
@@ -6312,7 +6536,7 @@ function _caRender(){
       if(!data) return '';
       var s = data.state || 'normal';
       if(s === 'gap') return '<span class="sm-badge bg-red">G</span>';
-      if(s === 'below') return '<span class="sm-badge bg-red">↓</span>';
+      if(s === 'below') return '<span class="sm-badge bg-red-light">↓</span>';
       if(s === 'idle') return '<span class="sm-badge bg-yellow">I</span>';
       if(s === 'faststart') return '<span class="sm-badge bg-purple">FS</span>';
       return '';
@@ -6366,12 +6590,13 @@ function _caRender(){
           if(!hasProc) div.style.opacity = "0.12";
         }
         // Highlight mode dim (applied on top of proc filter)
-        if(window._perfMapHighlight){
-          var hl = window._perfMapHighlight;
+        if(window._perfMapHighlight || window._mapSeeOpps){
+          var hl = window._mapSeeOpps ? "opps" : window._perfMapHighlight;
           var gcaPend = window._gcaPendingLogins || new Set();
-          var matches = (hl==="gap" && data.state==="gap")
-                     || (hl==="idle" && data.state==="idle")
-                     || (hl==="faststart" && data.state==="faststart")
+          var matches = (hl==="opps" && (data.hasGap||data.hasBelow||data.hasIdle||data.hasFs))
+                     || (hl==="gap" && data.hasGap)
+                     || (hl==="idle" && data.hasIdle)
+                     || (hl==="faststart" && data.hasFs)
                      || (hl==="gca" && data.rows.some(function(r){ return gcaPend.has((r.login||"").toLowerCase()); }));
           if(!matches) div.style.opacity = "0.12";
         }
@@ -6471,9 +6696,9 @@ function _caRender(){
             var al2=pm2[proc2]||[];
             if(!p2rData.rows.some(function(r){return al2.indexOf(String(r.role||"").toUpperCase())>-1;})) p2rSt.style.opacity="0.12";
           }
-          if(window._perfMapHighlight){
-            var hl2=window._perfMapHighlight; var gcaP2=window._gcaPendingLogins||new Set();
-            var m2=(hl2==="gap"&&p2rData.state==="gap")||(hl2==="idle"&&p2rData.state==="idle")||(hl2==="faststart"&&p2rData.state==="faststart")||(hl2==="gca"&&p2rData.rows.some(function(r){return gcaP2.has((r.login||"").toLowerCase());}));
+          if(window._perfMapHighlight || window._mapSeeOpps){
+            var hl2=window._mapSeeOpps ? "opps" : window._perfMapHighlight; var gcaP2=window._gcaPendingLogins||new Set();
+            var m2=(hl2==="opps"&&(p2rData.hasGap||p2rData.hasBelow||p2rData.hasIdle||p2rData.hasFs))||(hl2==="gap"&&p2rData.hasGap)||(hl2==="idle"&&p2rData.hasIdle)||(hl2==="faststart"&&p2rData.hasFs)||(hl2==="gca"&&p2rData.rows.some(function(r){return gcaP2.has((r.login||"").toLowerCase());}));
             if(!m2) p2rSt.style.opacity="0.12";
           }
           p2rSt.style.cursor="pointer";
@@ -6530,105 +6755,183 @@ function _caRender(){
     el.innerHTML = "";
     el.style.padding = "12px";
 
-    // Discover sections from stationData
-    var afeWalls = {};
-    var rebinWalls = {};
-    var singlesLines = {};
-    var sobresLines = {};
-    var decantLines = {};
-    var p2rWalls = {};
-    Object.keys(stationData).forEach(function(k){
-      if(k.indexOf("p1_")===-1) return;
-      var parts = k.split("_");
-      if(parts[1]==="afe"){ var id=parseInt(parts[2]); var w=parseInt(parts[3]); if(!afeWalls[id]) afeWalls[id]=new Set(); afeWalls[id].add(w); }
-      else if(parts[1]==="rebin"){ rebinWalls[parseInt(parts[2]||parts[3])]=true; }
-      else if(parts[1]==="singles"){ singlesLines[parseInt(parts[2])]=true; }
-      else if(parts[1]==="sobres"){ sobresLines[parseInt(parts[2])]=true; }
-      else if(parts[1]==="decant"){ decantLines[parseInt(parts[2])]=true; }
-      else if(parts[1]==="p2r"){ var id=parseInt(parts[2]); var w=parseInt(parts[3]); if(!p2rWalls[id]) p2rWalls[id]=new Set(); p2rWalls[id].add(w); }
-    });
+    var gcaPending = window._gcaPendingLogins || new Set();
 
-    // Build sections
-    var sections = [];
-    // AFE
-    var afeIds = Object.keys(afeWalls).map(Number).sort();
-    if(afeIds.length===0) afeIds=[1];
-    afeIds.forEach(function(afeId){
-      var muros = afeWalls[afeId] ? Array.from(afeWalls[afeId]).sort() : [101,103,105,107];
-      sections.push({title:"AFE "+afeId, lines:muros.map(function(w){ return {label:"M"+String(w).slice(-2), prefix:"afe", id:afeId, wall:w, count:8, start:1}; })});
-    });
-    // AFE Rebin
-    var rIds = Object.keys(rebinWalls).map(Number).sort();
-    if(rIds.length>0) sections.push({title:"AFE Rebin", lines:rIds.map(function(w){ return {label:"M"+String(w).slice(-2), prefix:"rebin", id:0, wall:w, count:4, start:1}; })});
-    // P2R
-    var p2rIds = Object.keys(p2rWalls).map(Number).sort();
-    if(p2rIds.length===0) p2rIds=[2];
-    p2rIds.forEach(function(pid){
-      var muros = p2rWalls[pid] ? Array.from(p2rWalls[pid]).sort() : [];
-      if(muros.length>0) sections.push({title:"P2R"+pid, lines:muros.map(function(w){ return {label:"M"+String(w).slice(-1)+""+String(w).slice(-2), prefix:"p2r", id:pid, wall:w, count:2, start:1}; })});
-    });
-    // Singles
-    var sIds = [1,2,3,4]; // Always show all 4 singles lines
-    sections.push({title:"Singles", lines:sIds.map(function(id){ return {label:"L"+String(id).padStart(2,"0"), prefix:"singles", id:id, count:20, start:1}; })});
-    // Sobres
-    var soIds = Object.keys(sobresLines).map(Number).sort();
-    if(soIds.length===0) soIds=[1,2];
-    sections.push({title:"Sobres", lines:soIds.map(function(id){ return {label:"L"+id, prefix:"sobres", id:id, count:10, start:1}; })});
-    // Decant
-    var dIds = Object.keys(decantLines).map(Number).sort();
-    if(dIds.length>0) sections.push({title:"Decant", lines:dIds.map(function(id){ return {label:"L"+String(id).padStart(2,"0"), prefix:"decant", id:id, count:20, start:1}; })});
-
-    // Render using sm-station style
-    sections.forEach(function(section){
-      var secDiv = document.createElement("div");
-      secDiv.style.cssText = "margin-bottom:12px;";
-      secDiv.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:4px">'+section.title+'</div>';
-      section.lines.forEach(function(ln){
-        var row = document.createElement("div");
-        row.style.cssText = "display:flex;align-items:center;gap:3px;margin-bottom:3px;flex-wrap:wrap;";
-        row.innerHTML = '<span style="width:36px;font-size:9px;color:var(--text-muted);text-align:right;flex-shrink:0">'+ln.label+'</span>';
-        for(let pos=ln.start;pos<ln.start+ln.count;pos++){
-          let key = ln.wall ? "p1_"+ln.prefix+"_"+ln.id+"_"+ln.wall+"_"+pos : "p1_"+ln.prefix+"_"+ln.id+"_"+pos;
-          let data = stationData[key];
-          var state = data ? (data.state||"normal") : "";
-          var cls = "sm-station";
-          if(!data) cls += " sm-empty";
-          else if(state==="gap") cls += " sm-danger";
-          else if(state==="idle") cls += " sm-idle";
-          else if(state==="faststart") cls += " sm-faststart";
-          else cls += " sm-active";
-          var st = document.createElement("div");
-          st.className = cls;
-          st.innerHTML = '<span class="sm-type">'+ln.prefix.toUpperCase().slice(0,3)+'</span><span class="sm-num">'+pos+'</span>';
-          if(data && state==="gap") st.insertAdjacentHTML("afterbegin",'<span class="sm-badge bg-red">G</span>');
-          else if(data && state==="idle") st.insertAdjacentHTML("afterbegin",'<span class="sm-badge bg-yellow">I</span>');
-          else if(data && state==="faststart") st.insertAdjacentHTML("afterbegin",'<span class="sm-badge bg-purple">FS</span>');
-          if(data){
-            var gcaPending = window._gcaPendingLogins || new Set();
-            var gcaCount = data.rows.filter(function(r){ return gcaPending.has((r.login||"").toLowerCase()); }).length;
-            if(gcaCount>0) st.insertAdjacentHTML("beforeend",'<span class="fm-gca-flag">'+gcaCount+'</span>');
-            var procP1=window._perfMapProc||"ALL";
-            if(procP1!=="ALL"){
-              var pmP1={PICK:["PICK_AR","P2R_PICK"],STOW:["STOW","QUANTITY_STOW"],QS:["QUANTITY_STOW"],PACK:["SM","SM1","SMMIX","SM2","AFE_PACK","P2R_PACK","SNS1","SNS2","SINGLES","WS_SLAM","WS_VDF"],DEC:["DECANT"]};
-              var alP1=pmP1[procP1]||[];
-              if(!data.rows.some(function(r){return alP1.indexOf(String(r.role||"").toUpperCase())>-1;})) st.style.opacity="0.12";
-            }
-            if(window._perfMapHighlight){
-              var hlP1=window._perfMapHighlight;
-              var mP1=(hlP1==="gap"&&data.state==="gap")||(hlP1==="idle"&&data.state==="idle")||(hlP1==="gca"&&gcaCount>0);
-              if(!mP1) st.style.opacity="0.12";
-            }
-            st.style.cursor="pointer";
-            st.onmouseenter = function(ev){ showPerfTooltip(ev, ln.label+" #"+pos, data); };
-            st.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=document.getElementById("gcaMapTooltip"); if(tt) tt.style.display="none"; },150); };
-            st.onclick = function(){ var t=data.rows.find(function(r){return !r.coached;})||data.rows[0]; if(t) openUploadPrefill(t.login); };
-          }
-          row.appendChild(st);
+    // ── Shared station-cell builder (states, badges, GCA flag, proc filter,
+    //    highlight dim, tooltip, click-to-coach). `key` indexes stationData;
+    //    `typeLbl`/`num` are the visual label. Returns a DOM node. ──
+    function _p1cell(key, typeLbl, num, shape){
+      var data = stationData[key];
+      var state = data ? (data.state||"normal") : "";
+      var cls = "sm-station" + (shape==="circle" ? " sm-circle" : "");
+      if(!data) cls += " sm-empty";
+      else if(state==="gap") cls += " sm-danger";
+      else if(state==="below") cls += " sm-below";
+      else if(state==="idle") cls += " sm-idle";
+      else if(state==="faststart") cls += " sm-faststart";
+      else cls += " sm-active";
+      var st = document.createElement("div");
+      st.className = cls;
+      st.innerHTML = '<span class="sm-type">'+esc(typeLbl)+'</span><span class="sm-num">'+esc(String(num))+'</span>';
+      // Badge from independent flags (v219): a person can be below AND fast start.
+      if(data){
+        if(data.hasGap)        st.insertAdjacentHTML("afterbegin",'<span class="sm-badge bg-red">G</span>');
+        else if(data.hasBelow) st.insertAdjacentHTML("afterbegin",'<span class="sm-badge bg-red-light">↓</span>');
+        if(data.hasIdle)       st.insertAdjacentHTML("afterbegin",'<span class="sm-badge bg-yellow">I</span>');
+        else if(data.hasFs)    st.insertAdjacentHTML("afterbegin",'<span class="sm-badge bg-purple">FS</span>');
+        var gcaCount = data.rows.filter(function(r){ return gcaPending.has((r.login||"").toLowerCase()); }).length;
+        if(gcaCount>0) st.insertAdjacentHTML("beforeend",'<span class="fm-gca-flag">'+gcaCount+'</span>');
+        var procP1=window._perfMapProc||"ALL";
+        if(procP1!=="ALL"){
+          var pmP1={PICK:["PICK_AR","P2R_PICK"],STOW:["STOW","QUANTITY_STOW"],QS:["QUANTITY_STOW"],PACK:["SM","SM1","SMMIX","SM2","AFE_PACK","P2R_PACK","SNS1","SNS2","SINGLES","WS_SLAM","WS_VDF"],DEC:["DECANT"],IND:["INDUCT"],REB:["AFE_REBIN"]};
+          var alP1=pmP1[procP1]||[];
+          if(!data.rows.some(function(r){return alP1.indexOf(String(r.role||"").toUpperCase())>-1;})) st.style.opacity="0.12";
         }
-        secDiv.appendChild(row);
-      });
-      el.appendChild(secDiv);
+        if(window._perfMapHighlight || window._mapSeeOpps){
+          var hlP1=window._mapSeeOpps ? "opps" : window._perfMapHighlight;
+          var mP1=(hlP1==="opps"&&(data.hasGap||data.hasBelow||data.hasIdle||data.hasFs))||(hlP1==="gap"&&(data.hasGap||data.hasBelow))||(hlP1==="idle"&&data.hasIdle)||(hlP1==="faststart"&&data.hasFs)||(hlP1==="gca"&&gcaCount>0);
+          if(!mP1) st.style.opacity="0.12";
+        }
+        st.style.cursor="pointer";
+        st.onmouseenter = function(ev){ showPerfTooltip(ev, typeLbl+" "+num, data); };
+        st.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=document.getElementById("gcaMapTooltip"); if(tt) tt.style.display="none"; },150); };
+        st.onclick = function(){ var t=data.rows.find(function(r){return !r.coached;})||data.rows[0]; if(t) openUploadPrefill(t.login); };
+      }
+      return st;
+    }
+
+    // ── Discover what's present in the data ──
+    var inductWalls = {};   // muro (01/03/..) present in induct
+    var rebinWalls = {};    // muro (101/103/..) present in rebin
+    var afeWalls = {};      // muro (101/103/..) present in afe pack
+    var singlesLines = {}, wsLines = {}, decantLines = {};
+    Object.keys(stationData).forEach(function(k){
+      if(k.indexOf("p1_")!==0) return;
+      var p = k.split("_");
+      if(p[1]==="induct")      inductWalls[parseInt(p[2])] = true;
+      else if(p[1]==="rebin")  rebinWalls[parseInt(p[3]||p[2])] = true;
+      else if(p[1]==="afe"){ var w=parseInt(p[3]); afeWalls[w]=true; }
+      else if(p[1]==="singles") singlesLines[parseInt(p[2])] = true;
+      else if(p[1]==="ws")     wsLines[parseInt(p[2])] = true;
+      else if(p[1]==="decant") decantLines[parseInt(p[2])] = true;
     });
+
+    // 8 physical AFE walls (101..108), shown in pairs side by side. Sites don't
+    // always open all walls — empty ones still render (greyed) for orientation.
+    var WALLS = [101,102,103,104,105,106,107,108];
+
+    // Helpers to detect ACTIVE stations (only show what's operating).
+    function _hasData(prefix, a, b, c){
+      var key = "p1_"+prefix+"_"+a+(b!=null?"_"+b:"")+(c!=null?"_"+c:"");
+      return !!stationData[key];
+    }
+    function _wallActive(w){
+      var mm = parseInt(String(w).slice(-2));
+      if(stationData["p1_induct_"+mm]) return true;
+      for(var i=1;i<=4;i++) if(stationData["p1_rebin_0_"+w+"_"+i]) return true;
+      for(var p=1;p<=8;p++) if(stationData["p1_afe_1_"+w+"_"+p]) return true;
+      return false;
+    }
+    function _lineActive(prefix, id, count){
+      for(var p=1;p<=count;p++) if(stationData["p1_"+prefix+"_"+id+"_"+p]) return true;
+      return false;
+    }
+
+    // Two-column layout: LEFT = induct + wall blocks, RIGHT = lateral lines
+    // (Singles / WS / Decant) stacked vertically so there's no long scroll.
+    // LEFT sizes to its content (not flex:1, which stretched it full-width and
+    // pushed the lines off-screen); RIGHT sits right beside it.
+    var cols = document.createElement("div");
+    cols.style.cssText = "display:inline-flex;gap:32px;align-items:flex-start;justify-content:flex-start";
+    var left = document.createElement("div");
+    left.style.cssText = "flex:0 0 auto";
+    var right = document.createElement("div");
+    right.style.cssText = "flex:0 0 auto";
+    cols.appendChild(left); cols.appendChild(right);
+    el.appendChild(cols);
+
+    // 8 physical AFE walls (101..108) in pairs. Only ACTIVE walls are shown.
+    var WALLS = [101,102,103,104,105,106,107,108];
+    var activeWalls = WALLS.filter(_wallActive);
+
+    // ═══ INDUCT ROW (top, separated from the walls) — active inducts only ═══
+    var inductWrap = document.createElement("div");
+    inductWrap.style.cssText = "display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;align-items:center";
+    inductWrap.innerHTML = '<span style="font-size:10px;font-weight:700;color:var(--text-secondary);width:48px">INDUCT</span>';
+    var anyInduct = false;
+    activeWalls.forEach(function(w){
+      var mm = String(w).slice(-2);
+      var key = "p1_induct_"+parseInt(mm);
+      if(stationData[key]){ inductWrap.appendChild(_p1cell(key, "In", mm)); anyInduct = true; }
+    });
+    if(anyInduct) left.appendChild(inductWrap);
+
+    // ═══ WALL BLOCKS: [4 Rebins A-D (left) | Muro (center) | 8 Packers (right)] ═══
+    function _wallBlock(w){
+      var block = document.createElement("div");
+      block.style.cssText = "display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--border);border-radius:10px;background:var(--bg-card)";
+      var reb = document.createElement("div");
+      reb.style.cssText = "display:flex;flex-direction:column;gap:3px";
+      ["A","B","C","D"].forEach(function(slot,i){
+        var key = "p1_rebin_0_"+w+"_"+(i+1);
+        if(stationData[key]) reb.appendChild(_p1cell(key, "R"+slot, String(w).slice(-2), "circle"));
+      });
+      block.appendChild(reb);
+      var wall = document.createElement("div");
+      wall.style.cssText = "min-width:56px;padding:14px 8px;border-radius:8px;text-align:center;font-weight:800;font-size:13px;background:linear-gradient(180deg,#4b5563,#374151);color:#fff";
+      wall.innerHTML = 'Muro<br>'+String(w).slice(-2);
+      block.appendChild(wall);
+      var pk = document.createElement("div");
+      pk.style.cssText = "display:flex;flex-wrap:wrap;gap:3px;max-width:180px";
+      for(var pos=1; pos<=8; pos++){
+        var key = "p1_afe_1_"+w+"_"+pos;
+        if(stationData[key]) pk.appendChild(_p1cell(key, "Pk", pos));
+      }
+      block.appendChild(pk);
+      return block;
+    }
+    if(!activeWalls.length){
+      left.insertAdjacentHTML("beforeend", '<div style="padding:20px;color:var(--text-muted);font-size:12px">No hay muros activos ahora.</div>');
+    }
+    for(var i=0; i<activeWalls.length; i+=2){
+      var pairRow = document.createElement("div");
+      pairRow.style.cssText = "display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px";
+      pairRow.appendChild(_wallBlock(activeWalls[i]));
+      if(activeWalls[i+1] != null) pairRow.appendChild(_wallBlock(activeWalls[i+1]));
+      left.appendChild(pairRow);
+    }
+
+    // ═══ LATERAL LINES (right column, vertical): Singles + WS + Decant ═══
+    // A line = a vertical stack of its active stations (only active shown).
+    function _lineCol(label, prefix, lineId, count, typeLbl){
+      var col = document.createElement("div");
+      col.style.cssText = "display:flex;flex-direction:column;gap:3px;align-items:center;margin-right:8px";
+      col.innerHTML = '<span style="font-size:9px;font-weight:700;color:var(--text-muted);margin-bottom:2px">'+esc(label)+'</span>';
+      var any=false;
+      for(var pos=1; pos<=count; pos++){
+        var key = "p1_"+prefix+"_"+lineId+"_"+pos;
+        if(stationData[key]){ col.appendChild(_p1cell(key, typeLbl, pos)); any=true; }
+      }
+      return any ? col : null;
+    }
+    function _lineGroup(title, prefix, ids, count, lblFn){
+      var active = ids.filter(function(id){ return _lineActive(prefix, id, count); });
+      if(!active.length) return;
+      var grp = document.createElement("div");
+      grp.style.cssText = "margin-bottom:16px";
+      grp.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:6px">'+title+'</div>';
+      var rowc = document.createElement("div");
+      rowc.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start";
+      active.forEach(function(id){ var c=_lineCol(lblFn(id), prefix, id, count, prefix==="ws"?"W"+id:prefix==="decant"?"Dc":"S"+String(id).padStart(2,"0")); if(c) rowc.appendChild(c); });
+      grp.appendChild(rowc);
+      right.appendChild(grp);
+    }
+    var sIds = Object.keys(singlesLines).map(Number).sort(); if(!sIds.length) sIds=[1,2];
+    _lineGroup("Singles", "singles", sIds, 20, function(id){ return "S"+String(id).padStart(2,"0"); });
+    var wIds = Object.keys(wsLines).map(Number).sort();
+    _lineGroup("WS", "ws", wIds, 24, function(id){ return "WS"+id; });
+    var dIds = Object.keys(decantLines).map(Number).sort();
+    _lineGroup("Decant", "decant", dIds, 20, function(id){ return "D"+String(id).padStart(2,"0"); });
   }
 
 
@@ -6695,11 +6998,15 @@ function _caRender(){
 
         if(!zones[zone]) zones[zone]={rows:[],gap:0,idle:0,fs:0,gca:0,ok:0};
         zones[zone].rows.push({r:r, stKey:k});
-        var st = sd.state;
-        if(st==="gap")       zones[zone].gap++;
-        else if(st==="idle") zones[zone].idle++;
-        else if(st==="faststart") zones[zone].fs++;
-        else                 zones[zone].ok++;
+        // Per-associate condition flags (independent) so fast start is counted
+        // even for a below-target person. A row can bump several tallies.
+        var rNotes = String(r.notes||"");
+        var below100 = r.pct < 100;
+        var anyIssue = false;
+        if(below100 && rNotes.indexOf("Gap") !== -1){ zones[zone].gap++; anyIssue = true; }
+        if(below100 && rNotes.indexOf("IDLE") !== -1){ zones[zone].idle++; anyIssue = true; }
+        if(below100 && !!r.nhFlag){ zones[zone].fs++; anyIssue = true; }
+        if(!anyIssue) zones[zone].ok++;
         if(gcaPending.has((r.login||"").toLowerCase())) zones[zone].gca++;
       });
     });
@@ -6814,20 +7121,31 @@ function _caRender(){
           var allowed = procMap[proc] || [];
           if(allowed.indexOf(role) === -1) return;
         }
-        var st = sd.state || "normal";
+        // Derive this ASSOCIATE's own condition flags (not the station's), so a
+        // person in fast start inside a "below" station is still tagged fast
+        // start. A person can hold several at once.
+        var rNotes = String(r.notes||"");
+        var itHasGap  = r.pct < 100 && rNotes.indexOf("Gap") !== -1;
+        var itHasIdle = r.pct < 100 && rNotes.indexOf("IDLE") !== -1;
+        var itHasBelow= r.pct < 80;
+        var itHasFs   = r.pct < 100 && !!r.nhFlag;
         var hasGca = gcaPending.has((r.login||"").toLowerCase());
+        // Dominant state for color/sorting (gap > idle > below > faststart).
+        var st = itHasGap ? "gap" : itHasIdle ? "idle" : itHasBelow ? "below" : itHasFs ? "faststart" : (r.pct >= 100 ? "ontarget" : "normal");
         // OK cards aren't shown in board view; just counted.
         if((st === "ontarget" || st === "normal") && !hasGca){ okCount++; return; }
-        items.push({ r: r, state: st, hasGca: hasGca, stationKey: k });
+        items.push({ r: r, state: st, hasGca: hasGca, stationKey: k,
+                     hasGap:itHasGap, hasIdle:itHasIdle, hasBelow:itHasBelow, hasFs:itHasFs });
       });
     });
 
-    // Filter by active highlight (gap/idle/gca pill click)
+    // Filter by active highlight — match on the INDEPENDENT flags so Fast Start
+    // catches everyone in fast start even if their dominant state is below/gap.
     if(hl){
       items = items.filter(function(it){
-        if(hl === "gap")  return it.state === "gap" || it.state === "below";
-        if(hl === "idle") return it.state === "idle";
-        if(hl === "faststart") return it.state === "faststart";
+        if(hl === "gap")  return it.hasGap || it.hasBelow;
+        if(hl === "idle") return it.hasIdle;
+        if(hl === "faststart") return it.hasFs;
         if(hl === "gca")  return it.hasGca;
         return true;
       });
@@ -6930,10 +7248,13 @@ function _caRender(){
     var photo = r.photo_url
       ? '<img class="ib-photo" src="'+esc(r.photo_url)+'" loading="lazy" decoding="async" onerror="this.outerHTML=\'<div class=&quot;ib-photo-ph&quot;>'+esc((r.login||"?").charAt(0).toUpperCase())+'</div>\'">'
       : '<div class="ib-photo-ph">'+esc((r.login||"?").charAt(0).toUpperCase())+'</div>';
+    // Tags reflect ALL of this person's active conditions (flags), so someone
+    // who is below-target AND in fast start shows both "Low" and "FS".
     var tags = "";
-    if(it.state === "gap" || it.state === "below") tags += '<span class="ib-tag tag-gap">Gap</span>';
-    if(it.state === "idle") tags += '<span class="ib-tag tag-idle">Idle</span>';
-    if(it.state === "faststart") tags += '<span class="ib-tag tag-fs">FS</span>';
+    if(it.hasGap) tags += '<span class="ib-tag tag-gap">Gap</span>';
+    else if(it.hasBelow) tags += '<span class="ib-tag tag-below">Low</span>';
+    if(it.hasIdle) tags += '<span class="ib-tag tag-idle">Idle</span>';
+    if(it.hasFs) tags += '<span class="ib-tag tag-fs">FS</span>';
     if(it.hasGca) tags += '<span class="ib-tag tag-gca">GCA</span>';
     if(r.coached) tags += '<span class="ib-tag tag-coached">✓ Coached</span>';
     card.innerHTML =
@@ -7212,17 +7533,17 @@ function _caRender(){
     if(!tt)return;
     if(tt.parentElement!==document.body)document.body.appendChild(tt);
     var rows=data.rows||[];
-    var h='<div style="font-weight:700;margin-bottom:8px;font-size:15px">Station '+stNum+'</div>';
-    h+='<div style="font-size:14px;color:#b0bec5;margin-bottom:4px">'+rows.length+' associate'+(rows.length>1?'s':'')+'</div>';
+    var h='<div style="font-weight:700;margin-bottom:10px;font-size:19px">Station '+stNum+'</div>';
+    h+='<div style="font-size:15px;color:#b0bec5;margin-bottom:8px">'+rows.length+' associate'+(rows.length>1?'s':'')+'</div>';
     for(var i=0;i<Math.min(rows.length,5);i++){
       var r=rows[i];
       var pc=Math.round(r.pct||0);
       var clr=pc>=100?'#059669':pc>=80?'#d97706':'#dc2626';
-      h+='<div style="display:flex;align-items:center;gap:5px;padding:3px 0;border-bottom:1px solid #2a3a4a">';
-      if(r.photo_url)h+='<img src="'+r.photo_url+'" loading="lazy" decoding="async" style="width:30px;height:30px;border-radius:50%;object-fit:cover">';
-      h+='<b style="min-width:55px">'+(r.login||'--')+'</b>';
-      h+='<span style="font-size:13px;color:#e2e8f0">'+Math.round(r.rate||0)+' uph</span>';
-      h+='<span style="font-size:13px;font-weight:700;color:'+clr+'">'+pc+'%</span>';
+      h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #2a3a4a">';
+      if(r.photo_url)h+='<img src="'+r.photo_url+'" loading="lazy" decoding="async" style="width:42px;height:42px;border-radius:50%;object-fit:cover">';
+      h+='<b style="min-width:70px;font-size:15px">'+(r.login||'--')+'</b>';
+      h+='<span style="font-size:15px;color:#e2e8f0">'+Math.round(r.rate||0)+' uph</span>';
+      h+='<span style="font-size:16px;font-weight:700;color:'+clr+'">'+pc+'%</span>';
       if(r.coached)h+=' <span style="color:#f59e0b">&#9679;</span>';
       if(r.nhFlag)h+=' <span style="color:#8b5cf6;font-size:12px">[FS]</span>';
       h+='</div>';
@@ -7230,8 +7551,8 @@ function _caRender(){
     for(var j=0;j<Math.min(rows.length,2);j++){
       if(rows[j].notes){
         var parts=String(rows[j].notes).split(/[,;]/);
-        h+='<div style="margin-top:4px;font-size:13px;font-weight:600;color:#e2e8f0">'+rows[j].login+':</div>';
-        for(var k=0;k<parts.length;k++){if(parts[k].trim())h+='<div style="font-size:13px;color:#cbd5e1;padding-left:8px">- '+parts[k].trim()+'</div>';}
+        h+='<div style="margin-top:8px;font-size:14px;font-weight:600;color:#e2e8f0">'+rows[j].login+':</div>';
+        for(var k=0;k<parts.length;k++){if(parts[k].trim())h+='<div style="font-size:14px;color:#cbd5e1;padding-left:10px;line-height:1.5">- '+parts[k].trim()+'</div>';}
       }
     }
     
@@ -7279,6 +7600,7 @@ function _caRender(){
   let gcaOwnerFilter = "";
   let gcaPresentOnly = true;   // Present-only filter ON by default (matches old checkbox)
   let gcaSortExp = "";         // "", "asc" (soonest first), "desc" — expiration sort
+  let gcaTab = "pending";      // "pending" | "closed" (Cancelled/Expired view)
 
   const $g = id => document.getElementById(id);
 
@@ -7315,6 +7637,12 @@ function _caRender(){
       var pMap = {};
       (d.items||[]).forEach(function(it){ if(it.status==="PENDING"){ var lg=(it.login||"").toLowerCase(); if(!pMap[lg]) pMap[lg]={id:it.id||"",insight:it.insight||"",comment:it.comment||""}; }});
       window._gcaPendingMap = pMap;
+      // Preload cancel-reason labels so the Cancelled/Expired tab can translate
+      // the closedReason enum. Fire-and-forget: re-render once loaded so the
+      // labels appear even if the user is already on the closed tab.
+      if(!_ccCancelReasons){
+        _ccLoadReasons().then(()=>{ if(gcaTab==="closed") renderGca(); }).catch(()=>{});
+      }
       renderGca();
       maybeAlertHighDefects();
     }catch(e){
@@ -7456,15 +7784,18 @@ function _caRender(){
     return "pick";
   }
 
+  // Floor id from a 4-digit AR station by thousands digit (2xxx→p2 … 9xxx→p9),
+  // so robotic sites with >2 AR floors (MAD7 P4, etc.) map correctly.
+  function _arFloorOf2(n){ var k=Math.floor(n/1000); return (k>=2&&k<=9)?("p"+k):"p2"; }
   // Parse station string → {floor, stationNum}
   function parseStation(st){
     if(!st) return null;
-    // dz-P-A2311 or dz-P-A3429
+    // dz-P-A2311 or dz-P-A3429 or dz-P-A4386
     let m = st.match(/dz-P-A(\d{4})/);
-    if(m){ const n=parseInt(m[1]); return {floor: n>=3000?"p3":"p2", num:n}; }
-    // ws-k-A-02-2133 or ws-k-A-03-3327
-    m = st.match(/ws-k-A-0([23])-(\d{4})/);
-    if(m){ const n=parseInt(m[2]); return {floor: m[1]==="3"?"p3":"p2", num:n}; }
+    if(m){ const n=parseInt(m[1]); return {floor: _arFloorOf2(n), num:n}; }
+    // ws-k-A-02-2133 or ws-k-A-04-4386 (floor prefix 02..09)
+    m = st.match(/ws-k-A-0(\d)-(\d{4})/);
+    if(m){ const n=parseInt(m[2]); return {floor: "p"+m[1], num:n}; }
     // wsAFE1_101_05
     m = st.match(/wsAFE(\d+)_(\d+)_(\d+)/);
     if(m) return {floor:"p1", type:"afe", wall:parseInt(m[1]), pos:parseInt(m[3])};
@@ -7688,10 +8019,40 @@ function _caRender(){
   function renderGca(){
     if(!gcaData) return;
     const k = gcaData.kpis || {};
-    $g("gcaKpiTotal").textContent = k.total || 0;
-    $g("gcaKpiCompleted").textContent = k.completed || 0;
-    $g("gcaKpiPending").textContent = k.pending || 0;
-    $g("gcaKpiPct").textContent = (k.compliance_pct || 0) + "%";
+    // Large KPI cards: % big + count small. Completed/Cancelled/Pending are % of
+    // the total resolved; Expiring ≤3d/≤7d are % OF PENDING (7d includes 3d).
+    const allItems = gcaData.items || [];
+    const total = k.total || allItems.length || 0;
+    const cCompleted = k.completed != null ? k.completed : allItems.filter(i=>i.status==="COMPLETED").length;
+    const cCancelled = k.cancelled != null ? k.cancelled : allItems.filter(i=>i.status==="CANCELLED").length;
+    const cPending   = k.pending   != null ? k.pending   : allItems.filter(i=>i.status==="PENDING").length;
+    const pctOf = (n, base) => base > 0 ? Math.round(n/base*100) : 0;
+    // Days until expiration for a pending item (floor; negative = already past).
+    const daysToExp = raw => { if(!raw) return null; const d=new Date(raw); if(isNaN(d)) return null; return Math.floor((d-new Date())/86400000); };
+    const pendingItems = allItems.filter(i=>i.status==="PENDING");
+    const exp3 = pendingItems.filter(i=>{ const d=daysToExp(i.expiration); return d!=null && d<=3; }).length;
+    const exp7 = pendingItems.filter(i=>{ const d=daysToExp(i.expiration); return d!=null && d<=7; }).length;
+    // Pending >7d = the rest of pending that is NOT expiring within 7 days. This
+    // makes the 5 cards a clean non-overlapping breakdown of the total:
+    // Completed + Expiring≤7d + Pending>7d + Cancelled = 100%. (≤3d is an
+    // informational sub-slice inside ≤7d, not a separate slice of the total.)
+    const pendingOver7 = Math.max(0, cPending - exp7);
+
+    $g("gcaKpiCompleted").textContent  = pctOf(cCompleted, total) + "%";
+    $g("gcaKpiCompletedN").textContent = `${cCompleted} of ${total}`;
+    $g("gcaKpiCancelled").textContent  = pctOf(cCancelled, total) + "%";
+    $g("gcaKpiCancelledN").textContent = `${cCancelled} of ${total}`;
+    // "Pending" card now shows the >7d remainder (not the full pending), so it
+    // no longer overlaps the Expiring cards. Sub still references total pending.
+    $g("gcaKpiPending").textContent    = pctOf(pendingOver7, total) + "%";
+    $g("gcaKpiPendingN").textContent   = `${pendingOver7} of ${cPending} pending`;
+    // Expiring cards are sub-slices of Pending expressed as % OF TOTAL, so they
+    // stay consistent with the total breakdown (showing % of pending made ≤7d
+    // look alarmingly high, e.g. 78%).
+    $g("gcaKpiExp3").textContent  = pctOf(exp3, total) + "%";
+    $g("gcaKpiExp3N").textContent = `${exp3} of ${cPending} pending`;
+    $g("gcaKpiExp7").textContent  = pctOf(exp7, total) + "%";
+    $g("gcaKpiExp7N").textContent = `${exp7} of ${cPending} pending`;
     const hdPending = (gcaData.items||[]).filter(i=>i.status==="PENDING" && i.scenario==="HIGH_DEFECTS").length;
     const sub = $g("gcaSubtitle");
     sub.innerHTML = `Last 7 days · ${esc(gcaData.fc || currentFC)}` +
@@ -7699,19 +8060,53 @@ function _caRender(){
     const hdPill = $g("gcaHdPill");
     if(hdPill) hdPill.addEventListener("click", ()=>openModal("modalHighDefects"));
 
-    // Bars
+    // Stacked compliance bar: Completed / Pending / Cancelled / Expired, with
+    // each segment's % of the total resolved shown in its label.
     const os = gcaData.owner_stats || {};
     const barsEl = $g("gcaBars");
-    barsEl.innerHTML = GCA_OWNERS.map(owner=>{
-      const s = os[owner] || {completed:0,pending:0,total:0,pct:0};
-      const cls = s.pct >= 95 ? "high" : s.pct >= 70 ? "mid" : "low";
-      const w = Math.max(s.pct, 2);
-      return `<div class="gca-bar-row">
-        <span class="gca-bar-label">${esc(owner)}</span>
-        <div class="gca-bar-track"><div class="gca-bar-fill ${cls}" style="width:${w}%"><span>${s.pct}%</span></div></div>
-        <span class="gca-bar-nums">${s.completed} / ${s.total}</span>
-      </div>`;
-    }).join("");
+    const items4 = gcaData.items || [];
+    const cnt = st => items4.filter(i=>i.status===st).length;
+    const sc = { completed: cnt("COMPLETED"), pending: cnt("PENDING"), cancelled: cnt("CANCELLED"), expired: cnt("EXPIRED") };
+    const scTotal = sc.completed + sc.pending + sc.cancelled + sc.expired;
+    const segDef = [
+      {k:"completed", lbl:"Completed"},
+      {k:"pending",   lbl:"Pending"},
+      {k:"cancelled", lbl:"Cancelled"},
+      {k:"expired",   lbl:"Expired"},
+    ];
+    // Build a stacked bar (Completed/Pending/Cancelled/Expired) for a given
+    // count object — reused for the global bar and each owner row.
+    const stackHtml = (counts, total) => {
+      if(!total) return `<div class="gca-stack"></div>`;
+      return `<div class="gca-stack">` + segDef.map(d=>{
+        const n = counts[d.k] || 0;
+        if(!n) return "";
+        const pct = Math.round(n/total*100);
+        const label = pct >= 10 ? `${pct}%` : "";
+        return `<div class="gca-stack-seg ${d.k}" style="width:${pct}%" title="${d.lbl}: ${n} (${pct}%)">${label}</div>`;
+      }).join("") + `</div>`;
+    };
+
+    if(scTotal > 0){
+      const legend = segDef.map(d=>`<span><span class="dot ${d.k}"></span>${d.lbl} ${sc[d.k]} (${scTotal?Math.round(sc[d.k]/scTotal*100):0}%)</span>`).join("");
+      // Global stacked bar + legend
+      let html = stackHtml(sc, scTotal) + `<div class="gca-stack-legend">${legend}</div>`;
+      // Per-owner stacked bars: same 4-colour breakdown, one row per owner that
+      // has any coaching. Label + completed% + counts on the right.
+      const ownerRows = GCA_OWNERS.map(owner=>{
+        const s = os[owner] || {completed:0,pending:0,cancelled:0,expired:0,total:0,pct:0};
+        if(!s.total) return "";
+        return `<div class="gca-owner-row">
+          <span class="gca-owner-label">${esc(owner)}</span>
+          <div class="gca-owner-track">${stackHtml(s, s.total)}</div>
+          <span class="gca-owner-nums">${s.pct}% · ${s.completed}/${s.total}</span>
+        </div>`;
+      }).join("");
+      if(ownerRows) html += `<div class="gca-owner-bars">${ownerRows}</div>`;
+      barsEl.innerHTML = html;
+    } else {
+      barsEl.innerHTML = `<div style="padding:8px 16px;font-size:11px;color:var(--text-muted)">Sin datos de coaching.</div>`;
+    }
 
     // Owner filter pills
     const filtersEl = $g("gcaOwnerFilters");
@@ -7731,6 +8126,22 @@ function _caRender(){
         renderGca();
       });
     });
+
+    // Tab visibility: Pending table vs Cancelled/Expired table.
+    const pendTable = $g("gcaTable");
+    const closedTable = $g("gcaClosedTable");
+    const tabPendEl = $g("gcaTabPending");
+    const tabClosedEl = $g("gcaTabClosed");
+    if(tabPendEl) tabPendEl.classList.toggle("active", gcaTab==="pending");
+    if(tabClosedEl) tabClosedEl.classList.toggle("active", gcaTab==="closed");
+    if(pendTable) pendTable.style.display = gcaTab==="pending" ? "" : "none";
+    if(closedTable) closedTable.style.display = gcaTab==="closed" ? "" : "none";
+
+    if(gcaTab==="closed"){
+      renderGcaClosed();
+      if(floorMapVisible) renderFloorMap();
+      return;
+    }
 
     // Table
     let items = (gcaData.items||[]).filter(i=>i.status==="PENDING");
@@ -7775,24 +8186,24 @@ function _caRender(){
         const presenceDot = isActive
           ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green)"></span> <span style="font-size:10px">Active</span>${stationInfo ? `<div style="font-size:9.5px;color:var(--text-muted);margin-top:1px">${esc(stationInfo)}</div>` : ""}`
           : `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#cbd5e1"></span> <span style="font-size:10px;color:var(--text-muted)">${esc(it.presence||"Unknown")}</span>${stationInfo ? `<div style="font-size:9.5px;color:var(--text-muted);margin-top:1px">${esc(stationInfo)}</div>` : ""}${lsLine}`;
-        const _exp = coachingExpiry(it.expiration);
-        const expCell = _exp
-          ? `<span style="font-size:11px;font-weight:700;color:${_exp.color}">${esc(_exp.text)}</span>`
-          : `<span style="color:var(--text-muted)">—</span>`;
         const photoHtml = it.photo_url
           ? `<img src="${esc(it.photo_url)}" loading="lazy" decoding="async" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-right:6px;vertical-align:middle" onerror="this.style.display='none'">`
           : "";
         const isHighDef = it.scenario === "HIGH_DEFECTS";
         const hdBadge = isHighDef ? `<span class="gca-hd-badge" title="High Defects — debe cerrarse">HIGH DEFECTS</span>` : "";
+        const _exp = coachingExpiry(it.expiration);
+        const expCell = _exp
+          ? `<span style="font-size:11px;font-weight:700;color:${_exp.color}">${esc(_exp.text)}</span>`
+          : `<span style="color:var(--text-muted)">—</span>`;
         return `<tr class="${isHighDef ? "gca-high-defects" : ""}">
           <td><div style="display:flex;align-items:center">${photoHtml}<span style="font-weight:600">${esc(loginDisplay)}</span>${hdBadge}</div></td>
           <td>${esc(it.insight||it.course_title||"—")}</td>
           <td><span style="font-size:11px">${esc(it.owner)}</span></td>
           <td>${notes}</td>
-          <td><div style="display:flex;align-items:center;gap:4px">${presenceDot}</div></td>
+          <td><div style="display:flex;align-items:center;justify-content:center;gap:4px">${presenceDot}</div></td>
           <td>${expCell}</td>
           <td>
-            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:center">
               <div style="display:flex;gap:4px">
                 <button class="row-btn cc-complete" data-iid="${esc(it.id||"")}" data-login="${esc(loginDisplay)}" data-name="${esc(it.name||"")}" data-eid="${esc(it.employee_id||"")}" data-process="${esc(it.process_path||it.station||it.course_title||it.insight||"")}">✓</button>
                 <button class="row-btn cc-cancel" data-iid="${esc(it.id||"")}" data-login="${esc(loginDisplay)}" data-name="${esc(it.name||"")}" data-eid="${esc(it.employee_id||"")}" data-process="${esc(it.process_path||it.station||it.course_title||it.insight||"")}">✗</button>
@@ -7820,6 +8231,195 @@ function _caRender(){
     $g("gcaShowing").textContent = `Showing ${Math.min(items.length,100)} of ${items.length} pending · ${totalCompleted} completed this week`;
     // Re-render floor map if visible
     if(floorMapVisible) renderFloorMap();
+  }
+
+  // ── Bulk cancel (modal) ────────────────────────────────────────────────
+  // A dedicated modal keeps the table clean (no always-on checkboxes). The
+  // modal lists the current pending coachings with a checkbox each, one shared
+  // reason + note, and cancels the selected batch. Each still goes through
+  // /api/coaching/close (action=cancel) so the backend round-trips the full GCA
+  // instance per coaching (no shortcut).
+  function _bcRows(){
+    // Same filtered/sorted pending set the table shows (respects owner + search + present).
+    let items = (gcaData?.items||[]).filter(i=>i.status==="PENDING");
+    if(gcaPresentOnly) items = items.filter(i=>i.presence==="ACTIVE");
+    if(gcaOwnerFilter) items = items.filter(i=>i.owner===gcaOwnerFilter);
+    const q = ($g("gcaSearchInput")?.value || "").trim().toLowerCase();
+    if(q){
+      items = items.filter(i=>[i.login,i.name,i.employee_id,i.station,i.insight,i.course_title]
+        .map(x=>String(x||"").toLowerCase()).join(" ").includes(q));
+    }
+    return items;
+  }
+  function _bcUpdateCount(){
+    const boxes = Array.from(document.querySelectorAll("#bcList .bc-chk"));
+    const n = boxes.filter(b=>b.checked).length;
+    const sc = $g("bcSelCount"); if(sc) sc.textContent = `${n} seleccionado${n===1?"":"s"}`;
+    const all = $g("bcSelectAll"); if(all) all.checked = boxes.length>0 && n===boxes.length;
+  }
+  function openBulkCancelModal(){
+    if(!gcaData){ showToast({title:"GCA no cargado", body:"Corre el pipeline primero.", type:"warn", ms:4000}); return; }
+    // Populate the reason dropdown (same list as the close modal).
+    const sel = $g("bcReason");
+    if(sel && sel.options.length <= 1 && (_ccCancelReasons||[]).length){
+      _ccCancelReasons.forEach(r=>{ const o=document.createElement("option"); o.value=r.value; o.textContent=r.label||r.value; sel.appendChild(o); });
+    }
+    if(sel) sel.value = "";
+    const note = $g("bcNote"); if(note) note.value = "";
+    const prog = $g("bcProgress"); if(prog) prog.style.display = "none";
+    const allBox = $g("bcSelectAll"); if(allBox) allBox.checked = false;
+
+    const rows = _bcRows();
+    const vc = $g("bcVisibleCount"); if(vc) vc.textContent = rows.length;
+    const list = $g("bcList");
+    if(list){
+      if(!rows.length){
+        list.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:12px">No hay coachings pendientes${gcaOwnerFilter?" · "+gcaOwnerFilter:""}.</div>`;
+      } else {
+        list.innerHTML = rows.map(it=>{
+          const login = it.login || it.employee_id || "—";
+          const _exp = coachingExpiry(it.expiration);
+          const expTxt = _exp ? `<span style="font-size:10px;color:${_exp.color};font-weight:700">${esc(_exp.text)}</span>` : "";
+          const pres = it.presence==="ACTIVE" ? `<span style="color:var(--green);font-size:10px">● Active</span>` : `<span style="color:var(--text-muted);font-size:10px">○ ${esc(it.presence||"—")}</span>`;
+          return `<label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer">
+            <input type="checkbox" class="bc-chk" data-iid="${esc(it.id||"")}" data-login="${esc(login)}">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:600">${esc(login)} <span style="font-weight:400;color:var(--text-secondary)">· ${esc(it.owner||"")}</span></div>
+              <div style="font-size:10.5px;color:var(--text-muted)">${esc(it.insight||it.course_title||"—")}</div>
+            </div>
+            <div style="text-align:right;white-space:nowrap">${pres}<br>${expTxt}</div>
+          </label>`;
+        }).join("");
+        list.querySelectorAll(".bc-chk").forEach(cb=>cb.addEventListener("change", _bcUpdateCount));
+      }
+    }
+    _bcUpdateCount();
+    openModal("modalBulkCancel");
+  }
+  async function _bcExecute(){
+    const checked = Array.from(document.querySelectorAll("#bcList .bc-chk:checked"))
+      .map(cb=>({iid:cb.dataset.iid, login:cb.dataset.login})).filter(r=>r.iid);
+    if(!checked.length){ showToast({title:"Nada seleccionado", body:"Marca al menos un coaching.", type:"warn", ms:4000}); return; }
+    const reason = ($g("bcReason")?.value || "").trim();
+    const note   = ($g("bcNote")?.value || "").trim();
+    if(!reason){ showToast({title:"Falta el motivo", body:"Elige un motivo de cancelación.", type:"warn", ms:4000}); return; }
+    if(!note){ showToast({title:"Falta la nota", body:"La nota es obligatoria para cancelar.", type:"warn", ms:4000}); return; }
+    const logins = checked.map(r=>r.login||"—");
+    const preview = logins.slice(0,20).join(", ") + (logins.length>20?`, +${logins.length-20} más`:"");
+    if(!confirm(`Vas a CANCELAR ${checked.length} coaching(s) en GCA:\n\n${preview}\n\nMotivo: ${reason}\nNota: ${note}\n\n¿Continuar?`)) return;
+
+    const btn = $g("bcCancelBtn");
+    const prog = $g("bcProgress"), bar = $g("bcProgBar"), lbl = $g("bcProgLbl");
+    if(btn){ btn.disabled = true; btn.style.opacity = ".6"; }
+    if(prog) prog.style.display = "flex";
+    let done = 0, ok = 0, fail = 0; const errors = [];
+    // Sequential (not parallel): each cancel round-trips a full GCA instance.
+    for(const r of checked){
+      try{
+        const res = await jpost(`${API}/api/coaching/close`, {
+          fc: currentFC, instance_id: r.iid, action: "cancel", cancel_reason: reason, notes: note,
+        });
+        if(res && res.ok !== false) ok++; else { fail++; errors.push(r.login); }
+      }catch(e){ fail++; errors.push(r.login); }
+      done++;
+      if(bar) bar.style.width = Math.round(done/checked.length*100) + "%";
+      if(lbl) lbl.textContent = `${done}/${checked.length}`;
+    }
+    if(btn){ btn.disabled = false; btn.style.opacity = "1"; }
+    showToast({
+      title: fail ? `Cancelados ${ok}/${checked.length}` : `✓ ${ok} coaching(s) cancelados`,
+      body: fail ? `${fail} fallaron: ${errors.slice(0,10).join(", ")}` : "Refrescando GCA…",
+      type: fail ? "warn" : "success", ms: fail ? 8000 : 4000,
+    });
+    closeModal("modalBulkCancel");
+    if(window._loadGcaDashboard) window._loadGcaDashboard();
+  }
+
+  // Prettify a raw coachingReason enum (TOO_MANY_X / MANUAL_QUALITY_COACHING_FOR_Y)
+  // into a readable label — mirrors the backend _format_reason.
+  function _fmtReason(reason){
+    if(!reason) return "";
+    return String(reason)
+      .replace(/^(TOO_(MANY|HIGH|LOW)_|MANUAL_(QUALITY|PRODUCTIVITY)_COACHING_FOR_)/,"")
+      .replace(/_/g," ")
+      .toLowerCase()
+      .replace(/\b\w/g, c=>c.toUpperCase());
+  }
+
+  // Translate a cancel closedReason enum (e.g. ASSOCIATE_NOT_AVAILABLE_NOT_IN_
+  // THE_SAME_PROCESS) into its human label from gca_cancel_reasons.json, using
+  // the same list the cancel modal shows. Falls back to a title-cased enum.
+  function _cancelReasonLabel(enumVal){
+    if(!enumVal) return "";
+    const list = _ccCancelReasons || [];
+    const hit = list.find(r => r && r.value === enumVal);
+    if(hit && hit.label) return hit.label;
+    return String(enumVal).replace(/_/g," ").toLowerCase().replace(/\b\w/g, c=>c.toUpperCase());
+  }
+
+  // Cancelled / Expired tab — informational, no actions (these are terminal).
+  function renderGcaClosed(){
+    if(!gcaData) return;
+    let items = (gcaData.items||[]).filter(i=>i.status==="CANCELLED" || i.status==="EXPIRED");
+    if(gcaOwnerFilter) items = items.filter(i=>i.owner===gcaOwnerFilter);
+    const gcaQuery = ($g("gcaSearchInput")?.value || "").trim().toLowerCase();
+    if(gcaQuery){
+      items = items.filter(i=>{
+        const hay = [i.login, i.name, i.employee_id, i.insight, i.course_title, i.reason, i.comment]
+          .map(x=>String(x||"").toLowerCase()).join(" ");
+        return hay.includes(gcaQuery);
+      });
+    }
+    // Most recent first (by closed timestamp, fallback creation).
+    const ts = v => { const d = new Date(v); return isNaN(d) ? 0 : d.getTime(); };
+    items = items.slice().sort((a,b)=> ts(b.closed||b.created) - ts(a.closed||a.created));
+
+    const tbody = $g("gcaClosedTbody");
+    if(!items.length){
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);font-size:12px">Sin coachings cancelados o expirados${gcaOwnerFilter?" · "+gcaOwnerFilter:""}.</td></tr>`;
+    } else {
+      tbody.innerHTML = items.slice(0,200).map(it=>{
+        const gcaUrl = `https://guided-coaching-dub.corp.amazon.com/#/view-coaching-instance/${it.id}`;
+        const loginDisplay = it.login || it.employee_id || "—";
+        const photoHtml = it.photo_url
+          ? `<img src="${esc(it.photo_url)}" loading="lazy" decoding="async" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-right:6px;vertical-align:middle" onerror="this.style.display='none'">`
+          : "";
+        const st = it.status==="EXPIRED" ? "expired" : "cancelled";
+        const stBadge = `<span class="gca-status-badge ${st}">${it.status==="EXPIRED"?"EXPIRED":"CANCELLED"}</span>`;
+        // Upload Notes = the note left when the coaching was CREATED
+        // (creatorComment, e.g. "Ops Pack Performance | Rate X | Y% to Target").
+        const uploadTxt = it.comment ? esc(it.comment) : "";
+        const uploadCell = uploadTxt
+          ? `<span style="font-size:11px">${uploadTxt}</span>`
+          : `<span style="color:var(--text-muted)">—</span>`;
+        // Reason / Coach Notes = why it closed + the note the coach left ON CLOSE:
+        //  · CANCELLED → the cancel closedReason label (e.g. "Associate not
+        //    available - Not in the same process") + the coach's closing note.
+        //  · EXPIRED   → no cancel reason exists; show the coaching's own reason.
+        // The note here is the CLOSE note (closed_note), NOT the upload comment.
+        let reasonTxt = it.status==="CANCELLED" ? _cancelReasonLabel(it.closed_reason) : _fmtReason(it.reason);
+        const closeNote = it.closed_note ? esc(it.closed_note) : "";
+        const reasonCell = (reasonTxt || closeNote)
+          ? `<div style="font-size:11px">${reasonTxt?`<b>${esc(reasonTxt)}</b>`:""}${(reasonTxt&&closeNote)?" · ":""}${closeNote}</div>`
+          : `<span style="color:var(--text-muted)">—</span>`;
+        // Date: EXPIRED → expiration; CANCELLED → closed (fallback creation).
+        const dateRaw = it.status==="EXPIRED" ? (it.expiration||it.closed) : (it.closed||it.created);
+        const dateTxt = dateRaw ? esc(String(dateRaw).slice(0,10)) : "—";
+        return `<tr>
+          <td><div style="display:flex;align-items:center">${photoHtml}<span style="font-weight:600">${esc(loginDisplay)}</span></div></td>
+          <td>${esc(it.insight||it.course_title||"—")}</td>
+          <td><span style="font-size:11px">${esc(it.owner||"—")}</span></td>
+          <td>${stBadge}</td>
+          <td>${uploadCell}</td>
+          <td>${reasonCell}</td>
+          <td><span style="font-size:11px;color:var(--text-muted)">${dateTxt}</span></td>
+          <td><a href="${esc(gcaUrl)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-size:10px">Open GCA →</a></td>
+        </tr>`;
+      }).join("");
+    }
+    const totalC = (gcaData.items||[]).filter(i=>i.status==="CANCELLED").length;
+    const totalE = (gcaData.items||[]).filter(i=>i.status==="EXPIRED").length;
+    $g("gcaShowing").textContent = `Showing ${Math.min(items.length,200)} of ${items.length} · ${totalC} cancelled · ${totalE} expired (last 7 days)`;
   }
 
   // ── CSV download button ──
@@ -7924,6 +8524,23 @@ function _caRender(){
   const gcaSearchEl = $g("gcaSearchInput");
   if(gcaSearchEl) gcaSearchEl.addEventListener("input", ()=>{ renderGca(); });
 
+  // Tab toggle: Pending ↔ Cancelled/Expired → re-render (no re-fetch)
+  const _gcaTabPend = $g("gcaTabPending");
+  const _gcaTabClosed = $g("gcaTabClosed");
+  if(_gcaTabPend) _gcaTabPend.addEventListener("click", ()=>{ gcaTab = "pending"; renderGca(); });
+  if(_gcaTabClosed) _gcaTabClosed.addEventListener("click", ()=>{ gcaTab = "closed"; renderGca(); });
+
+  // Bulk cancel modal controls: open button, select-all inside modal, execute.
+  const _gcaBulkOpenBtn = $g("gcaBulkOpenBtn");
+  if(_gcaBulkOpenBtn) _gcaBulkOpenBtn.addEventListener("click", openBulkCancelModal);
+  const _bcSelectAll = $g("bcSelectAll");
+  if(_bcSelectAll) _bcSelectAll.addEventListener("change", (e)=>{
+    document.querySelectorAll("#bcList .bc-chk").forEach(cb=>{ cb.checked = e.target.checked; });
+    _bcUpdateCount();
+  });
+  const _bcCancelBtn = $g("bcCancelBtn");
+  if(_bcCancelBtn) _bcCancelBtn.addEventListener("click", _bcExecute);
+
 
   // ═══ COACHING PATH OPTIMIZER ═══
 
@@ -7984,21 +8601,25 @@ function _caRender(){
     if(presenceOn) items = items.filter(function(i){return i.presence==="ACTIVE";});
     if(gcaOwnerFilter) items = items.filter(function(i){return i.owner===gcaOwnerFilter;});
 
-    var byFloor = {p2:[], p3:[], p1:[]};
+    // Group by whatever floor the parser resolved (p2..p9 for AR, p1 for pack),
+    // so robotic sites with P4+ are handled instead of being forced into p2/p3.
+    var byFloor = {};
     items.forEach(function(it){
       var parsed = parseStation(it.station);
       if(!parsed) return;
-      var floor = parsed.num ? (parsed.num >= 3000 ? "p3" : "p2") : "p1";
+      var floor = parsed.floor || (parsed.num ? _arFloorOf2(parsed.num) : "p1");
+      if(!byFloor[floor]) byFloor[floor] = [];
       byFloor[floor].push({item:it, parsed:parsed, num:parsed.num||0, floor:floor});
     });
 
     var bestFloor = "p2"; var bestCount = 0;
     for(var fl in byFloor){ if(byFloor[fl].length > bestCount){ bestCount = byFloor[fl].length; bestFloor = fl; } }
 
-    var pathItems = byFloor[bestFloor];
+    var pathItems = byFloor[bestFloor] || [];
     if(!pathItems.length){ alert(tf("empty_no_coachings_floor", {floor: bestFloor.toUpperCase()})); return; }
 
-    if(bestFloor==="p2"||bestFloor==="p3"){
+    // Perimeter ordering applies to any AR ring floor (p2..p9), not just p2/p3.
+    if(/^p[2-9]$/.test(bestFloor)){
       pathItems.forEach(function(e){ e.pIdx = perimeterIndex(e.num, bestFloor); });
       pathItems.sort(function(a,b){ return a.pIdx - b.pIdx; });
     }

@@ -34,6 +34,14 @@
         "file": "FCLM_1003019.csv",
         "function_contains": "Decant",
         "unit_type": "CASE"
+      },
+      "INDUCT": {
+        "file": "FCLM_1003051.csv",
+        "function_contains": "AFE 1 Induct"
+      },
+      "AFE_REBIN": {
+        "file": "FCLM_1003051.csv",
+        "function_contains": "AFE 1 Rebin"
       }
     },
     "role_fallback": {
@@ -125,6 +133,14 @@
         "file": "FCLM_1003019.csv",
         "function_contains": "Decant",
         "unit_type": "CASE"
+      },
+      "INDUCT": {
+        "file": "FCLM_1003051.csv",
+        "function_contains": "AFE 1 Induct"
+      },
+      "AFE_REBIN": {
+        "file": "FCLM_1003051.csv",
+        "function_contains": "AFE 1 Rebin"
       }
     },
     "role_fallback": {
@@ -216,6 +232,14 @@
         "file": "FCLM_1003019.csv",
         "function_contains": "Decant",
         "unit_type": "CASE"
+      },
+      "INDUCT": {
+        "file": "FCLM_1003051.csv",
+        "function_contains": "AFE 1 Induct"
+      },
+      "AFE_REBIN": {
+        "file": "FCLM_1003051.csv",
+        "function_contains": "AFE 1 Rebin"
       }
     },
     "role_fallback": {
@@ -322,6 +346,14 @@
         "file": "FCLM_1003019.csv",
         "function_contains": "Decant",
         "unit_type": "CASE"
+      },
+      "INDUCT": {
+        "file": "FCLM_1003051.csv",
+        "function_contains": "AFE 1 Induct"
+      },
+      "AFE_REBIN": {
+        "file": "FCLM_1003051.csv",
+        "function_contains": "AFE 1 Rebin"
       }
     },
     "role_fallback": {
@@ -413,6 +445,14 @@
         "file": "FCLM_1003019.csv",
         "function_contains": "Decant",
         "unit_type": "CASE"
+      },
+      "INDUCT": {
+        "file": "FCLM_1003051.csv",
+        "function_contains": "AFE 1 Induct"
+      },
+      "AFE_REBIN": {
+        "file": "FCLM_1003051.csv",
+        "function_contains": "AFE 1 Rebin"
       }
     },
     "role_fallback": {
@@ -426,8 +466,8 @@
       {
         "station_contains": "WS11",
         "file": "FCLM_1002993.csv",
-        "function_contains": "Slam At Pack",
-        "role_override": "SNS",
+        "function_contains": "Slam at Pack",
+        "role_override": "SNS1",
         "process_id": "100054"
       },
       {
@@ -440,22 +480,22 @@
       {
         "station_contains": "SINGLES_01",
         "file": "FCLM_1002993.csv",
-        "function_contains": "SLAP Mix",
-        "role_override": "Bolsas BP",
+        "function_contains": "Scan Verify Large",
+        "role_override": "SM2",
         "process_id": "100054"
       },
       {
         "station_contains": "SINGLES_02",
         "file": "FCLM_1002993.csv",
-        "function_contains": "Scan Verify Large",
-        "role_override": "SM",
+        "function_contains": "Scan Verify Small",
+        "role_override": "SMMIX",
         "process_id": "100054"
       },
       {
         "station_contains": "SINGLES_03",
         "file": "FCLM_1002993.csv",
-        "function_contains": "Scan Verify SIOC",
-        "role_override": "Sioc/Siob",
+        "function_contains": "Scan Verify Medium",
+        "role_override": "SM",
         "process_id": "100054"
       },
       {
@@ -508,6 +548,14 @@
       "SM1": {
         "file": "FCLM_1002993.csv",
         "function_contains": "Scan Verify Medium"
+      },
+      "INDUCT": {
+        "file": "FCLM_1003051.csv",
+        "function_contains": "AFE 1 Induct"
+      },
+      "AFE_REBIN": {
+        "file": "FCLM_1003051.csv",
+        "function_contains": "AFE 1 Rebin"
       }
     },
     "role_fallback": {

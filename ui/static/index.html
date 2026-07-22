@@ -723,6 +723,9 @@ body.is-admin .cc-row-close, body.is-admin .cc-complete, body.is-admin .cc-cance
 /* TABLE */
 .tab-panel{display:none;flex:1;flex-direction:column;overflow-y:auto;overflow-x:hidden}
 .tab-panel.active{display:flex}
+/* Map panel uses BLOCK (not flex): its AR-ring stations are absolutely
+   positioned and give the flex panel no height, collapsing it to 0. */
+#panel-map.active{display:block;overflow:auto}
 .table-wrap{flex:1;overflow-y:auto;overflow-x:auto}
 .main-table{width:100%;border-collapse:collapse;font-size:14px}
 /* AMZL (Delivery Station) view: hide FC-only columns (Station, Notes) and the
@@ -1307,7 +1310,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .ib-card.gap      {--ib-accent:#dc2626}
 .ib-card.idle     {--ib-accent:#ca8a04}
 .ib-card.faststart{--ib-accent:#7c3aed}
-.ib-card.below    {--ib-accent:#dc2626}
+.ib-card.below    {--ib-accent:#f87171}
 .ib-photo{width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--border)}
 .ib-photo-ph{width:38px;height:38px;border-radius:50%;flex-shrink:0;background:var(--bg-panel);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--text-muted);border:2px solid var(--border)}
 .ib-info{flex:1;min-width:0}
@@ -1322,6 +1325,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .ib-pct.ok  {color:#16a34a}
 .ib-tag{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
 .ib-tag.tag-gap   {background:rgba(220,38,38,0.12); color:#991b1b}
+.ib-tag.tag-below {background:rgba(248,113,113,0.15); color:#dc2626}
 .ib-tag.tag-idle  {background:rgba(202,138,4,0.12); color:#854d0e}
 .ib-tag.tag-fs    {background:rgba(124,58,237,0.12);color:#5b21b6}
 .ib-tag.tag-gca   {background:rgba(245,158,11,0.15);color:#92400e}
@@ -1342,27 +1346,27 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .fc-center{flex:1;min-height:240px;padding:14px;display:flex;align-items:stretch;justify-content:center;position:sticky;top:8px;align-self:flex-start}
 .fcc{width:100%;max-width:680px;display:flex;flex-direction:column;gap:10px}
 .fcc-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-.fcc-title{font-size:13px;font-weight:800;letter-spacing:.05em;color:var(--text);text-transform:uppercase}
-.fcc-title-sub{font-size:10px;color:var(--text-muted);font-weight:600}
-.fcc-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.fcc-stat{padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);text-align:center;position:relative;overflow:hidden}
+.fcc-title{font-size:15px;font-weight:800;letter-spacing:.05em;color:var(--text);text-transform:uppercase}
+.fcc-title-sub{font-size:12px;color:var(--text-muted);font-weight:600}
+.fcc-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.fcc-stat{padding:16px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg-card);text-align:center;position:relative;overflow:hidden}
 .fcc-stat::before{content:"";position:absolute;left:0;top:0;width:100%;height:2px;background:var(--fcc-color,var(--accent))}
-.fcc-stat-val{font-size:22px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.1}
-.fcc-stat-lbl{font-size:9.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.fcc-stat-val{font-size:38px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.05}
+.fcc-stat-lbl{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:5px;font-weight:600}
 .fcc-stat.gap   {--fcc-color:#dc2626} .fcc-stat.gap   .fcc-stat-val{color:#dc2626}
 .fcc-stat.idle  {--fcc-color:#ca8a04} .fcc-stat.idle  .fcc-stat-val{color:#ca8a04}
 .fcc-stat.fs    {--fcc-color:#7c3aed} .fcc-stat.fs    .fcc-stat-val{color:#7c3aed}
 .fcc-stat.ok    {--fcc-color:#16a34a} .fcc-stat.ok    .fcc-stat-val{color:#16a34a}
 
 .fcc-procs{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px}
-.fcc-proc{padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);position:relative;overflow:hidden}
+.fcc-proc{padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg-card);position:relative;overflow:hidden}
 .fcc-proc::before{content:"";position:absolute;left:0;top:0;width:3px;height:100%;background:var(--accent)}
-.fcc-proc-name{font-size:10px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em}
+.fcc-proc-name{font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em}
 .fcc-proc-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:3px;gap:6px}
-.fcc-proc-uph{font-size:14px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
-.fcc-proc-pct{font-size:10.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.fcc-proc-uph{font-size:22px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+.fcc-proc-pct{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
 .fcc-proc-pct.bad {color:#dc2626} .fcc-proc-pct.warn{color:#ca8a04} .fcc-proc-pct.ok  {color:#16a34a}
-.fcc-proc-foot{font-size:9.5px;color:var(--text-muted);margin-top:2px;display:flex;justify-content:space-between;gap:6px}
+.fcc-proc-foot{font-size:11px;color:var(--text-muted);margin-top:4px;display:flex;justify-content:space-between;gap:6px}
 .fcc-proc-click{cursor:pointer;transition:transform .1s,box-shadow .1s,border-color .1s}
 .fcc-proc-click:hover{transform:translateY(-2px);box-shadow:0 8px 18px -10px var(--shadow);border-color:var(--accent)}
 .fcc-proc-active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
@@ -1411,13 +1415,12 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .map-mini-btn:hover{border-color:var(--accent-border);color:var(--accent)}
 .map-mini-toggle{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;color:var(--text-secondary);cursor:pointer;padding:4px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--bg-card)}
 .map-mini-toggle input{accent-color:var(--accent);margin:0}
-.map-zoom{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--bg-card)}
-.map-zoom input[type=range]{width:90px;accent-color:var(--accent);cursor:pointer}
 .map-legend{display:flex;flex-wrap:wrap;gap:14px;padding:6px 14px 8px;border-bottom:1px solid var(--border);font-size:10.5px;color:var(--text-secondary);font-weight:600}
 .map-legend span{display:inline-flex;align-items:center;gap:5px}
 .map-legend .lg-sw{display:inline-block;width:14px;height:14px;border-radius:3px;border:1.5px solid;flex-shrink:0}
 /* Zoom: scale the floor wrapper without affecting layout text */
-#perfFloorWrap{transform-origin:top left;transition:transform .15s}
+#perfFloorWrap{transform-origin:top center;transition:transform .15s;width:fit-content;max-width:100%;margin:0 auto}
+.perf-floor-container{width:fit-content;max-width:100%;margin:0 auto}
 
 /* ═══ Station Map (AR floors) ═══ */
 .sm-grid{display:flex;flex-direction:column;gap:2px;align-items:center}
@@ -1425,24 +1428,28 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .sm-middle{display:flex;gap:8px;align-items:stretch;width:100%}
 .sm-col{display:flex;flex-direction:column;gap:1px;align-items:center;padding:2px 0}
 .sm-center{flex:1;display:flex;align-items:flex-start;justify-content:center;min-height:80px}
-.sm-station{width:34px;height:42px;border-radius:5px;border:2px solid #d1d5db;background:var(--bg-card);display:inline-flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .15s;gap:2px;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+.sm-station{width:44px;height:54px;border-radius:7px;border:2px solid #d1d5db;background:var(--bg-card);display:inline-flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .15s;gap:2px;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+.sm-station.sm-circle{width:48px;height:48px;border-radius:50%}
 .sm-station:hover{transform:scale(1.25);z-index:10;box-shadow:0 6px 18px rgba(0,0,0,0.30)}
-.sm-station .sm-type{font-size:7px;font-weight:600;color:var(--text-muted);text-transform:uppercase;line-height:1}
-.sm-station .sm-num{font-size:10px;font-weight:700;color:var(--text);line-height:1}
+.sm-station .sm-type{font-size:8.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;line-height:1}
+.sm-station .sm-num{font-size:13px;font-weight:700;color:var(--text);line-height:1}
 .sm-station.sm-empty{border-color:var(--border);background:var(--bg-panel);opacity:0.45;box-shadow:none}
 .sm-station.sm-empty .sm-type,.sm-station.sm-empty .sm-num{color:var(--text-dim)}
 .sm-station.sm-active   {border-color:#3b82f6;background:linear-gradient(180deg,#eff6ff 0%,#dbeafe 100%)}
 .sm-station.sm-ontarget {border-color:#16a34a;background:linear-gradient(180deg,#f0fdf4 0%,#dcfce7 100%)}
 .sm-station.sm-danger   {border-color:#dc2626;background:linear-gradient(180deg,#fef2f2 0%,#fee2e2 100%);box-shadow:0 0 0 1px rgba(220,38,38,0.20),0 4px 12px -4px rgba(220,38,38,0.45)}
+.sm-station.sm-below    {border-color:#f87171;background:linear-gradient(180deg,#fff5f5 0%,#fee2e2 60%);box-shadow:0 0 0 1px rgba(248,113,113,0.18),0 3px 8px -4px rgba(248,113,113,0.35)}
 .sm-station.sm-idle     {border-color:#ca8a04;background:linear-gradient(180deg,#fefce8 0%,#fef9c3 100%);box-shadow:0 0 0 1px rgba(202,138,4,0.20),0 4px 10px -4px rgba(202,138,4,0.40)}
 .sm-station.sm-faststart{border-color:#7c3aed;background:linear-gradient(180deg,#faf5ff 0%,#ede9fe 100%);box-shadow:0 0 0 1px rgba(124,58,237,0.18)}
 .sm-station.sm-danger .sm-num{color:#991b1b}
+.sm-station.sm-below .sm-num{color:#dc2626}
 .sm-station.sm-idle .sm-num{color:#854d0e}
 .sm-station.sm-ontarget .sm-num{color:#166534}
 .sm-station.sm-faststart .sm-num{color:#5b21b6}
 .sm-badge{position:absolute;top:-9px;left:50%;transform:translateX(-50%);min-width:16px;height:13px;border-radius:3px;font-size:8px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1}
 .sm-badge.bg-green{background:#22c55e}
 .sm-badge.bg-red{background:#ef4444}
+.sm-badge.bg-red-light{background:#f87171}
 .sm-badge.bg-yellow{background:#eab308}
 .sm-badge.bg-purple{background:#8b5cf6}
 .sm-station .fm-gca-flag{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);min-width:14px;height:13px;border-radius:6px;padding:0 3px;background:#f59e0b;color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 4px rgba(245,158,11,0.6)}
@@ -1464,6 +1471,21 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .kpi-card:hover::before{opacity:1}
 .kpi-card .kpi-val{font-size:22px;font-weight:700;color:var(--text)}
 .kpi-card .kpi-lbl{font-size:10px;color:var(--text-muted);margin-top:2px}
+/* GCA large KPI cards (daily reviews / L8): big % + small count. */
+.gca-kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px}
+@media(max-width:1100px){.gca-kpi-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:640px){.gca-kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.kpi-card.kpi-lg{padding:22px 18px}
+.kpi-card.kpi-lg .kpi-val{font-size:44px;font-weight:800;line-height:1}
+.kpi-card.kpi-lg .kpi-lbl{font-size:13px;font-weight:600;color:var(--text-secondary);margin-top:8px}
+.kpi-card.kpi-lg .kpi-sub{font-size:11px;color:var(--text-muted);margin-top:3px}
+/* Accent stripe per card type (positive-first: Completed green is the hero). */
+.kpi-card.kpi-completed::before{background:linear-gradient(90deg,#22c55e,#4ade80);opacity:1}
+.kpi-card.kpi-completed .kpi-val{color:#16a34a}
+.kpi-card.kpi-cancelled::before{background:linear-gradient(90deg,#94a3b8,#cbd5e1);opacity:.8}
+.kpi-card.kpi-pending::before{background:linear-gradient(90deg,#f59e0b,#fbbf24);opacity:.8}
+.kpi-card.kpi-exp3::before{background:linear-gradient(90deg,#f59e0b,#fbbf24);opacity:.8}
+.kpi-card.kpi-exp7::before{background:linear-gradient(90deg,#60a5fa,#93c5fd);opacity:.8}
 .gca-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .gca-bar-label{width:120px;font-size:11px;color:var(--text-secondary);text-align:right}
 .gca-bar-track{flex:1;height:18px;background:var(--bg-panel);border-radius:9px;overflow:hidden;border:1px solid var(--border)}
@@ -1474,6 +1496,33 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .gca-bar-nums{font-size:10px;color:var(--text-muted);min-width:50px}
 .gca-pill{padding:4px 10px;border-radius:12px;font-size:10px;border:1px solid var(--border);background:var(--bg-card);cursor:pointer;color:var(--text-secondary)}
 .gca-pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* Stacked compliance bar (Completed / Pending / Cancelled / Expired) */
+.gca-stack{display:flex;height:40px;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin:8px 16px 4px}
+.gca-stack-seg{display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;transition:width .4s}
+.gca-stack-seg.completed{background:linear-gradient(90deg,#22c55e,#4ade80)}
+.gca-stack-seg.pending{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.gca-stack-seg.cancelled{background:linear-gradient(90deg,#94a3b8,#cbd5e1);color:#1e293b}
+.gca-stack-seg.expired{background:linear-gradient(90deg,#ef4444,#f87171)}
+.gca-stack-legend{display:flex;flex-wrap:wrap;gap:16px;padding:4px 16px 8px;font-size:12px;color:var(--text-secondary)}
+.gca-stack-legend .dot{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:middle}
+.gca-stack-legend .dot.completed{background:#22c55e}
+.gca-stack-legend .dot.pending{background:#f59e0b}
+.gca-stack-legend .dot.cancelled{background:#94a3b8}
+.gca-stack-legend .dot.expired{background:#ef4444}
+/* Per-owner stacked compliance bars */
+.gca-owner-bars{margin:12px 16px 4px;display:flex;flex-direction:column;gap:8px}
+.gca-owner-row{display:flex;align-items:center;gap:8px}
+.gca-owner-label{width:130px;font-size:12px;font-weight:600;color:var(--text-secondary);text-align:right;flex-shrink:0}
+.gca-owner-track{flex:1}
+.gca-owner-track .gca-stack{margin:0;height:28px}
+.gca-owner-track .gca-stack-seg{font-size:11px}
+.gca-owner-nums{font-size:12px;color:var(--text-muted);min-width:90px;flex-shrink:0}
+/* Pending | Cancelled/Expired tab toggle */
+.gca-tab{padding:6px 14px;border-radius:8px 8px 0 0;font-size:12px;font-weight:600;border:1px solid var(--border);border-bottom:none;background:var(--bg-panel);cursor:pointer;color:var(--text-secondary)}
+.gca-tab.active{background:var(--bg-card);color:var(--text);border-color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
+.gca-status-badge{display:inline-block;font-size:9px;font-weight:700;padding:1px 7px;border-radius:10px;letter-spacing:.3px}
+.gca-status-badge.cancelled{background:#94a3b8;color:#1e293b}
+.gca-status-badge.expired{background:var(--red);color:#fff}
 .main-table .login-name{font-weight:600;font-size:13px;color:var(--text)}
 /* ═══ TOPBAR 2-ROW ═══ */
 .t-row1{display:flex;align-items:center;width:100%;gap:4px;min-height:42px}
@@ -1650,13 +1699,14 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
   <div class="t-nav">
     <div class="t-tab on"  data-tab="dashboard" data-i18n="tab_performance">Performance</div>
+    <div class="t-tab" data-tab="map" id="tabMap" style="display:none">🗺️ Map</div>
     <!--<div class="t-tab" data-tab="history" data-i18n="tab_history">History</div>-->
     <div class="t-tab" data-tab="targets" data-i18n="tab_targets">Targets</div>
     <div class="t-tab" data-tab="quality" id="tabQuality" data-i18n="tab_quality" style="display:none">Quality</div>
+    <div class="t-tab" data-tab="courses" id="tabCourses">📚 Courses</div>
     <div class="t-tab" data-tab="faq" data-i18n="tab_faq">FAQ</div>
     <div class="t-tab" data-tab="gca" id="tabGca" style="display:none">GCA</div>
     <div class="t-tab" data-tab="shifttracker" id="tabShiftTracker" style="display:none">📈 Shift Tracker</div>
-    <div class="t-tab" data-tab="courses" id="tabCourses" style="display:none">📚 Courses</div>
     <div class="t-tab" data-tab="config" id="tabConfig" style="display:none">⚙️ Config</div>
 
   </div>
@@ -1948,9 +1998,13 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <span class="sb-l">Showing <b id="sbCount">0</b> records · filter: <b id="sbFilter">P3+P2+P1</b> · <span data-i18n="lbl_updated">Updated</span> <b id="updatedAt">—</b></span>
     <span class="sb-r" style="display:flex;align-items:center;gap:12px"><span id="sbVersion" style="font-size:9.5px;font-weight:600;color:var(--text-secondary);opacity:.85">v—</span><span style="font-size:9.5px;font-weight:600;color:var(--text-secondary)">Design: EU13 L&D · Created: Fumanue@</span><span class="ldot"></span> <span data-i18n="lbl_live">Live</span> · <b id="sbFc">BCN4</b></span>
   </div>
+</div><!-- /panel-dashboard (close before the Map panel — the map used to live inside dashboard) -->
 
-<!-- ═══ PERFORMANCE FLOOR MAP ═══ -->
-<div id="perfMapWrap" style="display:none;padding:12px 16px">
+<!-- ═══ FLOOR MAP (own tab: panel-map) ═══ -->
+<!-- display:block override: the AR-ring map uses absolutely-positioned stations
+     that don't give the flex panel height, so as its own tab it collapsed to h=0.
+     Block layout + min-height keeps the map visible. -->
+<div class="tab-panel" id="panel-map"><div id="perfMapWrap" style="padding:12px 16px;min-height:calc(100vh - 120px)">
   <div style="background:linear-gradient(180deg,var(--bg-panel),var(--bg-card));border:1px solid var(--border);border-radius:14px;overflow:visible;box-shadow:0 12px 28px -16px var(--shadow)">
     <div style="display:flex;gap:4px;padding:10px 14px;border-bottom:1px solid var(--border);align-items:center;flex-wrap:wrap;row-gap:6px">
       <!-- Floor tabs injected dynamically by _buildFloorTabs() -->
@@ -1963,8 +2017,8 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <button id="mapHlGca"  class="map-pill map-pill-gca"  data-hl="gca"  title="Highlight stations with GCA pending"><span class="map-pill-dot"></span><span class="map-pill-lbl">GCA</span><span id="mapCntGca"  class="map-pill-num">0</span></button>
       <span class="map-pill map-pill-ok map-pill-readonly" title="Stations performing on/above target"><span class="map-pill-dot"></span><span class="map-pill-lbl">OK</span><span id="mapCntOk" class="map-pill-num">0</span></span>
       <div style="width:1px;height:22px;background:var(--border);margin:0 6px"></div>
-      <!-- Process filters -->
-      <button class="map-proc-btn on" data-proc="ALL">All</button>
+      <!-- Process filters (no "All": the default map already shows every process) -->
+      <button class="map-proc-btn on" data-proc="ALL" style="display:none">All</button>
       <button class="map-proc-btn" data-proc="PICK">Pick</button>
       <button class="map-proc-btn" data-proc="STOW">Stow</button>
       <button class="map-proc-btn" data-proc="QS">QS</button>
@@ -1976,16 +2030,11 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
         <svg id="mapRadarSvg" width="78" height="44" viewBox="0 0 78 44"></svg>
         <span class="map-radar-label">FC</span>
       </div>
-      <!-- Right-side controls -->
+      <!-- Right-side controls. On-Target is the DEFAULT view (all active stations
+           shown with their colour). "See opportunities" dims everything except
+           coaching opportunities (gap / below / idle / fast start). -->
       <div style="display:flex;align-items:center;gap:8px">
-        <label class="map-zoom" title="Zoom stations" data-i18n-title="map_zoom_tip">
-          <span style="font-size:11px;color:var(--text-secondary);font-weight:600">↔</span>
-          <input id="mapZoom" type="range" min="80" max="160" value="100" step="5">
-          <span id="mapZoomVal" style="font-size:10px;color:var(--text-muted);font-variant-numeric:tabular-nums;min-width:32px;text-align:right">100%</span>
-        </label>
-        <button id="mapRefreshGca" class="map-mini-btn" title="Refresh GCA pending badges">⟳ GCA</button>
-        <label class="map-mini-toggle" title="Show all stations, including empty ones" data-i18n-title="map_show_all_tip"><input type="checkbox" id="perfShowAll"> All</label>
-        <label class="map-mini-toggle" title="Include on-target stations to see the full real situation" data-i18n-title="map_show_ontarget_tip"><input type="checkbox" id="perfShowOnTarget"> On-Target</label>
+        <label class="map-mini-toggle" title="Resalta solo oportunidades de coaching (Gap, bajo target, Idle, Fast Start)"><input type="checkbox" id="mapSeeOpps"> 🎯 See opportunities</label>
         <div class="map-view-toggle">
           <button id="mapViewBoard" class="active" title="Incidents Board (recommended)">⚡</button>
           <button id="mapViewGrid" title="Grid view">⊞</button>
@@ -2007,8 +2056,8 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <!-- Floor containers injected dynamically by _buildFloorTabs() -->
     <div id="perfFloorWrap"></div>
   </div>
-</div>
-</div>
+</div><!-- /perfMapWrap -->
+</div><!-- /panel-map -->
 
 <!-- ═══ HISTORY ═══ -->
 <div class="tab-panel" id="panel-history">
@@ -2147,8 +2196,8 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   <div class="pipeline-log" id="qualityLog" style="display:none;margin:12px 16px"></div>
 
   <div class="statusbar">
-    <span class="sb-l">Quality Coaching · <b id="qkFcLabel">—</b> · Weekly sigma-based detection</span>
-    <span class="sb-r">Threshold: associates above configured σ appear here</span>
+    <span class="sb-l">Quality Coaching · <b id="qkFcLabel">—</b> · Todos con ≥1 defecto (filtro σ opcional)</span>
+    <span class="sb-r">Todos los asociados con ≥1 defecto · usa el filtro σ para acotar</span>
   </div>
 </div>
 
@@ -2268,6 +2317,25 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 </div>
 
 
+<!-- ═══ COURSES (read-only: which course is bound to each role/error) ═══ -->
+<div class="tab-panel" id="panel-courses">
+  <div style="padding:16px 20px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+      <span style="font-size:16px;font-weight:800">📚 Course Assignments</span>
+      <span id="ca-status" style="font-size:11px;color:var(--text-muted)"></span>
+      <div style="flex:1"></div>
+      <select id="ca-kind" class="form-input" style="height:30px;font-size:12px;width:auto">
+        <option value="all">Todos</option>
+        <option value="role">Performance (rol)</option>
+        <option value="quality">Quality (error)</option>
+      </select>
+      <div class="tb-search" style="max-width:260px"><span style="color:#ccc;font-size:13px">⌕</span><input id="ca-search" placeholder="Buscar tarea / curso…"></div>
+    </div>
+    <div id="ca-area"><div class="cfg-loading">Cargando…</div></div>
+  </div>
+</div>
+
+
 <!-- ═══ GCA COMPLIANCE ═══ -->
 <div class="tab-panel" id="panel-gca">
   <!-- GCA Header -->
@@ -2321,12 +2389,14 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <span id="complianceArrow">▶</span> Compliance Details
     </button>
     <div id="gcaComplianceWrap" style="display:none;margin-top:8px">
-      <!-- KPI Cards -->
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
-        <div class="kpi-card"><div class="kpi-val" id="gcaKpiTotal">0</div><div class="kpi-lbl">Total</div></div>
-        <div class="kpi-card"><div class="kpi-val" id="gcaKpiCompleted">0</div><div class="kpi-lbl">Completed</div></div>
-        <div class="kpi-card"><div class="kpi-val" id="gcaKpiPending">0</div><div class="kpi-lbl">Pending</div></div>
-        <div class="kpi-card"><div class="kpi-val" id="gcaKpiPct">0%</div><div class="kpi-lbl">Compliance</div></div>
+      <!-- KPI Cards (large, for daily reviews / L8). Each shows % big + count small.
+           Expiring cards are % OF PENDING (the 7d card includes the 3d card). -->
+      <div class="gca-kpi-grid">
+        <div class="kpi-card kpi-lg kpi-completed"><div class="kpi-val" id="gcaKpiCompleted">0%</div><div class="kpi-lbl">Completed</div><div class="kpi-sub" id="gcaKpiCompletedN">0</div></div>
+        <div class="kpi-card kpi-lg kpi-exp3"><div class="kpi-val" id="gcaKpiExp3">0%</div><div class="kpi-lbl">Expiring &le;3d</div><div class="kpi-sub" id="gcaKpiExp3N">0 of pending</div></div>
+        <div class="kpi-card kpi-lg kpi-exp7"><div class="kpi-val" id="gcaKpiExp7">0%</div><div class="kpi-lbl">Expiring &le;7d</div><div class="kpi-sub" id="gcaKpiExp7N">0 of pending</div></div>
+        <div class="kpi-card kpi-lg kpi-pending"><div class="kpi-val" id="gcaKpiPending">0%</div><div class="kpi-lbl">Pending &gt;7d</div><div class="kpi-sub" id="gcaKpiPendingN">0</div></div>
+        <div class="kpi-card kpi-lg kpi-cancelled"><div class="kpi-val" id="gcaKpiCancelled">0%</div><div class="kpi-lbl">Cancelled</div><div class="kpi-sub" id="gcaKpiCancelledN">0</div></div>
       </div>
       <!-- Owner Bars -->
       <div id="gcaBars"></div>
@@ -2344,16 +2414,35 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     </div>
   </div>
 
+  <!-- Tabs: Pending | Cancelled/Expired -->
+  <div style="display:flex;gap:4px;padding:0 16px;margin-top:6px;border-bottom:1px solid var(--border)">
+    <div class="gca-tab active" id="gcaTabPending" data-tab="pending">⏳ Pendientes</div>
+    <div class="gca-tab" id="gcaTabClosed" data-tab="closed">🚫 Cancelled / Expired</div>
+  </div>
+
   <!-- GCA Table -->
   <div style="padding:0 16px 16px;overflow-x:auto">
-    <div id="gcaShowing" style="font-size:10px;color:var(--text-muted);margin-bottom:6px;padding:0 16px"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;padding:0 16px">
+      <div id="gcaShowing" style="font-size:10px;color:var(--text-muted)"></div>
+      <button id="gcaBulkOpenBtn" class="act-btn act-secondary" style="font-size:11px;padding:6px 12px" title="Cancelar varios coachings a la vez">✗ Cancelar en bulk</button>
+    </div>
+    <!-- PENDING view -->
     <table class="main-table" id="gcaTable">
       <thead>
         <tr>
-          <th>Associate</th><th>Insight</th><th>Owner</th><th>Notes</th><th>Presence</th><th id="gcaThExpiration" style="cursor:pointer;user-select:none" title="Ordenar por expiración (los que vencen primero)">Expiration ⏳ <span id="gcaSortArrow" style="font-size:9px;opacity:.6"></span></th><th>Open GCA</th>
+          <th>Associate</th><th>Insight</th><th>Owner</th><th>Notes</th><th style="text-align:center">Presence</th><th id="gcaThExpiration" style="cursor:pointer;user-select:none" title="Ordenar por expiración (los que vencen primero)">Expiration ⏳ <span id="gcaSortArrow" style="font-size:9px;opacity:.6"></span></th><th style="text-align:center">Open GCA</th>
         </tr>
       </thead>
       <tbody id="gcaTbody"></tbody>
+    </table>
+    <!-- CANCELLED / EXPIRED view (hidden until tab selected) -->
+    <table class="main-table" id="gcaClosedTable" style="display:none">
+      <thead>
+        <tr>
+          <th>Associate</th><th>Insight</th><th>Owner</th><th>Estado</th><th>Upload Notes</th><th>Reason / Coach Notes</th><th>Fecha</th><th>Open GCA</th>
+        </tr>
+      </thead>
+      <tbody id="gcaClosedTbody"></tbody>
     </table>
   </div>
 </div>
@@ -2402,7 +2491,6 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <button class="cfg-sidebar-tab active" data-cfg-tab="targets"><span class="cfg-tab-icon">📊</span>Pack Targets</button>
       <button class="cfg-sidebar-tab" data-cfg-tab="quality"><span class="cfg-tab-icon">🎯</span>Quality Mode</button>
       <button class="cfg-sidebar-tab" data-cfg-tab="courses"><span class="cfg-tab-icon">🎓</span>Courses</button>
-      <button class="cfg-sidebar-tab" data-cfg-tab="catalog"><span class="cfg-tab-icon">📚</span>Course Catalog</button>
       <button class="cfg-sidebar-tab" data-cfg-tab="shifts"><span class="cfg-tab-icon">🕐</span>Shifts</button>
       <button class="cfg-sidebar-tab" data-cfg-tab="stations"><span class="cfg-tab-icon">📍</span>Stations</button>
       <button class="cfg-sidebar-tab" data-cfg-tab="gcamap"><span class="cfg-tab-icon">🗺️</span>GCA Mapping</button>
@@ -2453,6 +2541,24 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
             <div id="cfgPerfCoursesArea"><div class="cfg-loading">Loading…</div></div>
           </div>
         </div>
+
+        <!-- Course Catalog (CMS browser). Populates from network only on Windows. -->
+        <div class="cfg-section-title" style="margin-top:20px">Course Catalog (CMS)</div>
+        <div class="cfg-section-sub">Catálogo completo de cursos por tipología (grupo de FCs). El catálogo se descarga vía red — solo se puebla en Windows.</div>
+        <div class="cfg-card">
+          <div class="cfg-card-hdr hdr-courses">
+            <span class="cfg-card-title">Catálogo</span>
+            <div style="display:flex;gap:8px;align-items:center">
+              <select id="cc-fc" class="form-input" style="height:28px;font-size:11px;width:auto"></select>
+              <select id="cc-type" class="form-input" style="height:28px;font-size:11px;width:auto"><option value="all">Todos los tipos</option><option value="manual">Manual</option><option value="auto">Auto</option><option value="other">Otros</option></select>
+              <select id="cc-assigned" class="form-input" style="height:28px;font-size:11px;width:auto"><option value="all">Todos</option><option value="assigned">Asignados</option><option value="unassigned">Sin asignar</option></select>
+              <button class="act-btn act-secondary" id="cc-refresh" style="font-size:11px;padding:4px 10px" title="Re-descargar del CMS">↻ Refrescar</button>
+              <button class="act-btn act-secondary" id="cc-csv" style="font-size:11px;padding:4px 10px" title="Exportar catálogo a CSV">↓ CSV</button>
+            </div>
+          </div>
+          <div style="padding:0 12px 8px"><div class="tb-search" style="max-width:300px"><span style="color:#ccc;font-size:13px">⌕</span><input id="cc-search" placeholder="Buscar título / uuid…"></div><span id="cc-status" style="font-size:10px;color:var(--text-muted);margin-left:8px"></span></div>
+          <div class="cfg-card-body" id="cc-area"><div class="cfg-loading">—</div></div>
+        </div>
       </div>
 
       <!-- SHIFTS -->
@@ -2470,7 +2576,17 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 
       <!-- STATIONS -->
       <div class="cfg-section" id="cfg-section-stations">
-        <div class="cfg-section-title">Station Overrides</div>
+        <div class="cfg-section-title">Min Hours in Role (per site)</div>
+        <div class="cfg-section-sub">Mínimo de horas pagadas en el puesto para que un asociado aparezca como activo. Default 1.0h; puedes bajarlo por site (ej. MAD7 = 0.5h). No afecta el agregado rate vs OP2 (usa a todos).</div>
+        <div class="cfg-card">
+          <div class="cfg-card-hdr hdr-stations">
+            <span class="cfg-card-title">Umbral de horas por FC</span>
+            <button class="act-btn act-primary cfg-save" id="cfgSaveMinHours" style="font-size:11px;padding:4px 12px">💾 Save</button>
+          </div>
+          <div class="cfg-card-body" id="cfgMinHoursBody"><div class="cfg-loading">Loading…</div></div>
+        </div>
+
+        <div class="cfg-section-title" style="margin-top:20px">Station Overrides</div>
         <div class="cfg-section-sub">Override role assignment based on station name pattern matching.</div>
         <div class="cfg-card">
           <div class="cfg-card-hdr hdr-stations">
@@ -2503,34 +2619,6 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
         </div>
       </div>
 
-      <div class="cfg-section" id="cfg-section-catalog">
-        <div class="cfg-section-title">📚 Course Catalog</div>
-        <div class="cfg-section-sub">Catálogo completo del CMS por tipología (grupo de FCs con catálogo idéntico). 1 pull cubre el grupo. Caché persistente; refresca cuando quieras.</div>
-        <div class="cfg-card">
-          <div class="cfg-card-hdr hdr-courses">
-            <span class="cfg-card-title">Todos los cursos</span>
-            <span style="flex:1"></span>
-            <select class="form-input" id="cc-fc" style="width:auto;min-width:220px;font-size:11px" title="Tipología (grupo de FCs). ✓=cacheado ○=sin descargar"></select>
-            <select class="form-input" id="cc-type" style="width:auto;min-width:120px;font-size:11px" title="Tipo de coaching">
-              <option value="all">Todos los tipos</option>
-              <option value="manual">Manual</option>
-              <option value="auto">Automático</option>
-              <option value="other">Otros</option>
-            </select>
-            <select class="form-input" id="cc-assigned" style="width:auto;min-width:120px;font-size:11px" title="Filtrar por asignación">
-              <option value="all">Todos</option>
-              <option value="assigned">✓ Asignados</option>
-              <option value="unassigned">● Sin asignar</option>
-            </select>
-            <input class="form-input" id="cc-search" placeholder="Buscar…" style="width:auto;min-width:160px;font-size:11px">
-            <button class="act-btn act-secondary" id="cc-refresh" style="font-size:11px;padding:4px 12px" title="Re-descargar (ignora caché, tarda)">↻ Refrescar</button>
-            <button class="act-btn act-secondary" id="cc-csv" style="font-size:11px;padding:4px 12px">↓ CSV</button>
-          </div>
-          <div id="cc-status" style="font-size:11px;color:var(--text-secondary);padding:6px 14px"></div>
-          <div class="cfg-card-body" id="cc-area" style="overflow:auto"><div class="cfg-loading">Abre esta sección para cargar.</div></div>
-        </div>
-      </div>
-
     </div>
   </div>
 </div>
@@ -2560,6 +2648,35 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     </div>
     <div class="modal-footer">
       <button class="act-btn act-secondary" data-close="modalHighDefects">Entendido</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Bulk Cancel Coachings ═══ -->
+<div class="modal-overlay" id="modalBulkCancel">
+  <div class="modal" style="width:620px">
+    <div class="modal-header" style="background:linear-gradient(135deg,#dc2626,#ea580c);color:#fff">
+      <span class="modal-title" style="color:#fff;display:flex;align-items:center;gap:8px">✗ Cancelar coachings en bulk</span>
+      <button class="modal-close" data-close="modalBulkCancel" style="color:#fff">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+        <select id="bcReason" class="form-input" style="flex:1;height:32px;font-size:12px"><option value="">Motivo de cancelación…</option></select>
+      </div>
+      <input id="bcNote" class="form-input" placeholder="Nota (obligatoria — aplica a todos)" style="width:100%;height:32px;font-size:12px;margin-bottom:10px" autocomplete="off">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <label style="font-size:12px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="bcSelectAll"> Seleccionar todos (<span id="bcVisibleCount">0</span>)</label>
+        <span id="bcSelCount" style="font-size:11px;color:var(--text-muted)">0 seleccionados</span>
+      </div>
+      <div id="bcList" style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:8px"></div>
+      <div id="bcProgress" style="display:none;align-items:center;gap:8px;margin-top:10px">
+        <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div id="bcProgBar" style="width:0%;height:100%;background:var(--red,#dc2626);border-radius:3px;transition:width .2s"></div></div>
+        <span id="bcProgLbl" style="font-size:11px;font-weight:700;color:var(--red,#dc2626);white-space:nowrap">0/0</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="act-btn act-secondary" data-close="modalBulkCancel">Cerrar</button>
+      <button class="act-btn" id="bcCancelBtn" style="background:var(--red,#dc2626);color:#fff;font-weight:700">✗ Cancelar seleccionados</button>
     </div>
   </div>
 </div>
@@ -2723,23 +2840,6 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
-<!-- ═══ TAB PANEL: Courses — assigned courses (read-only, visible to everyone) ═══ -->
-<div class="tab-panel" id="panel-courses" style="flex-direction:column">
-  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 4px">
-    <div style="font-weight:800;font-size:15px">📚 Cursos asignados</div>
-    <div style="font-size:11px;color:var(--text-secondary)">Qué curso está asignado a cada tarea (rol de Performance o error type de Quality)</div>
-    <span style="flex:1"></span>
-    <select class="form-input" id="ca-kind" style="width:auto;min-width:140px" title="Filtrar por tipo de asignación">
-      <option value="all">Todas las tareas</option>
-      <option value="role">👤 Performance (rol)</option>
-      <option value="quality">🎯 Quality (error)</option>
-    </select>
-    <input class="form-input" id="ca-search" placeholder="Buscar tarea / curso…" style="width:auto;min-width:220px">
-  </div>
-  <div id="ca-status" style="font-size:11px;color:var(--text-secondary);padding:0 4px 6px"></div>
-  <div id="ca-area" style="overflow:auto"><div class="cfg-loading">Cargando cursos asignados…</div></div>
-</div>
-
 <!-- ═══ MODAL: Close coaching (Complete / Cancel) ═══ -->
 <div class="modal-overlay" id="modalNewCoaching">
   <div class="modal" style="width:560px">
@@ -2788,7 +2888,12 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
             <option value="PACK">PACK</option>
             <option value="RECEIVE">RECEIVE</option>
             <option value="ICQA">ICQA</option>
+            <option value="__OTHER__">Other (CALM code)…</option>
           </select>
+        </div>
+        <!-- Free-text CALM code, shown only when "Other" is selected. e.g. LNTRAIN -->
+        <div id="cc-calm-code-wrap" style="display:none;margin-bottom:8px">
+          <input class="form-input" id="cc-calm-code" placeholder="CALM code (ej. LNTRAIN)" style="width:100%;text-transform:uppercase" autocomplete="off">
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button type="button" class="act-btn act-secondary" id="cc-calm-log" style="flex:1;min-width:150px">🎓 Logar AA</button>
@@ -2897,7 +3002,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 
 
 <!-- ═══ SHARED MAP TOOLTIP ═══ -->
-<div id="gcaMapTooltip" style="display:none;position:fixed;z-index:9999;background:#1a2736;border:1px solid #2a3a4a;border-radius:12px;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,0.5);max-width:500px;max-height:80vh;overflow-y:auto;font-size:14px;pointer-events:none;color:#e8ecf0"></div>
+<div id="gcaMapTooltip" style="display:none;position:fixed;z-index:9999;background:#1a2736;border:1px solid #2a3a4a;border-radius:14px;padding:26px 28px;box-shadow:0 16px 48px rgba(0,0,0,0.55);max-width:680px;min-width:380px;max-height:85vh;overflow-y:auto;font-size:15.5px;pointer-events:none;color:#e8ecf0"></div>
 
 <!-- MWINIT TOAST: shown while Midway is asking the user to touch the YubiKey -->
 <div class="mwinit-overlay hidden" id="mwinitOverlay"></div>
@@ -2930,7 +3035,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
-<script src="/static/app.js?v=v194_calm_expiry_20260717" defer></script>
+<script src="/static/app.js?v=v225_courses_feature_20260722" defer></script>
 </body>
 </html>
 

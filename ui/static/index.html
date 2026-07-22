@@ -615,6 +615,14 @@ html.theme-transitioning *::after{
 .theme-sw-label{font-size:10.5px;color:var(--text-secondary);font-weight:600;text-align:center;letter-spacing:.2px}
 .theme-sw.active .theme-sw-label{color:var(--accent)}
 .sp-select{padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);font-size:11px;cursor:pointer}
+/* Alert opt-in toggles (Settings) */
+.sp-alert-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;margin-bottom:6px;border:1px solid var(--border);border-radius:9px;background:var(--bg-input);cursor:pointer}
+.sp-alert-toggle:hover{border-color:var(--accent-border,var(--accent))}
+.sp-alert-toggle > span{display:flex;flex-direction:column;gap:1px}
+.sp-alert-toggle b{font-size:11.5px;color:var(--text);font-weight:700}
+.sp-alert-desc{font-size:10px;color:var(--text-muted);line-height:1.35}
+.sp-alert-toggle input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.sp-alert-toggle input[type=checkbox]:disabled{cursor:not-allowed;opacity:.5}
 /* THEME TOGGLE */
 .theme-toggle{width:36px;height:20px;border-radius:10px;background:var(--border-strong);border:none;cursor:pointer;position:relative;margin-left:8px;transition:background .3s}
 .theme-toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
@@ -899,6 +907,18 @@ body[data-bl="amzl"] .curve-label{font-size:13px}
 .qkpi-compliance::before{background:linear-gradient(90deg,var(--accent),var(--accent2))}
 .qkpi-num{font-size:22px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
 .qkpi-lbl{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+.qkpi-hint{font-size:9px;color:var(--accent);font-weight:700;margin-top:2px;letter-spacing:.02em}
+.qkpi-opp{cursor:pointer}
+.qkpi-opp.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-light) inset}
+.qkpi-opp.active::before{opacity:1}
+.qkpi-opp.active .qkpi-lbl{color:var(--accent)}
+.qkpi-opp.active .qkpi-hint::after{content:" · filtro activo";color:var(--accent)}
+/* Anomaly card: red accent bar + red active state (post-coaching errors). */
+.qkpi-anomaly::before{background:var(--red,#dc2626)}
+.qkpi-anomaly .qkpi-num{color:var(--red,#dc2626)}
+.qkpi-anomaly.active{border-color:var(--red,#dc2626);box-shadow:0 0 0 2px rgba(220,38,38,.18) inset}
+.qkpi-anomaly.active .qkpi-lbl{color:var(--red,#dc2626)}
+.qkpi-anomaly.active .qkpi-hint::after{content:" · filtro activo";color:var(--red,#dc2626)}
 .qkpi-present .qkpi-num{color:var(--green)}
 .qkpi-coached .qkpi-num{color:var(--accent)}
 .qkpi-pending .qkpi-num{color:var(--orange)}
@@ -1343,7 +1363,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .map-radar-label{font-size:10px;color:var(--text-muted);font-weight:600}
 
 /* ═══ Floor Command Center (the empty middle of the AR ring) ═══ */
-.fc-center{flex:1;min-height:240px;padding:14px;display:flex;align-items:stretch;justify-content:center;position:sticky;top:8px;align-self:flex-start}
+.fc-center{flex:1;min-height:240px;padding:14px;display:flex;align-items:flex-start;justify-content:center;align-self:flex-start}
 .fcc{width:100%;max-width:680px;display:flex;flex-direction:column;gap:10px}
 .fcc-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
 .fcc-title{font-size:15px;font-weight:800;letter-spacing:.05em;color:var(--text);text-transform:uppercase}
@@ -1427,6 +1447,9 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .sm-row{display:flex;gap:2px;justify-content:center;flex-wrap:wrap;padding:4px 0}
 .sm-middle{display:flex;gap:8px;align-items:stretch;width:100%}
 .sm-col{display:flex;flex-direction:column;gap:1px;align-items:center;padding:2px 0}
+/* Lateral columns (QS/STOW sides of the AR ring) get vertical breathing room so
+   the first/last station doesn't sit flush against the top/bottom rows. */
+.sm-middle .sm-col{margin-top:14px;margin-bottom:14px}
 .sm-center{flex:1;display:flex;align-items:flex-start;justify-content:center;min-height:80px}
 .sm-station{width:44px;height:54px;border-radius:7px;border:2px solid #d1d5db;background:var(--bg-card);display:inline-flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .15s;gap:2px;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
 .sm-station.sm-circle{width:48px;height:48px;border-radius:50%}
@@ -1847,6 +1870,26 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <button class="sp-opt" id="spDensityCompact" data-val="compact">Compacta</button>
     </div>
   </div>
+  <div id="spAlertsRow" style="display:none;border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
+    <div class="sp-label" style="margin-bottom:8px" data-i18n="alerts_settings_title">🔔 Alertas automáticas</div>
+    <div style="font-size:10.5px;color:var(--text-muted);line-height:1.5;margin-bottom:10px" data-i18n="alerts_settings_hint">
+      Opt-in. Cuando las activas, Argos revisa tu FC en segundo plano y te avisa. Detalles en la pestaña FAQ.
+    </div>
+    <label class="sp-alert-toggle" for="spAlertGca">
+      <span>
+        <b>GCA reactivo</b>
+        <span class="sp-alert-desc">Aviso al aparecer un HIGH_DEFECTS pendiente</span>
+      </span>
+      <input type="checkbox" id="spAlertGca" onchange="if(window._toggleAlert)window._toggleAlert('gca', this.checked)">
+    </label>
+    <label class="sp-alert-toggle" for="spAlertQuality" id="spAlertQualityLbl">
+      <span>
+        <b>Quality</b>
+        <span class="sp-alert-desc">Aviso cuando alguien cruza ≥2σ y está en site</span>
+      </span>
+      <input type="checkbox" id="spAlertQuality" onchange="if(window._toggleAlert)window._toggleAlert('quality', this.checked)">
+    </label>
+  </div>
   <div class="sp-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
     <button id="spDiagCopy" class="sp-opt" style="width:100%;padding:8px 10px;font-size:11.5px">📋 Copiar info de soporte</button>
   </div>
@@ -1942,7 +1985,6 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <button class="act-btn" id="btnAdoption" style="display:none;background:var(--accent-light);color:var(--accent-text);border:1px solid var(--accent-border)" title="Super admin: Argos adoption (DDD)">📊 Adoption</button>
     <button class="act-btn" id="btnExempt" style="display:none;font-size:11px;padding:7px 12px;background:var(--bg-panel);border:1px solid var(--border)" title="Admin: excluir asociados del coaching (Performance + Calidad)">🚫 Exempt</button>
     <button class="act-btn" id="btnShiftTracker" style="display:none;font-size:11px;padding:7px 12px;background:var(--bg-panel);border:1px solid var(--border)" title="Admin: progreso de rates vs Plan/OP2 durante 24h">📈 Shift Tracker</button>
-    <button onclick="if(window.testAlertsNow)window.testAlertsNow()" class="act-btn" id="btnTestAlerts" style="display:none;font-size:11px;padding:7px 12px;background:var(--bg-panel);border:1px solid var(--border)" title="Comprobar coachings manuales pendientes (GCA + Quality) ahora">🔔 Check Coaching Manual</button>
     <button onclick="if(window._showCoachingPath)window._showCoachingPath()" class="act-btn bl-fc-only" style="font-size:11px;padding:7px 14px;background:var(--bg-panel);border:1px solid var(--border)">🧭 Path</button>
 
     <div class="tb-count">Showing <b id="rowCount">0</b> of <b id="totalCount">0</b></div>
@@ -2104,11 +2146,12 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 
   <div class="quality-kpis" id="qualityKpis">
-    <div class="qkpi"><div class="qkpi-num" id="qkTotal">0</div><div class="qkpi-lbl" data-i18n="q_opportunities">Opportunities</div></div>
+    <div class="qkpi qkpi-opp" id="qkpiOpp" role="button" tabindex="0" title="Filtrar la tabla a solo oportunidades (σ ≥ 2)"><div class="qkpi-num" id="qkTotal">0</div><div class="qkpi-lbl" data-i18n="q_opportunities">Opportunities</div><div class="qkpi-hint" data-i18n="q_sigma2_hint">σ ≥ 2</div></div>
     <div class="qkpi qkpi-present"><div class="qkpi-num" id="qkPresent">0</div><div class="qkpi-lbl" data-i18n="q_present">Present</div></div>
     <div class="qkpi qkpi-coached"><div class="qkpi-num" id="qkCoached">0</div><div class="qkpi-lbl" data-i18n="q_coached">Coached</div></div>
     <div class="qkpi qkpi-pending"><div class="qkpi-num" id="qkPending">0</div><div class="qkpi-lbl" data-i18n="q_pending">Pending</div></div>
-    <div class="qkpi qkpi-compliance"><div class="qkpi-num" id="qkCompliance">0%</div><div class="qkpi-lbl">Compliance</div></div>
+    <div class="qkpi qkpi-compliance"><div class="qkpi-num" id="qkCompliance">0%</div><div class="qkpi-lbl">Compliance</div><div class="qkpi-hint" data-i18n="q_sigma2_hint">σ ≥ 2</div></div>
+    <div class="qkpi qkpi-opp qkpi-anomaly" id="qkpiAnomaly" role="button" tabindex="0" title="Filtrar la tabla a asociados con errores tras su último coaching (anomalía: no mejoró)"><div class="qkpi-num" id="qkAnomaly">0</div><div class="qkpi-lbl">⚠️ Anomalías</div><div class="qkpi-hint">post-coaching</div></div>
   </div>
 
   <div class="toolbar toolbar-sticky">
@@ -2196,7 +2239,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   <div class="pipeline-log" id="qualityLog" style="display:none;margin:12px 16px"></div>
 
   <div class="statusbar">
-    <span class="sb-l">Quality Coaching · <b id="qkFcLabel">—</b> · Todos con ≥1 defecto (filtro σ opcional)</span>
+    <span class="sb-l">Quality Coaching · <b id="qkFcLabel">—</b> · Tabla: todos con ≥1 defecto · Cards: solo oportunidades (σ ≥ 2)</span>
     <span class="sb-r">Todos los asociados con ≥1 defecto · usa el filtro σ para acotar</span>
   </div>
 </div>
@@ -2284,6 +2327,148 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
             </ol>
             <p><b>⚡ Priority = Sigma ≥ Modo</b>. El badge ⚡ marca a los associates que necesitan coaching según el modo de rendimiento actual del FC.</p>
             <p>Cuando pones un límite de coachings (ej. 20), la tool ordena por: P3 primero → P2 → P1 → luego por menor % al target dentro de cada grupo.</p>
+          </div>
+        </div>
+
+        <!-- Guía de botones -->
+        <div class="faq-item">
+          <button class="faq-q" data-i18n="faq_qbtn">Button guide — what does each one do?</button>
+          <div class="faq-a">
+            <p><b>Español</b> — Botones de la barra superior (algunos solo aparecen según tu rol/sitio):</p>
+            <ul style="line-height:1.9">
+              <li><b>▶ Start Pipeline</b> — Ejecuta el pipeline de Performance para el FC y turno seleccionados: descarga FCLM/RoboScout, calcula rates vs OP2, tenure, prioridad y arma el dashboard. Si tienes alertas activadas, al terminar dispara también GCA y/o Quality en segundo plano.</li>
+              <li><b>↑ Upload Coaching</b> — Sube a Guided Coaching los coachings seleccionados de la cola de Performance.</li>
+              <li><b>➕ Upload New Coaching</b> — Crea y sube un coaching manual (fuera de la cola) indicando login + notas.</li>
+              <li><b>↑↑ Bulk Upload</b> — Subida masiva de coachings desde la selección actual.</li>
+              <li><b>↓ CSV</b> — Exporta la tabla visible a CSV.</li>
+              <li><b>🗺️ Map</b> — Abre el mapa espacial del floor (estaciones, rates, gaps). Disponible en sitios FC (no en Delivery).</li>
+              <li><b>🧭 Path</b> — Muestra la ruta de coaching recomendada.</li>
+              <li><b>⚙️ Settings</b> — Tema, idioma, densidad y <b>activar/desactivar tus alertas automáticas</b> (GCA y Quality).</li>
+              <li><b>🕐 Manual</b> — Fija un rango de fecha/hora manual en lugar del turno auto-detectado.</li>
+              <li><b>🚫 Exempt</b> <span style="color:var(--text-muted)">(admin)</span> — Excluye asociados del coaching (Performance + Quality).</li>
+              <li><b>📊 Adoption</b> <span style="color:var(--text-muted)">(super admin)</span> — Métricas de adopción de Argos (DDD).</li>
+              <li><b>⚙️ Config</b> <span style="color:var(--text-muted)">(admin)</span> — Edición de configuración: targets, mapeos, umbrales, cursos, min-horas, etc. Los admins son <b>exclusivamente</b> para mover configuración.</li>
+            </ul>
+            <hr style="margin:12px 0;border-color:var(--border)">
+            <p><b>English</b> — Top-bar buttons (some appear only based on your role/site):</p>
+            <ul style="line-height:1.9">
+              <li><b>▶ Start Pipeline</b> — Runs the Performance pipeline for the selected FC + shift: downloads FCLM/RoboScout, computes rates vs OP2, tenure, priority and builds the dashboard. If you have alerts enabled, it also kicks GCA and/or Quality in the background on finish.</li>
+              <li><b>↑ Upload Coaching</b> — Uploads the selected coachings from the Performance queue to Guided Coaching.</li>
+              <li><b>➕ Upload New Coaching</b> — Creates and uploads a manual coaching (outside the queue) with login + notes.</li>
+              <li><b>↑↑ Bulk Upload</b> — Bulk upload of coachings from the current selection.</li>
+              <li><b>↓ CSV</b> — Exports the visible table to CSV.</li>
+              <li><b>🗺️ Map</b> — Opens the spatial floor map (stations, rates, gaps). Available on FC sites (not Delivery).</li>
+              <li><b>🧭 Path</b> — Shows the recommended coaching path.</li>
+              <li><b>⚙️ Settings</b> — Theme, language, density and <b>enable/disable your automatic alerts</b> (GCA and Quality).</li>
+              <li><b>🕐 Manual</b> — Sets a manual date/time range instead of the auto-detected shift.</li>
+              <li><b>🚫 Exempt</b> <span style="color:var(--text-muted)">(admin)</span> — Excludes associates from coaching (Performance + Quality).</li>
+              <li><b>📊 Adoption</b> <span style="color:var(--text-muted)">(super admin)</span> — Argos adoption metrics (DDD).</li>
+              <li><b>⚙️ Config</b> <span style="color:var(--text-muted)">(admin)</span> — Configuration editing: targets, mappings, thresholds, courses, min-hours, etc. Admins are <b>exclusively</b> for moving configuration.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Alertas automáticas -->
+        <div class="faq-item">
+          <button class="faq-q" data-i18n="faq_qalerts">🔔 Automatic alerts — what triggers them and how to enable them?</button>
+          <div class="faq-a">
+            <p><b>Español</b></p>
+            <p>Las alertas son <b>opt-in por usuario</b> y vienen <b>desactivadas por defecto</b>: nadie recibe auto-generación hasta que la active. Se activan en <b>⚙️ Settings → 🔔 Alertas automáticas</b>, de forma independiente:</p>
+            <p><b>1) Alerta GCA reactivo</b></p>
+            <ul style="line-height:1.8">
+              <li><b>Qué la dispara:</b> aparece un <b>coaching reactivo pendiente</b> del escenario <code>HIGH_DEFECTS</code> en tu FC por defecto.</li>
+              <li><b>Frecuencia:</b> Argos revisa en segundo plano <b>cada 5 minutos</b> (más un chequeo ~15s tras iniciar sesión, que solo fija la línea base y no alerta).</li>
+              <li><b>Condición de aviso:</b> solo salta con instancias <b>nuevas</b> respecto a la última revisión (se comparan por id de instancia, así que no re-alerta las mismas). Estado <code>PENDING</code> + escenario <code>HIGH_DEFECTS</code>.</li>
+              <li><b>Qué ves:</b> sonido + toast + notificación de Windows con quién y en qué estación/proceso, y un botón para saltar a la pestaña GCA.</li>
+            </ul>
+            <p><b>2) Alerta Quality</b></p>
+            <ul style="line-height:1.8">
+              <li><b>Qué la dispara:</b> un asociado que cumple <b>las tres condiciones</b> a la vez: <b>Sigma ≥ 2</b>, <b>presente en site</b> (Present) y <b>sin coaching completado</b> esta semana para ese tópico/curso.</li>
+              <li><b>Exentos:</b> los asociados exentos (por proceso o por tópico) <b>nunca</b> alertan, igual que en la cola del dashboard.</li>
+              <li><b>Frecuencia:</b> revisión en segundo plano <b>cada 15 minutos</b> (más una base ~25s tras iniciar sesión, que no alerta).</li>
+              <li><b>Condición de aviso:</b> solo salta con logins <b>nuevos</b> que cruzan la barra desde la última revisión (diff por login).</li>
+              <li><b>No aplica en Delivery (AMZL):</b> no hay pipeline de Quality en Delivery, así que ese toggle queda deshabilitado en sitios DS.</li>
+            </ul>
+            <p style="margin-top:8px"><b>Notas importantes:</b></p>
+            <ul style="line-height:1.8">
+              <li>Las alertas <b>siempre revisan tu FC por defecto</b> (el de tu selector), no el sitio que estés mirando en ese momento.</li>
+              <li>Una revisión en segundo plano <b>nunca abre el popup de YubiKey/Midway</b>: si no hay sesión válida en disco, se salta ese ciclo en silencio.</li>
+              <li>Junto al indicador de Midway verás una <b>píldora de cuenta atrás</b> (ej. <code>GCA 4:12 · Q 8:30</code>) que indica cuándo será la próxima revisión — solo si tienes alguna alerta activada.</li>
+              <li>Al pulsar <b>▶ Start Pipeline</b>, si tienes alertas activas se refrescan GCA/Quality al terminar. Si las tienes apagadas, no se ejecuta nada de eso.</li>
+            </ul>
+            <hr style="margin:12px 0;border-color:var(--border)">
+            <p><b>English</b></p>
+            <p>Alerts are <b>opt-in per user</b> and ship <b>OFF by default</b>: nobody gets auto-generation until they enable it. Turn them on in <b>⚙️ Settings → 🔔 Automatic alerts</b>, each independently:</p>
+            <p><b>1) GCA reactive alert</b></p>
+            <ul style="line-height:1.8">
+              <li><b>Trigger:</b> a <b>pending reactive coaching</b> of the <code>HIGH_DEFECTS</code> scenario appears in your default FC.</li>
+              <li><b>Frequency:</b> background check <b>every 5 minutes</b> (plus a ~15s baseline check after login that only sets the baseline and never alerts).</li>
+              <li><b>Alert condition:</b> fires only for instances that are <b>new</b> vs the last check (diffed by instance id, so it never re-alerts the same ones). Status <code>PENDING</code> + scenario <code>HIGH_DEFECTS</code>.</li>
+              <li><b>What you see:</b> sound + toast + Windows notification with who and which station/process, plus a button to jump to the GCA tab.</li>
+            </ul>
+            <p><b>2) Quality alert</b></p>
+            <ul style="line-height:1.8">
+              <li><b>Trigger:</b> an associate meeting <b>all three</b> at once: <b>Sigma ≥ 2</b>, <b>present on site</b>, and <b>no completed coaching</b> this week for that topic/course.</li>
+              <li><b>Exempt:</b> exempt associates (by process or by topic) <b>never</b> alert, same as the dashboard queue.</li>
+              <li><b>Frequency:</b> background check <b>every 15 minutes</b> (plus a ~25s baseline after login that never alerts).</li>
+              <li><b>Alert condition:</b> fires only for <b>new</b> logins crossing the bar since the last check (diffed by login).</li>
+              <li><b>Not on Delivery (AMZL):</b> there's no Quality pipeline on Delivery, so that toggle is disabled on DS sites.</li>
+            </ul>
+            <p style="margin-top:8px"><b>Important notes:</b></p>
+            <ul style="line-height:1.8">
+              <li>Alerts <b>always check your default FC</b> (from your selector), not whatever site you're currently viewing.</li>
+              <li>A background check <b>never opens the YubiKey/Midway popup</b>: if there's no valid session on disk, it skips that cycle silently.</li>
+              <li>Next to the Midway indicator you'll see a <b>countdown pill</b> (e.g. <code>GCA 4:12 · Q 8:30</code>) showing when the next check runs — only if you have an alert enabled.</li>
+              <li>When you press <b>▶ Start Pipeline</b>, if alerts are on it refreshes GCA/Quality on finish. If they're off, none of that runs.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Anomalía post-coaching -->
+        <div class="faq-item">
+          <button class="faq-q" data-i18n="faq_qanomaly">⚠️ Anomalía — ¿qué significa "no improvement post coaching"?</button>
+          <div class="faq-a">
+            <p><b>Español</b></p>
+            <p>Una <b>anomalía</b> marca a un asociado que <b>siguió cometiendo el mismo error DESPUÉS de haber sido coacheado</b> — es decir, el coaching no tuvo el efecto esperado y probablemente necesita re-coaching o escalación.</p>
+            <ul style="line-height:1.8">
+              <li><b>Cómo se calcula:</b> se toma la fecha del <b>último coaching COMPLETADO</b> del asociado (de Guided Coaching) y se cuentan los errores de OpenSearch (PEI/BFV) con <b>timestamp posterior</b> a esa fecha.</li>
+              <li><b>Dónde se ve:</b> un icono <b>⚠️</b> en la fila de la tabla de Quality (columna Root Cause) y, con más detalle, dentro del modal <b>🔎 RC</b> (banner "Anomaly detected — no improvement post coaching" con el nº de errores y la fecha del último coaching).</li>
+              <li><b>Card + filtro:</b> la card <b>⚠️ Anomalías</b> arriba cuenta cuántos asociados tienen esta condición; al pulsarla, la tabla se filtra solo a ellos (pulsa de nuevo para quitar el filtro).</li>
+              <li><b>Requisito:</b> necesita datos de OpenSearch (RC) y del historial de coaching frescos — corre el pipeline de Quality para actualizarlo.</li>
+            </ul>
+            <hr style="margin:12px 0;border-color:var(--border)">
+            <p><b>English</b></p>
+            <p>An <b>anomaly</b> flags an associate who <b>kept making the same error AFTER being coached</b> — the coaching didn't stick, so re-coaching or escalation is likely needed.</p>
+            <ul style="line-height:1.8">
+              <li><b>How it's computed:</b> takes the associate's <b>last COMPLETED coaching</b> date (from Guided Coaching) and counts OpenSearch errors (PEI/BFV) with a <b>timestamp after</b> that date.</li>
+              <li><b>Where you see it:</b> a <b>⚠️</b> icon on the Quality table row (Root Cause column), and in detail inside the <b>🔎 RC</b> modal (banner "Anomaly detected — no improvement post coaching" with the error count and last-coaching date).</li>
+              <li><b>Card + filter:</b> the <b>⚠️ Anomalies</b> card at the top counts how many associates match; click it to filter the table to just them (click again to clear).</li>
+              <li><b>Requirement:</b> needs fresh OpenSearch (RC) + coaching-history data — run the Quality pipeline to refresh it.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Pestañas -->
+        <div class="faq-item">
+          <button class="faq-q" data-i18n="faq_qtabs">Tabs: Performance · Quality · GCA · Map</button>
+          <div class="faq-a">
+            <p><b>Español</b> — Argos tiene varias pestañas, disponibles para todo el equipo:</p>
+            <ul style="line-height:1.9">
+              <li><b>Performance (Dashboard)</b> — Cola de coaching por rate vs OP2: prioridad, sigma, tenure, estación. Es la vista principal.</li>
+              <li><b>Quality</b> — Defectos de calidad de los últimos 7 días por asociado y tipo de error, con su curso asociado. Muestra a todos (incluso por debajo de sigma 1) para poder hacer dive-deep.</li>
+              <li><b>GCA</b> — Compliance de Guided Coaching: completados, pendientes, cancelados y expirados, con cards de %, barra apilada y una pestaña de Cancelled/Expired con su reason/nota. Incluye cancelación masiva por modal.</li>
+              <li><b>🗺️ Map</b> — Mapa espacial del floor por planta (P1 con muros/induct/rebin/packers/líneas; P2/P3/P4 por anillos), con rates, gaps, idle y GCA pendientes. Solo en sitios FC (no Delivery).</li>
+              <li><b>⚙️ Config</b> <span style="color:var(--text-muted)">(admin)</span> — Solo para administradores.</li>
+            </ul>
+            <hr style="margin:12px 0;border-color:var(--border)">
+            <p><b>English</b> — Argos has several tabs, available to the whole team:</p>
+            <ul style="line-height:1.9">
+              <li><b>Performance (Dashboard)</b> — Coaching queue by rate vs OP2: priority, sigma, tenure, station. The main view.</li>
+              <li><b>Quality</b> — Last-7-days quality defects per associate and error type, with the associated course. Shows everyone (even below sigma 1) so you can dive-deep.</li>
+              <li><b>GCA</b> — Guided Coaching compliance: completed, pending, cancelled and expired, with % cards, a stacked bar, and a Cancelled/Expired tab with its reason/note. Includes bulk cancel via modal.</li>
+              <li><b>🗺️ Map</b> — Spatial floor map per level (P1 with walls/induct/rebin/packers/lines; P2/P3/P4 by rings), with rates, gaps, idle and GCA pendings. FC sites only (not Delivery).</li>
+              <li><b>⚙️ Config</b> <span style="color:var(--text-muted)">(admin)</span> — Administrators only.</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -2553,7 +2738,6 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
               <select id="cc-type" class="form-input" style="height:28px;font-size:11px;width:auto"><option value="all">Todos los tipos</option><option value="manual">Manual</option><option value="auto">Auto</option><option value="other">Otros</option></select>
               <select id="cc-assigned" class="form-input" style="height:28px;font-size:11px;width:auto"><option value="all">Todos</option><option value="assigned">Asignados</option><option value="unassigned">Sin asignar</option></select>
               <button class="act-btn act-secondary" id="cc-refresh" style="font-size:11px;padding:4px 10px" title="Re-descargar del CMS">↻ Refrescar</button>
-              <button class="act-btn act-secondary" id="cc-csv" style="font-size:11px;padding:4px 10px" title="Exportar catálogo a CSV">↓ CSV</button>
             </div>
           </div>
           <div style="padding:0 12px 8px"><div class="tb-search" style="max-width:300px"><span style="color:#ccc;font-size:13px">⌕</span><input id="cc-search" placeholder="Buscar título / uuid…"></div><span id="cc-status" style="font-size:10px;color:var(--text-muted);margin-left:8px"></span></div>
@@ -3035,7 +3219,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
-<script src="/static/app.js?v=v225_courses_feature_20260722" defer></script>
+<script src="/static/app.js?v=v234_anomaly_card_faq_20260722" defer></script>
 </body>
 </html>
 

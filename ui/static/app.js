@@ -5,6 +5,8 @@ const I18N = {
     tab_performance: "Performance", tab_history: "Historial", tab_targets: "Targets", tab_quality: "Calidad",
     lbl_process: "Proceso", lbl_sub: "Sub", lbl_all: "Todos", lbl_fc: "FC",
     lbl_updated: "Actualizado", lbl_live: "Live", lbl_created: "Creado y Desarrollado por", lbl_theme: "Tema", lbl_lang: "Idioma",
+    alerts_settings_title: "🔔 Alertas automáticas",
+    alerts_settings_hint: "Opt-in. Cuando las activas, Argos revisa tu FC en segundo plano y te avisa. Detalles en la pestaña FAQ.",
     kpi_p3: "Prioridad 3", kpi_p3_sub: "Por debajo de 80%",
     kpi_p2: "Prioridad 2",
     kpi_p1: "Prioridad 1",
@@ -20,6 +22,7 @@ const I18N = {
     q_title: "Quality Coaching",
     q_subtitle: "Acumulado Atlas · últimos 7 días · detección sigma por Error Type",
     q_opportunities: "Oportunidades", q_present: "Presentes", q_coached: "Coached", q_pending: "Pendientes",
+    q_sigma2_hint: "σ ≥ 2",
     btn_present_only: "Solo presentes", btn_hide_coached: "Ocultar coached",
     btn_hide_on_target: "Ocultar on-target", btn_run_pipeline: "▶ Start Pipeline",
     btn_refresh: "↻ Refresh", btn_sync_gc: "⟳ Sync GC",
@@ -41,6 +44,10 @@ const I18N = {
     faq_q3: "¿Cómo se determina el Tenure?",
     faq_q4: "Leyenda de Coaching — ¿cuándo aparece alguien?",
     faq_q5: "Descripción de Columnas",
+    faq_qbtn: "Guía de botones — ¿para qué sirve cada uno?",
+    faq_qalerts: "🔔 Alertas automáticas — ¿qué las dispara y cómo activarlas?",
+    faq_qanomaly: "⚠️ Anomalía — ¿qué significa \"no improvement post coaching\"?",
+    faq_qtabs: "Pestañas: Performance · Quality · GCA · Map",
     faq_feedback_title: "💬 Enviar Feedback", faq_feedback_sub: "Reporta problemas, sugiere mejoras o comparte ideas",
     faq_feedback_lbl: "Feedback", faq_feedback_send: "Enviar Feedback", faq_feedback_ok: "✓ Enviado correctamente", faq_feedback_err: "Error al enviar",
     loading: "Cargando…", close: "Cerrar", cancel: "Cancelar",
@@ -152,6 +159,8 @@ const I18N = {
     tab_performance: "Performance", tab_history: "History", tab_targets: "Targets", tab_quality: "Quality",
     lbl_process: "Process", lbl_sub: "Sub", lbl_all: "All", lbl_fc: "FC",
     lbl_updated: "Updated", lbl_live: "Live", lbl_created: "Created and Developed by", lbl_theme: "Theme", lbl_lang: "Language",
+    alerts_settings_title: "🔔 Automatic alerts",
+    alerts_settings_hint: "Opt-in. When enabled, Argos checks your FC in the background and notifies you. Details in the FAQ tab.",
     kpi_p3: "Priority 3", kpi_p3_sub: "Below 80%",
     kpi_p2: "Priority 2",
     kpi_p1: "Priority 1",
@@ -166,6 +175,7 @@ const I18N = {
     q_title: "Quality Coaching",
     q_subtitle: "Cumulative Atlas · last 7 days · sigma detection by Error Type",
     q_opportunities: "Opportunities", q_present: "Present", q_coached: "Coached", q_pending: "Pending",
+    q_sigma2_hint: "σ ≥ 2",
     btn_present_only: "Present only", btn_hide_coached: "Hide Coached",
     btn_hide_on_target: "Hide On-Target", btn_run_pipeline: "▶ Start Pipeline",
     btn_refresh: "↻ Refresh", btn_sync_gc: "⟳ Sync GC",
@@ -184,6 +194,10 @@ const I18N = {
     faq_q3: "How is Tenure determined?",
     faq_q4: "Coaching Legend — when does someone appear?",
     faq_q5: "Column Descriptions",
+    faq_qbtn: "Button guide — what does each one do?",
+    faq_qalerts: "🔔 Automatic alerts — what triggers them and how to enable them?",
+    faq_qanomaly: "⚠️ Anomaly — what does \"no improvement post coaching\" mean?",
+    faq_qtabs: "Tabs: Performance · Quality · GCA · Map",
     faq_feedback_title: "💬 Send Feedback", faq_feedback_sub: "Report issues, suggest features, or share ideas",
     faq_feedback_lbl: "Feedback", faq_feedback_send: "Send Feedback", faq_feedback_ok: "✓ Sent successfully", faq_feedback_err: "Error sending",
     loading: "Loading…", close: "Close", cancel: "Cancel",
@@ -1399,8 +1413,13 @@ async function _qualityPollOnce(){
 
 function _startQualityBackgroundPoll(){
   if(_qualityPollTimer) return;
-  _qualityNextRunAt = Date.now() + 25000;
-  setTimeout(_qualityPollOnce, 25000);   // baseline ~25s after login
+  // Stagger the baseline well AFTER GCA's (~15s): both pipelines share the
+  // server lock, so if Quality's baseline fires while GCA is still running it
+  // would skip and never establish its alert baseline. 90s gives GCA time to
+  // finish first. (The recurring 15-min ticks can still occasionally collide;
+  // the server lock makes the loser skip + its timer retries — no corruption.)
+  _qualityNextRunAt = Date.now() + 90000;
+  setTimeout(_qualityPollOnce, 90000);   // baseline ~90s after login (after GCA)
   _qualityPollTimer = setInterval(_qualityPollOnce, QUALITY_POLL_MS);
   _startPollCountdownTicker();            // paint the topbar countdown pill
 }
@@ -1423,15 +1442,24 @@ function _fmtCountdown(ms){
 function _paintPollPill(){
   const pill = $("pollPill");
   if(!pill) return;
-  if(!window._canAlerts){ pill.style.display = "none"; return; }
-  pill.style.display = "";
   const now = Date.now();
   const gMs = _gcaNextRunAt != null ? _gcaNextRunAt - now : null;
   const qMs = _qualityNextRunAt != null ? _qualityNextRunAt - now : null;
+  // Alerts are opt-in: only show the countdown pill when at least one poll is
+  // actually armed. If the user hasn't enabled any alert (both timers null),
+  // hide it entirely — no armed poll means nothing to count down to.
+  if(!window._canAlerts || (gMs == null && qMs == null)){ pill.style.display = "none"; return; }
+  pill.style.display = "";
   const gEl = $("pollGca"), qEl = $("pollQuality");
   if(gEl){
-    gEl.textContent = `${t("poll_gca")} ${_fmtCountdown(gMs)}`;
-    gEl.classList.toggle("due", gMs != null && gMs <= 0);
+    // GCA off (timer null): hide the GCA segment; else paint countdown.
+    if(gMs == null){
+      gEl.style.display = "none";
+    }else{
+      gEl.style.display = "";
+      gEl.textContent = `${t("poll_gca")} ${_fmtCountdown(gMs)}`;
+      gEl.classList.toggle("due", gMs <= 0);
+    }
   }
   if(qEl){
     // Delivery (AMZL) has no Quality poll (_qualityNextRunAt stays null): hide
@@ -1452,22 +1480,89 @@ function _startPollCountdownTicker(){
   _pollCountdownTimer = setInterval(_paintPollPill, 1000);
 }
 
-// Gate alerts to the curated alerts group: show the Check Coaching Manual
-// button and start the GCA + Quality background polls ONLY for members.
-// Everyone else gets no alerts and no button.
+// ── Per-user alert opt-in ──────────────────────────────────────
+// Alerts (GCA reactivo + Quality) are OPT-IN per user, default OFF. Each user
+// arms them independently from Settings so we never auto-gen for people who
+// don't need it. Prefs persist in localStorage (survive reloads/relaunch).
+// `_canAlerts` means "eligible to arm" (any team member); the two prefs below
+// are the actual on/off switches.
+function _alertPref(kind){
+  // kind: "gca" | "quality". Default OFF (returns false) unless explicitly "1".
+  try{ return localStorage.getItem(`argos_alert_${kind}`) === "1"; }catch(_){ return false; }
+}
+function _setAlertPref(kind, on){
+  try{ localStorage.setItem(`argos_alert_${kind}`, on ? "1" : "0"); }catch(_){}
+}
+
+// Tear down a running poll so toggling OFF actually stops the auto-gen.
+function _stopGcaBackgroundPoll(){
+  if(_gcaPollTimer){ clearInterval(_gcaPollTimer); _gcaPollTimer = null; }
+  _gcaNextRunAt = null;
+}
+function _stopQualityBackgroundPoll(){
+  if(_qualityPollTimer){ clearInterval(_qualityPollTimer); _qualityPollTimer = null; }
+  _qualityNextRunAt = null;
+}
+
+// Called on login and whenever a toggle flips: (re)arm or tear down each poll
+// to match the user's saved prefs. `canAlerts` = eligible (member/admin).
 function _applyAlertsAccess(canAlerts){
   window._canAlerts = !!canAlerts;
+  // "Probar alertas" button retired — alerts are self-service now.
   const btn = $("btnTestAlerts");
-  if(btn) btn.style.display = canAlerts ? "" : "none";
-  if(canAlerts){
-    _startGcaBackgroundPoll();
-    // Delivery (AMZL) users get GCA alerts only — no Quality pipeline exists
-    // for delivery, so don't arm its 10-min poll at all.
-    if(!_isAmzlContext()){
-      _startQualityBackgroundPoll();
-    }
+  if(btn) btn.style.display = "none";
+  // Reflect current prefs in the Settings toggles (if the popover exists).
+  _syncAlertToggleUI();
+  if(!canAlerts){
+    _stopGcaBackgroundPoll();
+    _stopQualityBackgroundPoll();
+    _paintPollPill();
+    return;
+  }
+  // GCA alerts
+  if(_alertPref("gca")) _startGcaBackgroundPoll();
+  else _stopGcaBackgroundPoll();
+  // Quality alerts — Delivery (AMZL) has no Quality pipeline, so never arm it
+  // there even if the pref is ON.
+  if(_alertPref("quality") && !_isAmzlContext()) _startQualityBackgroundPoll();
+  else _stopQualityBackgroundPoll();
+  _startPollCountdownTicker();
+  _paintPollPill();
+}
+
+// Flip one alert on/off from the Settings toggle and (re)apply immediately.
+function _toggleAlert(kind, on){
+  _setAlertPref(kind, on);
+  _applyAlertsAccess(window._canAlerts);
+  const label = kind === "gca" ? "GCA" : "Quality";
+  showToast({
+    title: on ? `🔔 Alertas ${label} activadas` : `🔕 Alertas ${label} desactivadas`,
+    body: on
+      ? (kind === "gca"
+          ? "Recibirás aviso cuando aparezca un GCA reactivo (HIGH_DEFECTS) pendiente en tu FC."
+          : "Recibirás aviso cuando un asociado cruce el umbral de Quality (≥2σ y presente en site).")
+      : "No se ejecutará auto-generación para esta alerta.",
+    type: on ? "info" : "info", ms: 6000,
+  });
+}
+window._toggleAlert = _toggleAlert;
+
+// Paint the two Settings toggles to match saved prefs + eligibility.
+function _syncAlertToggleUI(){
+  const g = $("spAlertGca"), q = $("spAlertQuality"), row = $("spAlertsRow");
+  // Not eligible → hide the whole alerts row.
+  if(row) row.style.display = window._canAlerts ? "" : "none";
+  if(g){ g.checked = _alertPref("gca"); g.disabled = !window._canAlerts; }
+  if(q){
+    q.checked = _alertPref("quality");
+    // Quality alerts are meaningless on Delivery sites — disable + hint.
+    const amzl = _isAmzlContext();
+    q.disabled = !window._canAlerts || amzl;
+    const qLbl = $("spAlertQualityLbl");
+    if(qLbl) qLbl.style.opacity = amzl ? "0.5" : "";
   }
 }
+window._syncAlertToggleUI = _syncAlertToggleUI;
 
 // ── Map auto-refresh (15 min, background) ──────────────────────────────
 // Keeps the floor map fresh without a manual reload: every 15 min it re-pulls
@@ -1686,11 +1781,14 @@ function _applySiteBL(){
     if((at === "quality" || at === "shifttracker" || at === "map") && typeof switchTab === "function"){
       switchTab("dashboard");
     }
-  } else if(window._isAdmin){
+  } else {
+    // FC site: Map tab is available to everyone (member or admin).
     if($("tabMap")) $("tabMap").style.display = "";       // FC site: map tab back
-    // Restore the AMZL-hidden admin controls when switching back to an FC site.
-    if($("btnExempt")) $("btnExempt").style.display = "inline-flex";
-    // Shift Tracker retired — intentionally NOT restored (btn/tab stay hidden).
+    if(window._isAdmin){
+      // Restore the AMZL-hidden admin controls when switching back to an FC site.
+      if($("btnExempt")) $("btnExempt").style.display = "inline-flex";
+      // Shift Tracker retired — intentionally NOT restored (btn/tab stay hidden).
+    }
   }
 }
 window._applySiteBL = _applySiteBL;
@@ -1726,16 +1824,17 @@ async function loadUserInfo(){
       _applySiteBL();
     }catch(blErr){ console.error("BL apply (cached) failed:", blErr); }
     if(d.permissions) _applyPermissions(d.permissions);
-    // Quality + GCA tabs: visible to everyone (member or admin). Map, Config,
-    // multi-site and Adoption stay admin-only.
+    // Quality + GCA + Map tabs: visible to everyone (member or admin). Map is
+    // hidden only for AMZL/Delivery sites (no station map there) via
+    // _applySiteBL. Config, multi-site and Adoption stay admin-only.
     if($("tabQuality")) $("tabQuality").style.display = "";
     if($("tabGca")) $("tabGca").style.display = "";
+    if($("tabMap")) $("tabMap").style.display = "";   // _applySiteBL hides it for DS
     // Restore admin state from cache
     if(d.admin && d.admin.is_admin){
       window._isAdmin = true;
       window._isSuperAdmin = d.admin.is_super_admin || false;
       document.body.classList.add("is-admin");
-      if($("tabMap")) $("tabMap").style.display = "";   // map tab (admin); _applySiteBL hides it for DS
       if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
       if($("btnExempt")) $("btnExempt").style.display = "inline-flex";
       // Shift Tracker retired — button + tab stay hidden (code left inert).
@@ -1743,7 +1842,6 @@ async function loadUserInfo(){
       if($("tabConfig")) $("tabConfig").style.display = "";
     } else {
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "none";
-      if($("tabMap")) $("tabMap").style.display = "none";
     }
     _unblockUI();
     _applyAlertsAccess(d.can_alerts);
@@ -1799,20 +1897,22 @@ async function loadUserInfo(){
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "inline-flex";
       // Show Config tab
       if($("tabConfig")) $("tabConfig").style.display = "";
-      // Show beta tabs (Quality, GCA, Map) — admin only
+      // Show beta tabs (Quality, GCA, Map)
       if($("tabQuality")) $("tabQuality").style.display = "";
       if($("tabGca")) $("tabGca").style.display = "";
       if($("tabMap")) $("tabMap").style.display = "";   // _applySiteBL hides it for DS
       if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
     } else {
-      // Non-admin: Quality + GCA are now open to any Coaching team member
-      // (single-site only — the multi-site button stays admin-only). Map stays
-      // admin-only.
+      // Non-admin: Quality + GCA + Map are open to any Coaching team member
+      // (single-site only — the multi-site button stays admin-only). Map is
+      // hidden only for AMZL/Delivery sites via _applySiteBL, not by role.
       if($("tabQuality")) $("tabQuality").style.display = "";
       if($("tabGca")) $("tabGca").style.display = "";
+      if($("tabMap")) $("tabMap").style.display = "";   // _applySiteBL hides it for DS
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "none";
-      if($("tabMap")) $("tabMap").style.display = "none";
     }
+    // Non-AMZL sites: make sure Map isn't left hidden from a prior DS session.
+    if(window._applySiteBL) window._applySiteBL();
     // Alerts (GCA reactivo + Quality) run only for the curated alerts group.
     _applyAlertsAccess(d.can_alerts);
 
@@ -2967,6 +3067,10 @@ let qualityHideCoached = false;
 let qualityHideOnTarget = true;  // Hide >=100% by default
 let qFilterError = new Set();
 let qFilterSigma = 0;
+// When ON, clicking the Opportunities card filters the TABLE to σ≥2 (the same
+// set the cards measure). Toggle off to show everyone again (dive-deep).
+let qOnlyOpportunities = false;
+let qOnlyAnomalies = false;   // Anomaly card toggle: only rows with post-coaching errors
 let qFilterCurve = new Set();
 let qSortKey = "total_errors_wk";
 let qSortAsc = false;
@@ -3045,6 +3149,27 @@ $("btnQualityMulti") && $("btnQualityMulti").addEventListener("click",()=>{
   }
   pop.style.display = pop.style.display==="none"?"block":"none";
 });
+// Opportunities card = clickable filter. Toggling it restricts the TABLE to
+// σ≥2 (the opportunities the cards already count). Click again to show everyone.
+function _toggleOppFilter(){
+  qOnlyOpportunities = !qOnlyOpportunities;
+  const c = $("qkpiOpp");
+  if(c) c.classList.toggle("active", qOnlyOpportunities);
+  renderQuality();
+}
+$("qkpiOpp") && $("qkpiOpp").addEventListener("click", _toggleOppFilter);
+$("qkpiOpp") && $("qkpiOpp").addEventListener("keydown",(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); _toggleOppFilter(); } });
+
+// Anomaly card = filter the table to associates who kept making the error AFTER
+// their last coaching (rc_post_coaching > 0). Click toggles it on/off.
+function _toggleAnomalyFilter(){
+  qOnlyAnomalies = !qOnlyAnomalies;
+  const c = $("qkpiAnomaly");
+  if(c) c.classList.toggle("active", qOnlyAnomalies);
+  renderQuality();
+}
+$("qkpiAnomaly") && $("qkpiAnomaly").addEventListener("click", _toggleAnomalyFilter);
+$("qkpiAnomaly") && $("qkpiAnomaly").addEventListener("keydown",(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); _toggleAnomalyFilter(); } });
 $("qualityPresentOnly") && $("qualityPresentOnly").addEventListener("click",()=>{qualityPresentOnly=!qualityPresentOnly; $("qualityPresentOnly").classList.toggle("active",qualityPresentOnly); if($("qualityPresentIcon")) $("qualityPresentIcon").textContent=qualityPresentOnly?"●":"○"; renderQuality();});
 $("qualityHideCoached") && $("qualityHideCoached").addEventListener("click",()=>{qualityHideCoached=!qualityHideCoached; $("qualityHideCoached").classList.toggle("active",qualityHideCoached); if($("qualityHideCoachedIcon")) $("qualityHideCoachedIcon").textContent=qualityHideCoached?"●":"○"; renderQuality();});
 $("qualitySearchInput") && $("qualitySearchInput").addEventListener("input", _debounce(renderQuality, 200));
@@ -3239,6 +3364,15 @@ function renderQuality(){
   if(qFilterSigma > 0){
     rows = rows.filter(r => Number(qualityValue(r,["sigma","Sigma"],0)) >= qFilterSigma);
   }
+  // Opportunities card toggle: restrict the table to σ≥2 (the real opportunities
+  // the cards measure). Off by default so the table still shows everyone.
+  if(qOnlyOpportunities){
+    rows = rows.filter(r => Number(qualityValue(r,["sigma","Sigma"],0)) >= 2);
+  }
+  // Anomaly card toggle: only rows flagged "no improvement post coaching".
+  if(qOnlyAnomalies){
+    rows = rows.filter(r => Number(r.rc_post_coaching) > 0);
+  }
   // Filter by curve (NH/XT/VET)
   if(qFilterCurve.size){
     rows = rows.filter(r => {
@@ -3272,10 +3406,14 @@ function renderQuality(){
 
   if($("qualityRowCount")) $("qualityRowCount").textContent = rows.length;
 
-  // Update KPIs based on FILTERED rows
-  const total = rows.length;
-  const presentCount = rows.filter(qualityPresentValue).length;
-  const coachedCount = rows.filter(r => { const v = qualityValue(r,["coached","Coached"],""); return String(v).toLowerCase()==="true" || String(v).toUpperCase()==="YES"; }).length;
+  // Update KPIs. OPPORTUNITIES = only associates at Sigma >= 2 (the ones that
+  // actually warrant coaching). The TABLE still shows everyone (incl. <σ1) for
+  // dive-deep, but the top cards + compliance are measured ONLY against these
+  // real opportunities. Compliance = coached opportunities / total opportunities.
+  const oppRows = rows.filter(r => Number(qualityValue(r,["sigma","Sigma"],0)) >= 2);
+  const total = oppRows.length;
+  const presentCount = oppRows.filter(qualityPresentValue).length;
+  const coachedCount = oppRows.filter(r => { const v = qualityValue(r,["coached","Coached"],""); return String(v).toLowerCase()==="true" || String(v).toUpperCase()==="YES"; }).length;
   const pendingCount = total - coachedCount;
   const compliancePct = total > 0 ? Math.round((coachedCount / total) * 100) : 0;
   countUpKpi("qkTotal", total);
@@ -3283,6 +3421,10 @@ function renderQuality(){
   countUpKpi("qkCoached", coachedCount);
   countUpKpi("qkPending", pendingCount);
   countUpKpi("qkCompliance", compliancePct, "%");
+  // Anomalies = associates who kept erring after their last coaching. Counted
+  // over ALL rows (not just σ≥2) since the anomaly matters at any sigma.
+  const anomalyCount = rows.filter(r => Number(r.rc_post_coaching) > 0).length;
+  countUpKpi("qkAnomaly", anomalyCount);
   if($("qkFcLabel")) $("qkFcLabel").textContent = currentFC;
 
   // Sorting
@@ -3387,12 +3529,18 @@ function renderQuality(){
       <td>${present?'<span class="present-chk">✓</span>':'<span class="present-dash">—</span>'}</td>
       <td>${coached?'<span class="coached-chk"><span class="chk-circle">✓</span></span>':'—'}</td>
       <td style="text-align:left">${(()=>{
+        // Post-coaching anomaly: this associate kept making this error AFTER
+        // being coached. Just a ⚠️ icon (with tooltip) — no red text, per owner.
+        const postC = r.rc_post_coaching;
+        const anomaly = (postC > 0)
+          ? `<span style="font-size:13px;margin-right:4px;cursor:help" title="Anomaly detected — no improvement post coaching: ${postC} error${postC===1?"":"es"} tras el último coaching${r.rc_last_coaching?` (${esc(r.rc_last_coaching)})`:""}">⚠️</span>`
+          : "";
         // At-a-glance root-cause split (top 2) — like the Performance notes.
         const split = Array.isArray(r.rc_split) ? r.rc_split : [];
-        if(!split.length) return '<span style="color:var(--text-muted);font-size:11px">—</span>';
+        if(!split.length) return anomaly || '<span style="color:var(--text-muted);font-size:11px">—</span>';
         const palette = ["#2563eb","#f59e0b","#16a34a","#dc2626"];
         const top = split.slice(0,2);
-        return top.map((s,i)=>{
+        return anomaly + top.map((s,i)=>{
           const pct = Math.max(2, Math.min(100, s.pct));
           // shorten "Asin Categorization Filter" -> "Asin Categorization"
           const name = String(s.name||"").replace(/\s*Filter$/i,"");
@@ -3736,6 +3884,23 @@ async function openRcModal(login, fc, errorKey){
     const info = d.errors[errorKey];
     const palette = ["#2563eb","#f59e0b","#16a34a","#dc2626","#7c3aed","#0891b2","#db2777","#65a30d"];
     let html = `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">${info.total} eventos · split por <b>${esc(info.split_field)}</b></div>`;
+    // Post-coaching stickiness banner: errors AFTER the associate's last coaching.
+    // Only shown when we know their last coaching date (present in the payload).
+    if(info.last_coaching){
+        const post = info.errors_post_coaching;
+        if(post > 0){
+          // Anomaly: the associate kept making this error AFTER being coached —
+          // the coaching didn't stick. Flag it loudly.
+          html += `<div style="font-size:12.5px;margin-bottom:10px;padding:9px 12px;border-radius:8px;background:rgba(220,38,38,.08);border:1px solid var(--red,#dc2626)">
+            <span style="font-weight:800;color:var(--red,#dc2626)">⚠️ Anomaly detected — no improvement post coaching</span>
+            <div style="font-size:11px;color:var(--text-secondary);margin-top:2px"><b>${post}</b> error${post===1?"":"es"} tras el último coaching (${esc(info.last_coaching)}). Considerar re-coaching / escalación.</div>
+          </div>`;
+        } else {
+          html += `<div style="font-size:12px;margin-bottom:10px;padding:7px 10px;border-radius:8px;background:var(--bg-panel,#fafbfd);border:1px solid var(--border)">
+            <span style="color:var(--green,#16a34a);font-weight:700">✓ Sin errores desde el último coaching</span>
+            <span style="color:var(--text-muted);font-size:11px"> · ${esc(info.last_coaching)}</span></div>`;
+        }
+    }
     // Split bars
     html += info.split.map((s,i)=>_rcBar(s, palette[i%palette.length])).join("");
     // Dive deep per RC (collapsible)
@@ -3747,10 +3912,18 @@ async function openRcModal(login, fc, errorKey){
         <summary style="cursor:pointer;font-weight:600;font-size:12px">${esc(s.name)} <span style="color:var(--text-muted)">(${s.count})</span></summary>
         <table style="width:100%;margin-top:6px;font-size:11px;border-collapse:collapse">
           <thead><tr style="text-align:left;color:var(--text-muted)">
-            ${df.map(f=>`<th style="padding:3px 6px">${esc(f)}</th>`).join("")}<th style="padding:3px 6px;text-align:right">#</th>
+            <th style="padding:3px 6px">Día</th>${df.map(f=>`<th style="padding:3px 6px">${esc(f)}</th>`).join("")}<th style="padding:3px 6px;text-align:right">#</th>
           </tr></thead>
           <tbody>
-          ${rows.slice(0,50).map(rw=>`<tr style="border-top:1px solid var(--border)">
+          ${rows.slice(0,50).map(rw=>{
+            // Day of the error (from OpenSearch timestamp). If it spans several
+            // days show the most recent + a count hint.
+            const days = Array.isArray(rw.days) ? rw.days : [];
+            const dayCell = rw.last_day
+              ? `${esc(rw.last_day)}${days.length>1?` <span style="color:var(--text-muted)">(+${days.length-1}d)</span>`:""}`
+              : `<span style="color:var(--text-muted)">—</span>`;
+            return `<tr style="border-top:1px solid var(--border)">
+            <td style="padding:3px 6px;white-space:nowrap">${dayCell}</td>
             ${df.map(f=>{
               const val = String(rw[f]||"");
               // ASIN/FCSku columns become a clickable link to FC Research.
@@ -3761,7 +3934,7 @@ async function openRcModal(login, fc, errorKey){
               return `<td style="padding:3px 6px">${esc(val)}</td>`;
             }).join("")}
             <td style="padding:3px 6px;text-align:right;font-weight:700">${rw.count}</td>
-          </tr>`).join("")}
+          </tr>`;}).join("")}
           </tbody>
         </table>${rows.length>50?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px">+${rows.length-50} más…</div>`:""}
       </details>`;
@@ -4480,12 +4653,22 @@ $("btnPipeline").addEventListener("click", async ()=>{
                 shift: manualTimeMode ? "" : currentShift,
               }));
             }catch(ex){}
-            // After Performance finishes, kick GCA + Quality so all three are
-            // fresh from one "Start Pipeline" click. Fire-and-forget server-side
-            // (they keep running even though we reload the page right after).
+            // After Performance finishes, kick GCA + Quality ONLY for the alerts
+            // the user opted into (Settings toggles, default OFF). Fire-and-forget
+            // server-side (they keep running even though we reload right after).
+            // Fire the opted-in alert polls. They share Midway/COM/FCLM/CSV, so
+            // the server serializes them with a non-blocking pipeline lock: if
+            // both land at once, the loser returns "pipeline busy" and its own
+            // background timer retries shortly. (We can't chain client-side here —
+            // the reload below would abort any pending .then(). The lock is the
+            // real guard.)
             if(window._canAlerts){
-              try{ fetch(`${API}/api/gca/poll?fc=${encodeURIComponent(currentFC)}`, {method:"POST"}); }catch(_){}
-              try{ fetch(`${API}/api/quality/poll?fc=${encodeURIComponent(currentFC)}`, {method:"POST"}); }catch(_){}
+              if(_alertPref("gca")){
+                try{ fetch(`${API}/api/gca/poll?fc=${encodeURIComponent(currentFC)}`, {method:"POST"}); }catch(_){}
+              }
+              if(_alertPref("quality") && !_isAmzlContext()){
+                try{ fetch(`${API}/api/quality/poll?fc=${encodeURIComponent(currentFC)}`, {method:"POST"}); }catch(_){}
+              }
             }
             // window.location.reload() is the only reliable way to repaint in pywebview
             // after a pipeline. Auth cache is persisted in localStorage so the reload
@@ -4780,6 +4963,9 @@ if(_spBtn && _spPanel){
   _spBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     _spPanel.style.display = _spPanel.style.display === "none" ? "block" : "none";
+    // Refresh the alert toggles each time the popover opens (eligibility/site
+    // context may have changed since login).
+    if(_spPanel.style.display !== "none" && window._syncAlertToggleUI) window._syncAlertToggleUI();
   });
   document.addEventListener("click", (e) => {
     if(_spPanel.style.display !== "none" && !_spPanel.contains(e.target) && e.target !== _spBtn)
@@ -6022,7 +6208,14 @@ document.addEventListener("click",(e)=>{
     // so its own clientWidth == content width, which would defeat the fit).
     const parent = wrap.parentElement;
     const availW = (parent ? parent.clientWidth : window.innerWidth) - 8;
-    const scale = Math.min(availW / natW, availH / natH, 1);  // never upscale
+    // Fit by WIDTH primarily and let the page scroll vertically. A tall vertical
+    // floor (e.g. P2's long STOW column) has a huge natH; scaling to fit that
+    // height shrank the whole map to an unreadable size. We only downscale to fit
+    // the width; height overflows into vertical scroll. MIN_SCALE keeps the map
+    // legible (never shrinks below it).
+    const MIN_SCALE = 0.55;
+    let scale = Math.min(availW / natW, 1);   // fit width, never upscale
+    if(scale < MIN_SCALE) scale = MIN_SCALE;
     if(scale < 0.999){
       // Scale from top-center so the shrunk map stays centered in the viewport.
       wrap.style.transform = "scale(" + scale.toFixed(3) + ")";
@@ -6910,11 +7103,22 @@ document.addEventListener("click",(e)=>{
       var any=false;
       for(var pos=1; pos<=count; pos++){
         var key = "p1_"+prefix+"_"+lineId+"_"+pos;
-        if(stationData[key]){ col.appendChild(_p1cell(key, typeLbl, pos)); any=true; }
+        // WS: show the real 2-digit station number ("09"), the owner wants the
+        // last two digits directly (side is conveyed by the Der/Izq type label).
+        var numLbl = prefix==="ws" ? String(pos).padStart(2,"0") : pos;
+        if(stationData[key]){ col.appendChild(_p1cell(key, typeLbl, numLbl)); any=true; }
       }
       return any ? col : null;
     }
-    function _lineGroup(title, prefix, ids, count, lblFn){
+    // WS lines encode a SIDE in the line number: 11 = right, 12 = left (the two
+    // last station digits are the real position). Show the side as the cell type
+    // and the position as the number, so the map reads e.g. "Der / 09" instead of
+    // a repeated "W11". Fallback to "W"+id for any other line (e.g. 14).
+    // WS line group: the first digit-pair identifies the line (11 → Línea 1,
+    // 12 → Línea 2); the last 2 digits are the station number. Owner prefers
+    // "Línea 1/2" over "Der/Izq".
+    function _wsSideLabel(id){ return id===11 ? "Línea 1" : id===12 ? "Línea 2" : ("Línea "+id); }
+    function _lineGroup(title, prefix, ids, count, lblFn, typeLblFn){
       var active = ids.filter(function(id){ return _lineActive(prefix, id, count); });
       if(!active.length) return;
       var grp = document.createElement("div");
@@ -6922,14 +7126,20 @@ document.addEventListener("click",(e)=>{
       grp.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:6px">'+title+'</div>';
       var rowc = document.createElement("div");
       rowc.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start";
-      active.forEach(function(id){ var c=_lineCol(lblFn(id), prefix, id, count, prefix==="ws"?"W"+id:prefix==="decant"?"Dc":"S"+String(id).padStart(2,"0")); if(c) rowc.appendChild(c); });
+      active.forEach(function(id){
+        var typeLbl = typeLblFn ? typeLblFn(id) : (prefix==="decant"?"Dc":"S"+String(id).padStart(2,"0"));
+        var c=_lineCol(lblFn(id), prefix, id, count, typeLbl);
+        if(c) rowc.appendChild(c);
+      });
       grp.appendChild(rowc);
       right.appendChild(grp);
     }
     var sIds = Object.keys(singlesLines).map(Number).sort(); if(!sIds.length) sIds=[1,2];
     _lineGroup("Singles", "singles", sIds, 20, function(id){ return "S"+String(id).padStart(2,"0"); });
     var wIds = Object.keys(wsLines).map(Number).sort();
-    _lineGroup("WS", "ws", wIds, 24, function(id){ return "WS"+id; });
+    // Column header = "Línea 1/2" (the side); cell type label stays short "WS"
+    // so it's not repeated on every cell. Cell number = 2-digit station.
+    _lineGroup("WS", "ws", wIds, 24, function(id){ return _wsSideLabel(id); }, function(_id){ return "WS"; });
     var dIds = Object.keys(decantLines).map(Number).sort();
     _lineGroup("Decant", "decant", dIds, 20, function(id){ return "D"+String(id).padStart(2,"0"); });
   }

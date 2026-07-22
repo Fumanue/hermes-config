@@ -20,7 +20,8 @@
       ],
       "floors": [
         "p2",
-        "p3"
+        "p3",
+        "p4"
       ],
       "proc_filter": "STOW"
     },
@@ -43,7 +44,8 @@
       ],
       "floors": [
         "p2",
-        "p3"
+        "p3",
+        "p4"
       ],
       "proc_filter": "PICK"
     },
@@ -57,7 +59,8 @@
       "subs": [],
       "floors": [
         "p2",
-        "p3"
+        "p3",
+        "p4"
       ],
       "proc_filter": "PACK"
     },

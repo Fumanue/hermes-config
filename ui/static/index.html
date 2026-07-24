@@ -689,6 +689,7 @@ html.theme-transitioning *::after{
 .pf.on-p3{background:rgba(220,38,38,0.1);border-color:var(--red);color:var(--red);box-shadow:0 2px 6px rgba(220,38,38,0.12)}
 .pf.on-p2{background:rgba(217,119,6,0.1);border-color:var(--orange);color:var(--orange);box-shadow:0 2px 6px rgba(217,119,6,0.12)}
 .pf.on-p1{background:rgba(5,150,105,0.1);border-color:var(--green);color:var(--green);box-shadow:0 2px 6px rgba(5,150,105,0.12)}
+.pf.on{background:var(--accent-light);border-color:var(--accent);color:var(--accent-text);box-shadow:0 2px 6px rgba(0,0,0,0.08)}
 .nf{padding:4px 11px;font-size:11px;border-radius:14px;border:1px solid var(--border-strong);background:var(--bg-input);color:var(--text-muted);cursor:pointer;font-weight:600;transition:all .15s}
 .nf:hover{border-color:var(--accent)}
 .nf.on{background:var(--accent-light);border-color:var(--accent-border);color:var(--accent-text)}
@@ -840,6 +841,8 @@ body[data-bl="amzl"] .curve-label{font-size:13px}
 .row-btn{padding:4px 11px;font-size:10.5px;border-radius:12px;border:1px solid var(--border-strong);background:var(--bg-input);color:var(--text);cursor:pointer;font-weight:500;transition:all .15s}
 .row-btn:hover:not(:disabled){background:var(--accent-light);border-color:var(--accent-border);color:var(--accent-text)}
 .row-btn:disabled{opacity:.3;cursor:not-allowed}
+.row-btn.q-reupload{border-color:var(--green,#16a34a);color:var(--green,#16a34a)}
+.row-btn.q-reupload:hover:not(:disabled){background:rgba(22,163,74,.10);border-color:var(--green,#16a34a);color:var(--green,#16a34a)}
 /* "Pendiente · Cerrar": amber, signals a same-topic coaching already exists and
    must be closed (can't re-upload). Stands out from the blue Upload. */
 .row-btn.pending-close{background:#fef3c7;border-color:#f59e0b;color:#92400e;font-weight:700}
@@ -896,7 +899,7 @@ body[data-bl="amzl"] .curve-label{font-size:13px}
 .panel-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px 10px}
 .panel-title{font-size:16px;font-weight:700;color:var(--text);padding:16px 20px 8px}
 .panel-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
-.quality-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:0 20px 12px}
+.quality-kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;padding:0 20px 12px}
 .qkpi{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px 10px;text-align:center;position:relative;overflow:hidden;transition:transform .18s,box-shadow .18s,border-color .18s}
 .qkpi:hover{transform:translateY(-2px);box-shadow:0 10px 24px -10px var(--shadow);border-color:var(--accent-border)}
 .qkpi::before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;background:var(--accent);opacity:.55;transition:opacity .18s}
@@ -913,12 +916,16 @@ body[data-bl="amzl"] .curve-label{font-size:13px}
 .qkpi-opp.active::before{opacity:1}
 .qkpi-opp.active .qkpi-lbl{color:var(--accent)}
 .qkpi-opp.active .qkpi-hint::after{content:" · filtro activo";color:var(--accent)}
-/* Anomaly card: red accent bar + red active state (post-coaching errors). */
 .qkpi-anomaly::before{background:var(--red,#dc2626)}
 .qkpi-anomaly .qkpi-num{color:var(--red,#dc2626)}
 .qkpi-anomaly.active{border-color:var(--red,#dc2626);box-shadow:0 0 0 2px rgba(220,38,38,.18) inset}
 .qkpi-anomaly.active .qkpi-lbl{color:var(--red,#dc2626)}
 .qkpi-anomaly.active .qkpi-hint::after{content:" · filtro activo";color:var(--red,#dc2626)}
+.qkpi-improved::before{background:var(--green,#16a34a)}
+.qkpi-improved .qkpi-num{color:var(--green,#16a34a)}
+.qkpi-improved.active{border-color:var(--green,#16a34a);box-shadow:0 0 0 2px rgba(22,163,74,.18) inset}
+.qkpi-improved.active .qkpi-lbl{color:var(--green,#16a34a)}
+.qkpi-improved.active .qkpi-hint::after{content:" · filtro activo";color:var(--green,#16a34a)}
 .qkpi-present .qkpi-num{color:var(--green)}
 .qkpi-coached .qkpi-num{color:var(--accent)}
 .qkpi-pending .qkpi-num{color:var(--orange)}
@@ -1196,6 +1203,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 [data-theme="graphitenoir"] .mode-maintenance{color:#86efac}
 .present-chk{color:#16a34a;font-weight:900}
 .present-dash{color:var(--text-dim)}
+.q-reactive-flag{display:inline-block;font-size:9.5px;font-weight:800;color:#b45309;background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.5);border-radius:99px;padding:2px 8px;white-space:nowrap;cursor:help}
 [data-theme="dark"] .present-chk{color:#86efac}
 [data-theme="graphitenoir"] .present-chk{color:#86efac}
 .quality-cohort{font-size:11.5px;color:var(--text-secondary);font-weight:600}
@@ -1447,8 +1455,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .sm-row{display:flex;gap:2px;justify-content:center;flex-wrap:wrap;padding:4px 0}
 .sm-middle{display:flex;gap:8px;align-items:stretch;width:100%}
 .sm-col{display:flex;flex-direction:column;gap:1px;align-items:center;padding:2px 0}
-/* Lateral columns (QS/STOW sides of the AR ring) get vertical breathing room so
-   the first/last station doesn't sit flush against the top/bottom rows. */
+/* Separate the lateral columns (Singles/WS/Decant) from the top row so they don't overlap. */
 .sm-middle .sm-col{margin-top:14px;margin-bottom:14px}
 .sm-center{flex:1;display:flex;align-items:flex-start;justify-content:center;min-height:80px}
 .sm-station{width:44px;height:54px;border-radius:7px;border:2px solid #d1d5db;background:var(--bg-card);display:inline-flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .15s;gap:2px;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
@@ -1469,6 +1476,56 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .sm-station.sm-idle .sm-num{color:#854d0e}
 .sm-station.sm-ontarget .sm-num{color:#166534}
 .sm-station.sm-faststart .sm-num{color:#5b21b6}
+/* ═══ GCA MAP POPUP (burbuja flotante abajo-derecha, solo en pestaña GCA) ═══ */
+/* Owner palette (6 owners de gca_legend.json). Mismo orden que _gcaOwnerColor en app.js. */
+:root{
+  --own-ld:#7c3aed;        /* L&D — morado */
+  --own-tlib:#2563eb;      /* Team Lead IB — azul */
+  --own-tlob:#0891b2;      /* Team Lead OB — cyan */
+  --own-icqa:#16a34a;      /* ICQA — verde */
+  --own-amib:#ea580c;      /* Area Manager IB — naranja */
+  --own-amob:#db2777;      /* Area Manager OB — rosa */
+  --own-other:#64748b;     /* fallback — gris */
+}
+#gcaMapPopup{position:fixed;right:20px;bottom:20px;z-index:8000;width:min(720px,92vw);max-height:82vh;
+  background:var(--bg-card);border:1px solid var(--border);border-radius:16px;
+  box-shadow:0 24px 64px -12px rgba(0,0,0,0.45),0 0 0 1px rgba(0,0,0,0.04);
+  display:none;flex-direction:column;overflow:hidden}
+#gcaMapPopup.open{display:flex}
+#gcaMapPopup.min{height:auto;max-height:none}
+#gcaMapPopup.min .gmp-body{display:none}
+.gmp-head{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg-topbar);
+  border-bottom:1px solid var(--border);cursor:default;flex-shrink:0}
+.gmp-title{font-size:13px;font-weight:800;color:var(--text)}
+.gmp-total{font-size:11px;font-weight:700;color:#ef4444;background:rgba(239,68,68,.1);border-radius:99px;padding:2px 9px}
+.gmp-head .gmp-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:15px;padding:2px 6px;border-radius:6px;line-height:1}
+.gmp-head .gmp-btn:hover{background:var(--bg-panel);color:var(--text)}
+.gmp-tabs{display:flex;gap:4px;padding:8px 14px 0;flex-wrap:wrap}
+.gmp-tab{padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);font-size:11px;cursor:pointer;font-weight:600;color:var(--text-secondary)}
+.gmp-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.gmp-body{padding:8px 14px 14px;overflow:auto;flex:1}
+.gmp-floorwrap{overflow:auto}
+/* Toolbar dentro del popup: present-only + leyenda */
+.gmp-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 14px;border-bottom:1px solid var(--border)}
+.gmp-legend{display:flex;flex-wrap:wrap;gap:8px;font-size:10px;color:var(--text-secondary);align-items:center}
+.gmp-legend .ldot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:3px;vertical-align:middle}
+/* Botón flotante que abre el popup cuando está cerrado */
+#gcaMapFab{position:fixed;right:20px;bottom:20px;z-index:7999;display:none;align-items:center;gap:8px;
+  padding:11px 16px;border-radius:99px;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#fff;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 12px 32px -8px rgba(124,58,237,.6)}
+#gcaMapFab:hover{transform:translateY(-1px)}
+#gcaMapFab .fab-count{background:rgba(255,255,255,.25);border-radius:99px;padding:1px 8px;font-size:11px}
+/* Celda del mapa GCA: franjas por owner. Reemplaza el color liso por bandas verticales. */
+.gca-cell{width:44px;height:54px;border-radius:7px;border:2px solid var(--border);position:relative;
+  display:inline-flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
+  overflow:hidden;transition:transform .15s;gap:1px;background:var(--bg-panel)}
+.gca-cell:hover{transform:scale(1.25);z-index:10;box-shadow:0 6px 18px rgba(0,0,0,0.30)}
+.gca-cell.gca-empty{opacity:.4;border-color:var(--border);cursor:default}
+.gca-cell .gca-stripes{position:absolute;inset:0;display:flex;z-index:0}
+.gca-cell .gca-stripes span{flex:1}
+.gca-cell .gca-lbl{position:relative;z-index:1;font-size:8px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);line-height:1;text-transform:uppercase}
+.gca-cell .gca-cnt{position:relative;z-index:1;font-size:14px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7);line-height:1}
+.gca-cell.gca-empty .gca-lbl,.gca-cell.gca-empty .gca-cnt{color:var(--text-dim);text-shadow:none}
 .sm-badge{position:absolute;top:-9px;left:50%;transform:translateX(-50%);min-width:16px;height:13px;border-radius:3px;font-size:8px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1}
 .sm-badge.bg-green{background:#22c55e}
 .sm-badge.bg-red{background:#ef4444}
@@ -1532,6 +1589,19 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .gca-stack-legend .dot.pending{background:#f59e0b}
 .gca-stack-legend .dot.cancelled{background:#94a3b8}
 .gca-stack-legend .dot.expired{background:#ef4444}
+/* Cancelled/Expired table — fixed layout + wrap so the notes columns don't
+   overflow horizontally off-screen. 8 cols: Associate/Insight/Owner/Estado/
+   Upload Notes/Reason/Fecha/Open. */
+#gcaClosedTable{table-layout:fixed;width:100%}
+#gcaClosedTable th:nth-child(1),#gcaClosedTable td:nth-child(1){width:12%}
+#gcaClosedTable th:nth-child(2),#gcaClosedTable td:nth-child(2){width:15%}
+#gcaClosedTable th:nth-child(3),#gcaClosedTable td:nth-child(3){width:7%}
+#gcaClosedTable th:nth-child(4),#gcaClosedTable td:nth-child(4){width:9%}
+#gcaClosedTable th:nth-child(5),#gcaClosedTable td:nth-child(5){width:22%}
+#gcaClosedTable th:nth-child(6),#gcaClosedTable td:nth-child(6){width:22%}
+#gcaClosedTable th:nth-child(7),#gcaClosedTable td:nth-child(7){width:8%}
+#gcaClosedTable th:nth-child(8),#gcaClosedTable td:nth-child(8){width:5%}
+#gcaClosedTable td{overflow-wrap:anywhere;word-break:break-word;vertical-align:top}
 /* Per-owner stacked compliance bars */
 .gca-owner-bars{margin:12px 16px 4px;display:flex;flex-direction:column;gap:8px}
 .gca-owner-row{display:flex;align-items:center;gap:8px}
@@ -1685,6 +1755,15 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 </style>
 </head>
 <body>
+
+<!-- Missing Necro Permission banner (non-blocking) — shown only when the user
+     lacks the necronomicon-productivity-e team membership. calvenpj 2026-07-24. -->
+<div id="necroPermBanner" style="display:none;background:#fef3c7;border-bottom:2px solid #f59e0b;color:#78350f;padding:8px 16px;font-size:13px;line-height:1.4;text-align:center">
+  <b>⚠️ Missing Necro Permission</b> — Ask your manager to add you here:
+  <a id="necroPermLink" href="https://permissions.amazon.com/a/team/necronomicon-productivity-e" target="_blank" rel="noopener" style="color:#92400e;font-weight:700;text-decoration:underline">permissions.amazon.com → necronomicon-productivity-e</a>.
+  Once added, everything will work. <span style="opacity:.85">· Falta el permiso de Necro — pide a tu manager que te agregue en el enlace; al agregarte, todo funcionará.</span>
+  <button id="necroPermDismiss" title="Ocultar / Dismiss" style="margin-left:10px;background:transparent;border:1px solid #b45309;color:#92400e;border-radius:6px;padding:1px 8px;cursor:pointer;font-size:12px">×</button>
+</div>
 
 <!-- TOPBAR -->
 <div class="topbar">
@@ -1890,6 +1969,16 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <input type="checkbox" id="spAlertQuality" onchange="if(window._toggleAlert)window._toggleAlert('quality', this.checked)">
     </label>
   </div>
+  <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
+    <div class="sp-label" style="margin-bottom:8px">🔄 Actualización automática</div>
+    <label class="sp-alert-toggle" for="spAutoRefresh">
+      <span>
+        <b>Auto-refresh Performance (15 min)</b>
+        <span class="sp-alert-desc">Re-ejecuta el pipeline de Performance cada 15 min · Re-runs the Performance pipeline every 15 min. Se recuerda entre sesiones.</span>
+      </span>
+      <input type="checkbox" id="spAutoRefresh">
+    </label>
+  </div>
   <div class="sp-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
     <button id="spDiagCopy" class="sp-opt" style="width:100%;padding:8px 10px;font-size:11.5px">📋 Copiar info de soporte</button>
   </div>
@@ -1898,8 +1987,8 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 <!-- ═══ DASHBOARD ═══ -->
 <div class="tab-panel active" id="panel-dashboard">
   <div class="kpi-row">
-    <div class="kpi-tile kprio" data-f="priority">
-      <div class="kpi-lbl">⚡ Priority vs OP2</div>
+    <div class="kpi-tile kprio" data-f="priority" title="Asociados por debajo del umbral de coaching (Sigma ≥ Mode). No es la planta.">
+      <div class="kpi-lbl">⚡ Prioridad coaching</div>
       <div class="kpi-num" id="nPrio">0</div>
       <div class="kpi-bar-track"><div class="kpi-bar-fill" id="barPrio"></div></div>
       <div class="kpi-sub">Sigma ≥ Mode</div>
@@ -1943,12 +2032,15 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   <div class="toolbar toolbar-sticky">
     <div class="tb-search"><span style="color:#ccc;font-size:13px">⌕</span><input id="searchInput" placeholder="Login, role, station…"></div>
     <div class="sep"></div>
-    <span class="tb-label">SHOW</span>
-    <button class="pf on-p3" data-p="3" id="fp3">P3</button>
-    <button class="pf on-p2" data-p="2" id="fp2">P2</button>
-    <button class="pf on-p1" data-p="1" id="fp1">P1</button>
+    <span class="tb-label" title="Prioridad de coaching por severidad (no es la planta)">PRIO</span>
+    <button class="pf on-p3" data-p="3" id="fp3" title="Prioridad 3 (más severo)">P3</button>
+    <button class="pf on-p2" data-p="2" id="fp2" title="Prioridad 2">P2</button>
+    <button class="pf on-p1" data-p="1" id="fp1" title="Prioridad 1">P1</button>
+    <div class="sep bl-fc-only"></div>
+    <span class="tb-label bl-fc-only" title="Filtrar por planta física">PLANTA</span>
+    <span id="floorFilterBtns" class="bl-fc-only" style="display:inline-flex;gap:4px"></span>
     <div class="sep"></div>
-    <div class="max-wrap"><span class="max-lbl">MAX</span><input class="max-input" id="maxInput" type="number" min="1" max="9999" value="50"></div>
+    <div class="max-wrap"><span class="max-lbl">MAX</span><input class="max-input" id="maxInput" type="number" min="1" max="9999" value="200"></div>
     <div class="sep bl-fc-only"></div>
     <span class="tb-label bl-fc-only">Curve</span>
     <button class="nf on bl-fc-only" data-curve="ALL" id="curveAll">ALL</button>
@@ -1976,9 +2068,13 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <option value="FAST START">🚀 Fast Start</option>
     </select>
     <div class="sep bl-fc-only"></div>
-    <button class="act-btn act-secondary bl-fc-only" id="btnUpload" data-i18n="btn_upload_coaching">↑ Upload Coaching</button>
-    <button class="act-btn act-secondary btn-new-coaching bl-fc-only">➕ Upload New Coaching</button>
+    <!-- '↑ Upload Coaching' + '➕ Upload New Coaching' removed from Performance
+         (calvenpj feedback 2026-07-24): redundant + took too much screen room.
+         New-coaching now lives ONLY in the GCA tab; leads want more room to
+         observe + the per-row close action. Bulk upload stays. -->
     <button class="act-btn act-secondary" id="btnBulk" data-i18n="btn_bulk">↑↑ Bulk Upload</button>
+    <!-- Auto-refresh toggle moved to Settings (calvenpj 2026-07-24): set it once,
+         it persists across sessions — no need to re-enable it every launch. -->
     <button class="act-btn act-pipeline" id="btnPipeline" data-i18n="btn_run_pipeline">▶ Start Pipeline</button>
     <button class="act-btn act-csv" id="btnDownloadCSV">↓ CSV</button>
     <button class="act-btn" id="btnPerfMap" style="display:none;background:var(--accent-light);color:var(--accent-text);border:1px solid var(--accent-border)">🗺️ Map</button>
@@ -2151,7 +2247,8 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <div class="qkpi qkpi-coached"><div class="qkpi-num" id="qkCoached">0</div><div class="qkpi-lbl" data-i18n="q_coached">Coached</div></div>
     <div class="qkpi qkpi-pending"><div class="qkpi-num" id="qkPending">0</div><div class="qkpi-lbl" data-i18n="q_pending">Pending</div></div>
     <div class="qkpi qkpi-compliance"><div class="qkpi-num" id="qkCompliance">0%</div><div class="qkpi-lbl">Compliance</div><div class="qkpi-hint" data-i18n="q_sigma2_hint">σ ≥ 2</div></div>
-    <div class="qkpi qkpi-opp qkpi-anomaly" id="qkpiAnomaly" role="button" tabindex="0" title="Filtrar la tabla a asociados con errores tras su último coaching (anomalía: no mejoró)"><div class="qkpi-num" id="qkAnomaly">0</div><div class="qkpi-lbl">⚠️ Anomalías</div><div class="qkpi-hint">post-coaching</div></div>
+    <div class="qkpi qkpi-opp qkpi-anomaly" id="qkpiAnomaly" role="button" tabindex="0" title="Filtrar a anomalías: la tasa de errores/día NO bajó tras el coaching manual (≥1 día)"><div class="qkpi-num" id="qkAnomaly">0</div><div class="qkpi-lbl">⚠️ Anomalías</div><div class="qkpi-hint">tasa no bajó</div></div>
+    <div class="qkpi qkpi-opp qkpi-improved" id="qkpiImproved" role="button" tabindex="0" title="Filtrar a mejoras: la tasa de errores/día BAJÓ tras el coaching manual (≥1 día)"><div class="qkpi-num" id="qkImproved">0</div><div class="qkpi-lbl">🎉 Improvement</div><div class="qkpi-hint">tasa bajó</div></div>
   </div>
 
   <div class="toolbar toolbar-sticky">
@@ -2193,7 +2290,8 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <span class="q-pill" data-v="VET">VET</span>
     </div>
     <div class="sep"></div>
-    <button class="act-btn act-secondary btn-new-coaching" style="font-size:11px;padding:4px 12px">➕ Upload New Coaching</button>
+    <!-- '➕ Upload New Coaching' removed from Quality (calvenpj 2026-07-24) —
+         new-coaching now lives ONLY in the GCA tab. -->
     <button class="act-btn act-primary" id="btnQualityBulk" style="font-size:11px;padding:4px 12px">↑↑ Bulk Upload</button>
     <button class="act-btn act-csv" id="btnQualityExport" style="font-size:11px;padding:4px 10px">↓ CSV</button>
     <div style="position:relative;display:inline-block">
@@ -2213,8 +2311,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
           <th style="width:60px;cursor:pointer" data-qsort="fc">FC ⇅</th>
           <th style="width:240px;text-align:left;cursor:pointer" data-qsort="error_key"><span data-i18n="qth_error">Error Type</span> ⇅</th>
           <th style="width:50px" title="Opportunities (units processed)">Vol</th>
-          <th style="width:100px;cursor:pointer" data-qsort="total_errors_wk"><span data-i18n="qth_errors_wk">Errors WK</span> ⇅</th>
-          <th style="width:80px" data-i18n="qth_target">Target</th>
+          <th style="width:100px;cursor:pointer" data-qsort="total_errors_wk"><span data-i18n="qth_errors_wk">Errors L7D</span> ⇅</th>
           <th style="width:90px;cursor:pointer" data-qsort="pct_to_target">% Target ⇅</th>
           <th style="width:90px" data-i18n="qth_cohort">Cohort</th>
           <th style="width:90px;cursor:pointer" data-qsort="sigma"><span data-i18n="qth_sigma">σ Score</span> ⇅</th>
@@ -2424,26 +2521,24 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
           </div>
         </div>
 
-        <!-- Anomalía post-coaching -->
+        <!-- Anomalías post-coaching -->
         <div class="faq-item">
-          <button class="faq-q" data-i18n="faq_qanomaly">⚠️ Anomalía — ¿qué significa "no improvement post coaching"?</button>
+          <button class="faq-q" data-i18n="faq_qanomaly">⚠️ Anomalies — what is a post-coaching error?</button>
           <div class="faq-a">
             <p><b>Español</b></p>
-            <p>Una <b>anomalía</b> marca a un asociado que <b>siguió cometiendo el mismo error DESPUÉS de haber sido coacheado</b> — es decir, el coaching no tuvo el efecto esperado y probablemente necesita re-coaching o escalación.</p>
+            <p>Una <b>anomalía</b> es un asociado que <b>siguió cometiendo el mismo tipo de error DESPUÉS</b> de recibir su último coaching completado — es decir, el coaching <b>no mejoró</b> su desempeño en ese error.</p>
             <ul style="line-height:1.8">
-              <li><b>Cómo se calcula:</b> se toma la fecha del <b>último coaching COMPLETADO</b> del asociado (de Guided Coaching) y se cuentan los errores de OpenSearch (PEI/BFV) con <b>timestamp posterior</b> a esa fecha.</li>
-              <li><b>Dónde se ve:</b> un icono <b>⚠️</b> en la fila de la tabla de Quality (columna Root Cause) y, con más detalle, dentro del modal <b>🔎 RC</b> (banner "Anomaly detected — no improvement post coaching" con el nº de errores y la fecha del último coaching).</li>
-              <li><b>Card + filtro:</b> la card <b>⚠️ Anomalías</b> arriba cuenta cuántos asociados tienen esta condición; al pulsarla, la tabla se filtra solo a ellos (pulsa de nuevo para quitar el filtro).</li>
-              <li><b>Requisito:</b> necesita datos de OpenSearch (RC) y del historial de coaching frescos — corre el pipeline de Quality para actualizarlo.</li>
+              <li><b>Cómo se calcula:</b> Argos cruza cada error de calidad (de OpenSearch/Atlas) con la fecha del <b>último coaching COMPLETED</b> del asociado en GCA. Si hay errores con fecha <b>posterior</b> a ese coaching, cuentan como "errores post-coaching".</li>
+              <li><b>Dónde se ve:</b> (1) la <b>card ⚠️ Anomalías</b> arriba cuenta cuántas oportunidades (σ≥2) tienen errores post-coaching; púlsala para <b>filtrar la tabla</b> solo a ellas. (2) En la tabla, un icono <b>⚠️</b> en la columna Root Cause marca la fila. (3) En el modal <b>🔎 RC</b> (Dive Deep) aparece un banner rojo <i>"Anomaly detected — no improvement post coaching"</i> con el nº de errores y la fecha del coaching, más una columna <b>Día</b> que muestra cuándo ocurrió cada error.</li>
+              <li><b>Qué hacer:</b> considerar <b>re-coaching</b> o escalación — el coaching estándar no está funcionando para ese asociado/error.</li>
             </ul>
             <hr style="margin:12px 0;border-color:var(--border)">
             <p><b>English</b></p>
-            <p>An <b>anomaly</b> flags an associate who <b>kept making the same error AFTER being coached</b> — the coaching didn't stick, so re-coaching or escalation is likely needed.</p>
+            <p>An <b>anomaly</b> is an associate who <b>kept making the same error type AFTER</b> their last completed coaching — i.e. the coaching <b>did not improve</b> their performance on that error.</p>
             <ul style="line-height:1.8">
-              <li><b>How it's computed:</b> takes the associate's <b>last COMPLETED coaching</b> date (from Guided Coaching) and counts OpenSearch errors (PEI/BFV) with a <b>timestamp after</b> that date.</li>
-              <li><b>Where you see it:</b> a <b>⚠️</b> icon on the Quality table row (Root Cause column), and in detail inside the <b>🔎 RC</b> modal (banner "Anomaly detected — no improvement post coaching" with the error count and last-coaching date).</li>
-              <li><b>Card + filter:</b> the <b>⚠️ Anomalies</b> card at the top counts how many associates match; click it to filter the table to just them (click again to clear).</li>
-              <li><b>Requirement:</b> needs fresh OpenSearch (RC) + coaching-history data — run the Quality pipeline to refresh it.</li>
+              <li><b>How it's computed:</b> Argos cross-references each quality error (from OpenSearch/Atlas) with the associate's <b>last COMPLETED coaching</b> date in GCA. Errors dated <b>after</b> that coaching count as "post-coaching errors".</li>
+              <li><b>Where you see it:</b> (1) the <b>⚠️ Anomalies card</b> counts how many opportunities (σ≥2) have post-coaching errors; click it to <b>filter the table</b> to just those. (2) In the table, a <b>⚠️</b> icon in the Root Cause column flags the row. (3) In the <b>🔎 RC</b> modal (Dive Deep) a red banner <i>"Anomaly detected — no improvement post coaching"</i> shows the count + coaching date, plus a <b>Day</b> column showing when each error happened.</li>
+              <li><b>What to do:</b> consider <b>re-coaching</b> or escalation — standard coaching isn't working for that associate/error.</li>
             </ul>
           </div>
         </div>
@@ -2456,7 +2551,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
             <ul style="line-height:1.9">
               <li><b>Performance (Dashboard)</b> — Cola de coaching por rate vs OP2: prioridad, sigma, tenure, estación. Es la vista principal.</li>
               <li><b>Quality</b> — Defectos de calidad de los últimos 7 días por asociado y tipo de error, con su curso asociado. Muestra a todos (incluso por debajo de sigma 1) para poder hacer dive-deep.</li>
-              <li><b>GCA</b> — Compliance de Guided Coaching: completados, pendientes, cancelados y expirados, con cards de %, barra apilada y una pestaña de Cancelled/Expired con su reason/nota. Incluye cancelación masiva por modal.</li>
+              <li><b>GCA</b> — Compliance de Guided Coaching: completados, pendientes y cancelados, con cards de %, barra apilada y una pestaña de Cancelled con su reason/nota. Incluye cancelación masiva por modal.</li>
               <li><b>🗺️ Map</b> — Mapa espacial del floor por planta (P1 con muros/induct/rebin/packers/líneas; P2/P3/P4 por anillos), con rates, gaps, idle y GCA pendientes. Solo en sitios FC (no Delivery).</li>
               <li><b>⚙️ Config</b> <span style="color:var(--text-muted)">(admin)</span> — Solo para administradores.</li>
             </ul>
@@ -2465,7 +2560,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
             <ul style="line-height:1.9">
               <li><b>Performance (Dashboard)</b> — Coaching queue by rate vs OP2: priority, sigma, tenure, station. The main view.</li>
               <li><b>Quality</b> — Last-7-days quality defects per associate and error type, with the associated course. Shows everyone (even below sigma 1) so you can dive-deep.</li>
-              <li><b>GCA</b> — Guided Coaching compliance: completed, pending, cancelled and expired, with % cards, a stacked bar, and a Cancelled/Expired tab with its reason/note. Includes bulk cancel via modal.</li>
+              <li><b>GCA</b> — Guided Coaching compliance: completed, pending and cancelled, with % cards, a stacked bar, and a Cancelled tab with its reason/note. Includes bulk cancel via modal.</li>
               <li><b>🗺️ Map</b> — Spatial floor map per level (P1 with walls/induct/rebin/packers/lines; P2/P3/P4 by rings), with rates, gaps, idle and GCA pendings. FC sites only (not Delivery).</li>
               <li><b>⚙️ Config</b> <span style="color:var(--text-muted)">(admin)</span> — Administrators only.</li>
             </ul>
@@ -2550,22 +2645,25 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <div id="gcaProgMsg" style="font-size:10px;color:var(--text-muted);margin-top:4px;font-weight:600"></div>
   </div>
 
-  <!-- ═══ GCA INLINE FLOOR MAP (pending only, collapsed by default) ═══ -->
-  <div id="gcaFloorMap" style="background:var(--bg-panel);border-bottom:1px solid var(--border)">
-    <div style="display:flex;gap:4px;padding:8px 16px;align-items:center;cursor:pointer" id="gcaMapToggleBar">
-      <span id="gcaMapArrow" style="font-size:10px;color:var(--text-muted);transition:transform .2s">▶</span>
-      <span style="font-size:12px;font-weight:700;color:var(--text)">Station Map</span>
-      <span id="gcaMapPendingBadge" style="font-size:10px;color:#ef4444;font-weight:700;margin-left:4px"></span>
+  <!-- ═══ GCA STATION MAP — POPUP FLOTANTE (burbuja abajo-derecha, solo en pestaña GCA) ═══ -->
+  <!-- Botón flotante (FAB) que abre el popup cuando está cerrado -->
+  <button id="gcaMapFab" title="Abrir mapa de estaciones GCA">🗺️ Station Map <span class="fab-count" id="gcaFabCount">0</span></button>
+  <!-- Popup: mapa espacial coloreado por OWNER del topic, centro = total pending global -->
+  <div id="gcaMapPopup">
+    <div class="gmp-head">
+      <span class="gmp-title">🗺️ Station Map</span>
+      <span class="gmp-total" id="gcaMapTotal">0 pending</span>
       <div style="flex:1"></div>
-      <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-secondary)">
-        <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 5px rgba(239,68,68,0.7)"></span> Pending only
-      </span>
+      <button class="gmp-btn" id="gcaMapMin" title="Minimizar">▁</button>
+      <button class="gmp-btn" id="gcaMapClose" title="Cerrar">✕</button>
     </div>
-    <div id="gcaMapBody" style="display:none;padding:0 16px 10px">
-      <div style="display:flex;gap:4px;padding:0 0 8px;align-items:center">
-        <div class="gca-floor-tabs" style="display:contents"></div>
-      </div>
-      <div id="gcaFloorWrap" style="overflow-x:auto"></div>
+    <div class="gmp-toolbar">
+      <button class="toggle-btn active" id="gcaMapPresentOnly" style="font-size:10px;padding:4px 10px"><span id="gcaMapPresentIcon">●</span> Present only</button>
+      <div class="gmp-legend" id="gcaMapLegend"></div>
+    </div>
+    <div class="gmp-tabs" id="gcaMapTabs"></div>
+    <div class="gmp-body">
+      <div class="gmp-floorwrap" id="gcaFloorWrap"></div>
     </div>
   </div>
 <!-- Compliance Details (collapsable) -->
@@ -2602,7 +2700,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   <!-- Tabs: Pending | Cancelled/Expired -->
   <div style="display:flex;gap:4px;padding:0 16px;margin-top:6px;border-bottom:1px solid var(--border)">
     <div class="gca-tab active" id="gcaTabPending" data-tab="pending">⏳ Pendientes</div>
-    <div class="gca-tab" id="gcaTabClosed" data-tab="closed">🚫 Cancelled / Expired</div>
+    <div class="gca-tab" id="gcaTabClosed" data-tab="closed">🚫 Cancelled</div>
   </div>
 
   <!-- GCA Table -->
@@ -2738,6 +2836,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
               <select id="cc-type" class="form-input" style="height:28px;font-size:11px;width:auto"><option value="all">Todos los tipos</option><option value="manual">Manual</option><option value="auto">Auto</option><option value="other">Otros</option></select>
               <select id="cc-assigned" class="form-input" style="height:28px;font-size:11px;width:auto"><option value="all">Todos</option><option value="assigned">Asignados</option><option value="unassigned">Sin asignar</option></select>
               <button class="act-btn act-secondary" id="cc-refresh" style="font-size:11px;padding:4px 10px" title="Re-descargar del CMS">↻ Refrescar</button>
+              <button class="act-btn act-secondary" id="cc-csv" style="font-size:11px;padding:4px 10px" title="Exportar catálogo a CSV">↓ CSV</button>
             </div>
           </div>
           <div style="padding:0 12px 8px"><div class="tb-search" style="max-width:300px"><span style="color:#ccc;font-size:13px">⌕</span><input id="cc-search" placeholder="Buscar título / uuid…"></div><span id="cc-status" style="font-size:10px;color:var(--text-muted);margin-left:8px"></span></div>
@@ -3219,7 +3318,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
-<script src="/static/app.js?v=v234_anomaly_card_faq_20260722" defer></script>
+<script src="/static/app.js?v=v250_autorefresh_settings_20260724" defer></script>
 </body>
 </html>
 

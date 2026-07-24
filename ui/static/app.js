@@ -27,7 +27,7 @@ const I18N = {
     btn_hide_on_target: "Ocultar on-target", btn_run_pipeline: "▶ Start Pipeline",
     btn_refresh: "↻ Refresh", btn_sync_gc: "⟳ Sync GC",
     btn_upload_coaching: "↑ Subir Coaching", btn_summary: "📊 Resumen", btn_bulk: "↑↑ Subida masiva", btn_csv: "↓ CSV",
-    qth_associate: "Asociado", qth_error: "Tipo Error", qth_errors_wk: "Errores Sem",
+    qth_associate: "Asociado", qth_error: "Tipo Error", qth_errors_wk: "Errores L7D",
     qth_target: "Target", qth_pct_target: "% Target", qth_sigma: "σ Score",
     qth_cohort: "Cohort", qth_tenure: "Tenure", qth_mode: "Modo",
     qth_present: "Presente", qth_coached: "Coached", qth_action: "Acción",
@@ -46,7 +46,7 @@ const I18N = {
     faq_q5: "Descripción de Columnas",
     faq_qbtn: "Guía de botones — ¿para qué sirve cada uno?",
     faq_qalerts: "🔔 Alertas automáticas — ¿qué las dispara y cómo activarlas?",
-    faq_qanomaly: "⚠️ Anomalía — ¿qué significa \"no improvement post coaching\"?",
+    faq_qanomaly: "⚠️ Anomalías — ¿qué es un error post-coaching?",
     faq_qtabs: "Pestañas: Performance · Quality · GCA · Map",
     faq_feedback_title: "💬 Enviar Feedback", faq_feedback_sub: "Reporta problemas, sugiere mejoras o comparte ideas",
     faq_feedback_lbl: "Feedback", faq_feedback_send: "Enviar Feedback", faq_feedback_ok: "✓ Enviado correctamente", faq_feedback_err: "Error al enviar",
@@ -180,7 +180,7 @@ const I18N = {
     btn_hide_on_target: "Hide On-Target", btn_run_pipeline: "▶ Start Pipeline",
     btn_refresh: "↻ Refresh", btn_sync_gc: "⟳ Sync GC",
     btn_upload_coaching: "↑ Upload Coaching", btn_summary: "📊 Summary", btn_bulk: "↑↑ Bulk Upload", btn_csv: "↓ CSV",
-    qth_associate: "Associate", qth_error: "Error Type", qth_errors_wk: "Errors WK",
+    qth_associate: "Associate", qth_error: "Error Type", qth_errors_wk: "Errors L7D",
     qth_target: "Target", qth_pct_target: "% Target", qth_sigma: "σ Score",
     qth_cohort: "Cohort", qth_tenure: "Tenure", qth_mode: "Mode",
     qth_present: "Present", qth_coached: "Coached", qth_action: "Action",
@@ -196,7 +196,7 @@ const I18N = {
     faq_q5: "Column Descriptions",
     faq_qbtn: "Button guide — what does each one do?",
     faq_qalerts: "🔔 Automatic alerts — what triggers them and how to enable them?",
-    faq_qanomaly: "⚠️ Anomaly — what does \"no improvement post coaching\" mean?",
+    faq_qanomaly: "⚠️ Anomalies — what is a post-coaching error?",
     faq_qtabs: "Tabs: Performance · Quality · GCA · Map",
     faq_feedback_title: "💬 Send Feedback", faq_feedback_sub: "Report issues, suggest features, or share ideas",
     faq_feedback_lbl: "Feedback", faq_feedback_send: "Send Feedback", faq_feedback_ok: "✓ Sent successfully", faq_feedback_err: "Error sending",
@@ -344,7 +344,7 @@ let manualTimeMode = false;
 const PROCESS_GROUPS = {
   PACK:    ["SM","SM1","SMMIX","SM2","AFE_PACK","P2R_PACK","SNS1","SNS2","SINGLES","WS_SLAM","WS_VDF"],
   PICK:    ["PICK_AR","P2R_PICK"],
-  STOW:    ["STOW","QUANTITY_STOW","QUANTITY_STOYW"],
+  STOW:    ["STOW","QUANTITY_STOW"],
   RECEIVE: ["DECANT"],
   ICQA:    null,
 };
@@ -541,6 +541,33 @@ function parsePerfStationCached(raw){
   return result;
 }
 
+// Physical floor of a dashboard row — delegates to the MAP's own station parser
+// (window._floorOfStation, exposed from the map scope) so the PLANTA list-filter
+// and the map agree by construction. NO separate/invented logic here: the map is
+// the single source of truth for station→floor. Returns "" if the map util isn't
+// ready yet or the station has no floor. (calvenpj 2026-07-24)
+function _floorOfRow(r){
+  const raw = (r && (r.stationRaw || r.station)) || "";
+  if(!raw || typeof window._floorOfStation !== "function") return "";
+  return window._floorOfStation(raw) || "";
+}
+// Floors present in the current data, ordered by the map's own floor list
+// (window._getFloors → p1/p2/p3/p4 as defined in map_layouts.json for this FC),
+// intersected with the floors that actually have associates today. So the filter
+// only offers plants the map knows about AND that have data (P4 only when MAD7-
+// style P4 data is loaded; BCN4 shows P1/P2/P3 as present).
+function activeFloors(){
+  const present = new Set();
+  (state.all||[]).forEach(r=>{ const f=_floorOfRow(r); if(f) present.add(f); });
+  // Order by the map's declared floor order when available; else sort.
+  let order = [];
+  try{ if(typeof window._getFloors === "function") order = window._getFloors().map(f=>f.id); }catch(_){}
+  const ordered = order.filter(id=>present.has(id));
+  // Include any present floor the layout didn't list (defensive), appended sorted.
+  Array.from(present).sort().forEach(f=>{ if(!ordered.includes(f)) ordered.push(f); });
+  return ordered;
+}
+
 async function jget(url){
   const r = await fetch(url+(url.includes("?")?"&":"?")+"_t="+Date.now(),{cache:"no-store"});
   if(!r.ok) throw new Error(r.status+" "+r.statusText);
@@ -686,9 +713,10 @@ const state={
   // No default sorting. Sorting is applied only after user clicks a header.
   sortKey:"",
   sortAsc:true,
-  maxRows:50,
+  maxRows:200,
   proc:new Set(),
   sub:new Set(),
+  floor:new Set(),   // physical-floor filter (p1/p2/p3/p4). empty = ALL. calvenpj 2026-07-24
   curve:"ALL",
   tenureFilter:"",
   priorityOnly:false,
@@ -713,21 +741,45 @@ async function _ccLoadReasons(){
   return _ccCancelReasons;
 }
 
+// After closing a coaching, neutralize its action buttons in place (no full
+// reload). Finds every action button carrying this instance_id (GCA, Quality,
+// Performance queues all use data-iid) and swaps the button cluster for a small
+// "done" check. The row stays until the next natural data refresh.
+function _markCoachingRowDone(instanceId, isCancel){
+  if(!instanceId) return;
+  const mark = isCancel
+    ? `<span class="cc-done" style="font-size:11px;color:var(--text-secondary)" title="Cancelado — se actualizará en el próximo refresh">✗ cancelado</span>`
+    : `<span class="cc-done" style="font-size:11px;color:var(--green,#059669)" title="Completado — se actualizará en el próximo refresh">✓ completado</span>`;
+  // The action buttons across queues: cc-complete / cc-cancel / pending-close.
+  const btns = document.querySelectorAll(
+    `.cc-complete[data-iid="${CSS.escape(instanceId)}"],`+
+    `.cc-cancel[data-iid="${CSS.escape(instanceId)}"],`+
+    `.pending-close[data-iid="${CSS.escape(instanceId)}"]`);
+  const handled = new Set();
+  btns.forEach(b=>{
+    // Replace the tightest button-group wrapper once per row.
+    const group = b.closest("div") || b.parentElement;
+    if(!group || handled.has(group)) return;
+    handled.add(group);
+    group.innerHTML = mark;
+  });
+}
+
 // opts: {instanceId, fc, action:"complete"|"cancel", login, name, onDone}
 async function openCloseCoaching(opts){
   const o = opts || {};
-  // Closing coachings is admin-only (the server enforces it too). Non-admins can
-  // still SEE the "⏳ Pending" indicator, but not open the complete/cancel flow.
-  if(!window._isAdmin){
-    showToast({title:"Solo admin", body:"Cerrar coaching es una acción de administrador.", type:"info"});
-    return;
-  }
+  // Closing a coaching (complete/cancel + writing notes) is allowed for ANY team
+  // member, not just admins — Team Leads need to close and annotate coachings that
+  // are open for them. The server already gates this at team-member level
+  // (_require_access on /api/coaching/close), so the UI now matches that. Non-team
+  // users never reach here (the whole app is behind team access).
   if(!o.instanceId){ showToast({title:"Error", body:"Sin instance_id — refresca GCA.", type:"err"}); return; }
   _ccCtx = o;
   const isCancel = o.action === "cancel";
   $("cc-title").textContent = isCancel ? "✗ Cancelar coaching" : "✓ Completar coaching";
   $("cc-who").innerHTML = `<b>${esc(o.name || o.login || "")}</b>${o.login ? " ("+esc(o.login)+")" : ""}`
-    + (o.coachingLabel ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:3px">📋 ${esc(o.coachingLabel)}</div>` : "");
+    + (o.coachingLabel ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:3px">📋 ${esc(o.coachingLabel)}</div>` : "")
+    + (o.owner ? `<div style="font-size:12px;font-weight:700;margin-top:3px;color:var(--accent-text,#3730a3)">👤 Owner: ${esc(o.owner)}</div>` : "");
   $("cc-category-wrap").style.display = isCancel ? "none" : "";
   $("cc-reason-wrap").style.display   = isCancel ? "" : "none";
   $("cc-notes").value = "";
@@ -828,6 +880,9 @@ async function _ccSubmit(){
     closeModal("modalCloseCoaching");
     showToast({title: isCancel?"Coaching cancelado":"Coaching completado",
                body: `${o.name || o.login || ""} · ${j.status}`, type:"ok"});
+    // Instead of reloading ALL data, just neutralize THIS coaching's action
+    // buttons in place — mark the row done until the next natural refresh.
+    _markCoachingRowDone(o.instanceId, isCancel);
     if(typeof o.onDone === "function"){ try{ o.onDone(j); }catch(_){} }
   }catch(e){
     $("cc-result").innerHTML = `<div style="color:var(--red,#dc2626);font-size:12px;margin-top:6px">No se pudo cerrar: ${esc(e.message||String(e))}</div>`;
@@ -913,23 +968,33 @@ function openCloseFromRow(pending, meta){
   // For an INACTIVE associate not seen in process for days, this signals the
   // coaching can likely be cancelled.
   const _pres = String((list.find(c=>c.presence)||{}).presence || "").toUpperCase();
+  const _present = _pres === "ACTIVE" || _pres === "ON_SITE";
   const _ls = lastSeen((list.find(c=>c.last_seen_ms)||{}).last_seen_ms);
   let presBanner = "";
-  if(_pres === "INACTIVE" || _ls){
-    const dot = _pres === "ACTIVE" ? "🟢" : "⚪";
+  if(!_present || _ls){
+    const dot = _present ? "🟢" : "⚪";
     const lsTxt = _ls ? ` · <span style="color:${_ls.color};font-weight:700" title="${esc(_ls.full)}">${esc(_ls.text)}</span>` : "";
-    presBanner = `<div style="font-size:11.5px;margin-top:4px">${dot} ${_pres==="ACTIVE"?"In process now":"Not in process"}${lsTxt}</div>`;
+    const lbl = _pres === "ACTIVE" ? "In process now" : (_pres === "ON_SITE" ? "On site" : "Not in process");
+    presBanner = `<div style="font-size:11.5px;margin-top:4px">${dot} ${lbl}${lsTxt}</div>`;
   }
   $("ccPickWho").innerHTML = `<b>${esc(base.name||base.login)}</b> · ${list.length} coaching${list.length>1?"s":""} pendiente${list.length>1?"s":""}${presBanner}`;
   pickList.innerHTML = list.map((c,i)=>{
     const insight = c.insight || c.course_title || c.reason || "Coaching";
     const course = c.course_title || "";
     const exp = coachingExpiry(c.expiration);
+    // Owner = who is responsible for closing this coaching (from GCA LEGEND).
+    // calvenpj 2026-07-24: "super important" — a Team Lead needs to know at a
+    // glance whether a pending coaching is theirs to close.
+    const owner = String(c.owner||"").trim();
+    const ownerHtml = owner
+      ? `<div style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:2px 9px;border-radius:999px;background:var(--accent-light,#eef2ff);border:1px solid var(--accent-border,#c7d2fe);font-size:11px;font-weight:700;color:var(--accent-text,#3730a3)" title="Owner responsable de cerrar este coaching / Owner responsible for closing this coaching">👤 Owner: ${esc(owner)}</div>`
+      : "";
     return `
     <div style="padding:10px 12px;margin-bottom:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card)">
       <div style="font-weight:700;font-size:15px;line-height:1.25">${esc(insight)}</div>
       ${course && course!==insight ? `<div style="font-size:11px;color:var(--text-secondary);margin-top:3px">${esc(course)}</div>` : ""}
       <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${esc(c.scenario||"")}</div>
+      ${ownerHtml}
       ${exp ? `<div style="font-size:11px;font-weight:700;color:${exp.color};margin-top:4px">⏳ ${esc(exp.text)}</div>` : ""}
       <div style="display:flex;gap:6px;margin-top:8px">
         <button class="row-btn cc-pick-complete" data-i="${i}">✓ Completar</button>
@@ -940,7 +1005,8 @@ function openCloseFromRow(pending, meta){
   const go = (i, action)=>{
     closeModal("modalCcPick");
     openCloseCoaching({...base, action, instanceId: list[i].id,
-      coachingLabel: list[i].insight || list[i].course_title || ""});
+      coachingLabel: list[i].insight || list[i].course_title || "",
+      owner: list[i].owner || ""});
   };
   pickList.querySelectorAll(".cc-pick-complete").forEach(b=>b.addEventListener("click",()=>go(Number(b.dataset.i),"complete")));
   pickList.querySelectorAll(".cc-pick-cancel").forEach(b=>b.addEventListener("click",()=>go(Number(b.dataset.i),"cancel")));
@@ -1522,10 +1588,13 @@ function _applyAlertsAccess(canAlerts){
   // GCA alerts
   if(_alertPref("gca")) _startGcaBackgroundPoll();
   else _stopGcaBackgroundPoll();
-  // Quality alerts — Delivery (AMZL) has no Quality pipeline, so never arm it
-  // there even if the pref is ON.
-  if(_alertPref("quality") && !_isAmzlContext()) _startQualityBackgroundPoll();
-  else _stopQualityBackgroundPoll();
+  // Quality auto-poll DISABLED (owner/calvenpj feedback 2026-07-24): the Quality
+  // poll re-ran the whole Quality pipeline (run_quality_pipeline force_download)
+  // every 15 min on its own, which regenerated the coaching queue behind the
+  // Team Leads' backs — they are not the queue owners and it confused them ("it
+  // runs by itself"). Quality now refreshes ONLY when the user opens/refreshes it
+  // explicitly. GCA alerts are unaffected. Always stop any running Quality timer.
+  _stopQualityBackgroundPoll();
   _startPollCountdownTicker();
   _paintPollPill();
 }
@@ -1967,6 +2036,9 @@ function switchTab(name){
   if(name==="courses" && window._onCoursesTab) window._onCoursesTab();
   if(name==="shifttracker" && window._onShiftTrackerTab) window._onShiftTrackerTab();
   if(name==="map" && window._onMapTab) window._onMapTab();
+  // GCA station-map FAB/popup: only lives on the GCA tab. Show the FAB when
+  // entering GCA (if the popup isn't already open); hide FAB + popup elsewhere.
+  if(window._updateGcaFabVisibility) window._updateGcaFabVisibility();
 }
 document.querySelectorAll(".t-tab[data-tab]").forEach(tab=>
   tab.addEventListener("click",()=>switchTab(tab.dataset.tab))
@@ -2241,14 +2313,22 @@ function buildSubprocessOptions(){
   const procSet = (state.proc instanceof Set) ? state.proc : new Set();
   let roles = new Set();
 
+  // Only offer subprocess roles that ACTUALLY appear in today's data — never the
+  // full fixed group list. Before, picking "Stow" always showed every role in
+  // PROCESS_GROUPS.STOW (incl. the stale QUANTITY_STOYW typo) even when nobody
+  // worked it today, so the filter listed phantom subprocesses. Build the set of
+  // roles present in state.all first, then intersect the group's roles with it.
+  const presentRoles = new Set();
+  state.all.forEach(r=>{ const rr=String(r.role||"").toUpperCase(); if(rr && rr!=="—") presentRoles.add(rr); });
+
   if(procSet.size===0 || procSet.size>=ALL_PROCS_COUNT){
-    state.all.forEach(r=>{ if(r.role && r.role!=="—") roles.add(r.role); });
+    presentRoles.forEach(r=>roles.add(r));
   }else{
     for(const p of procSet){
       if(p==="ICQA"){
-        state.all.forEach(r=>{ if(String(r.role||"").includes("ICQA")) roles.add(r.role); });
+        presentRoles.forEach(r=>{ if(r.includes("ICQA")) roles.add(r); });
       }else{
-        (PROCESS_GROUPS[p]||[]).forEach(v=>roles.add(String(v).toUpperCase()));
+        (PROCESS_GROUPS[p]||[]).forEach(v=>{ const vu=String(v).toUpperCase(); if(presentRoles.has(vu)) roles.add(vu); });
       }
     }
   }
@@ -2288,6 +2368,38 @@ function initProcessMs(){
   if(btn) btn.onclick=()=>msSetOpen("procMs", !msIsOpen("procMs"));
   const btn2=$("subMsBtn");
   if(btn2) btn2.onclick=()=>msSetOpen("subMs", !msIsOpen("subMs"));
+
+  // PLANTA filter (FC-only): one toggle button per floor present in the data.
+  if(!isAmzl) renderFloorFilter();
+}
+
+// Paint the PLANTA (physical floor) filter buttons — one per floor with data,
+// toggle behaviour matching the PRIO buttons. Drops any selected floor that no
+// longer has data so the filter can't get stuck on an empty plant. Hidden when
+// there's 0/1 floor (a single-plant view needs no filter). calvenpj 2026-07-24.
+function renderFloorFilter(){
+  const host=$("floorFilterBtns");
+  if(!host) return;
+  const floors=activeFloors();               // e.g. ["p2","p3","p4"]
+  // Prune stale selections (floor filtered out by a data change / FC switch).
+  if(state.floor instanceof Set){
+    for(const f of Array.from(state.floor)) if(!floors.includes(f)) state.floor.delete(f);
+  }
+  if(floors.length<=1){ host.innerHTML=""; host.style.display="none"; if(state.floor) state.floor.clear(); return; }
+  host.style.display="inline-flex";
+  host.innerHTML=floors.map(f=>{
+    const num=f.replace(/[^0-9]/g,"")||f;
+    const on=state.floor.has(f);
+    return `<button class="pf${on?" on":""}" data-floor="${esc(f)}" title="Planta ${esc(num)}">P${esc(num)}</button>`;
+  }).join("");
+  host.querySelectorAll("[data-floor]").forEach(b=>{
+    b.onclick=()=>{
+      const f=b.dataset.floor;
+      if(state.floor.has(f)) state.floor.delete(f); else state.floor.add(f);
+      b.classList.toggle("on", state.floor.has(f));
+      renderAll();
+    };
+  });
 }
 // ── KPI ────────────────────────────────────────────────────
 function syncKpiActive(){
@@ -2422,6 +2534,12 @@ function getFiltered(opts){
     } else if(state.sub instanceof Set && state.sub.size){
       rows=rows.filter(r=>state.sub.has(r.role));
     }
+  }
+  // Floor filter (FC-only) — keep rows on the selected physical plant(s). Empty
+  // set = ALL. Rows whose station has no parseable floor are kept only when no
+  // floor is selected (they can't be attributed to a plant). calvenpj 2026-07-24.
+  if(!_isAmzlView && state.floor instanceof Set && state.floor.size){
+    rows=rows.filter(r=>state.floor.has(_floorOfRow(r)));
   }
   if(state.q){
     const q=state.q.toLowerCase();
@@ -2676,7 +2794,9 @@ function renderTable(){
         fc: currentFC, login: r.login, name: r.name,
         employee_id: r.employee_id, badge: r.employee_id,
         process: r.process || r.role, role: r.role,
-        onDone: ()=>loadDashboard(),
+        // No full reload — _markCoachingRowDone neutralizes the row's action in
+        // place; the coached state refreshes on the next natural pipeline/refresh.
+        onDone: null,
       });
     })
   );
@@ -3070,7 +3190,12 @@ let qFilterSigma = 0;
 // When ON, clicking the Opportunities card filters the TABLE to σ≥2 (the same
 // set the cards measure). Toggle off to show everyone again (dive-deep).
 let qOnlyOpportunities = false;
-let qOnlyAnomalies = false;   // Anomaly card toggle: only rows with post-coaching errors
+// When ON, the Anomalías card filters the TABLE to associates with errors dated
+// after their last coaching (rc_post_coaching > 0 = no improvement).
+let qOnlyAnomalies = false;
+// When ON, the Improvement card filters to associates who improved: were coached
+// (rc_last_coaching set) AND have ZERO errors after that coaching.
+let qOnlyImproved = false;
 let qFilterCurve = new Set();
 let qSortKey = "total_errors_wk";
 let qSortAsc = false;
@@ -3159,9 +3284,7 @@ function _toggleOppFilter(){
 }
 $("qkpiOpp") && $("qkpiOpp").addEventListener("click", _toggleOppFilter);
 $("qkpiOpp") && $("qkpiOpp").addEventListener("keydown",(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); _toggleOppFilter(); } });
-
-// Anomaly card = filter the table to associates who kept making the error AFTER
-// their last coaching (rc_post_coaching > 0). Click toggles it on/off.
+// Anomalías card = clickable filter: restrict the table to post-coaching anomalies.
 function _toggleAnomalyFilter(){
   qOnlyAnomalies = !qOnlyAnomalies;
   const c = $("qkpiAnomaly");
@@ -3170,6 +3293,23 @@ function _toggleAnomalyFilter(){
 }
 $("qkpiAnomaly") && $("qkpiAnomaly").addEventListener("click", _toggleAnomalyFilter);
 $("qkpiAnomaly") && $("qkpiAnomaly").addEventListener("keydown",(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); _toggleAnomalyFilter(); } });
+// "Improved" = was coached (rc_last_coaching set) AND zero errors since (rc_post_coaching===0).
+// Post-coaching outcome (rate-based, computed in the backend RC):
+//   improved  = error-rate/day dropped after the manual coaching (≥1 day elapsed)
+//   anomaly   = rate did NOT drop and still erroring (≥1 day elapsed)
+//   observing = coached <1 day ago — not enough data to judge yet
+function _qIsImproved(r){ return r.rc_outcome === "improved"; }
+function _qIsAnomaly(r){  return r.rc_outcome === "anomaly"; }
+function _qIsObserving(r){ return r.rc_outcome === "observing"; }
+// Improvement card = clickable filter: only associates who improved post-coaching.
+function _toggleImprovedFilter(){
+  qOnlyImproved = !qOnlyImproved;
+  const c = $("qkpiImproved");
+  if(c) c.classList.toggle("active", qOnlyImproved);
+  renderQuality();
+}
+$("qkpiImproved") && $("qkpiImproved").addEventListener("click", _toggleImprovedFilter);
+$("qkpiImproved") && $("qkpiImproved").addEventListener("keydown",(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); _toggleImprovedFilter(); } });
 $("qualityPresentOnly") && $("qualityPresentOnly").addEventListener("click",()=>{qualityPresentOnly=!qualityPresentOnly; $("qualityPresentOnly").classList.toggle("active",qualityPresentOnly); if($("qualityPresentIcon")) $("qualityPresentIcon").textContent=qualityPresentOnly?"●":"○"; renderQuality();});
 $("qualityHideCoached") && $("qualityHideCoached").addEventListener("click",()=>{qualityHideCoached=!qualityHideCoached; $("qualityHideCoached").classList.toggle("active",qualityHideCoached); if($("qualityHideCoachedIcon")) $("qualityHideCoachedIcon").textContent=qualityHideCoached?"●":"○"; renderQuality();});
 $("qualitySearchInput") && $("qualitySearchInput").addEventListener("input", _debounce(renderQuality, 200));
@@ -3369,9 +3509,14 @@ function renderQuality(){
   if(qOnlyOpportunities){
     rows = rows.filter(r => Number(qualityValue(r,["sigma","Sigma"],0)) >= 2);
   }
-  // Anomaly card toggle: only rows flagged "no improvement post coaching".
+  // Anomalías / Improvement card toggles: restrict to σ≥2 too, so the table's
+  // filtered count MATCHES the card count (the cards are measured over σ≥2
+  // oppRows; without this the table also showed <σ2 rows → more people than the card).
   if(qOnlyAnomalies){
-    rows = rows.filter(r => Number(r.rc_post_coaching) > 0);
+    rows = rows.filter(r => Number(qualityValue(r,["sigma","Sigma"],0)) >= 2 && _qIsAnomaly(r));
+  }
+  if(qOnlyImproved){
+    rows = rows.filter(r => Number(qualityValue(r,["sigma","Sigma"],0)) >= 2 && _qIsImproved(r));
   }
   // Filter by curve (NH/XT/VET)
   if(qFilterCurve.size){
@@ -3421,10 +3566,14 @@ function renderQuality(){
   countUpKpi("qkCoached", coachedCount);
   countUpKpi("qkPending", pendingCount);
   countUpKpi("qkCompliance", compliancePct, "%");
-  // Anomalies = associates who kept erring after their last coaching. Counted
-  // over ALL rows (not just σ≥2) since the anomaly matters at any sigma.
-  const anomalyCount = rows.filter(r => Number(r.rc_post_coaching) > 0).length;
+  // Anomalías = opportunities with errors dated after their last coaching (no
+  // improvement). Counted over oppRows so the card stays stable even when its
+  // own filter is active (which would otherwise make rows == anomalies).
+  const anomalyCount = oppRows.filter(_qIsAnomaly).length;
   countUpKpi("qkAnomaly", anomalyCount);
+  // Improvement = opportunities coached AND with zero errors since (post-coaching win).
+  const improvedCount = oppRows.filter(_qIsImproved).length;
+  countUpKpi("qkImproved", improvedCount);
   if($("qkFcLabel")) $("qkFcLabel").textContent = currentFC;
 
   // Sorting
@@ -3463,7 +3612,7 @@ function renderQuality(){
   _renderQualitySummary(rows);
 
   if(!rows.length){
-    body.innerHTML = `<tr><td colspan="15" style="text-align:center;padding:40px;color:#999">No quality opportunities found.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:40px;color:#999">No quality opportunities found.</td></tr>`;
     return;
   }
 
@@ -3512,7 +3661,6 @@ function renderQuality(){
       <td style="text-align:left"><span style="font-weight:800;font-size:12px">${esc(errorType)}</span></td>
       <td><span class="td-rate" style="font-size:11px;color:var(--text-muted)" title="Opportunities processed">${volume>0?volume.toLocaleString():'—'}</span></td>
       <td><span class="td-rate">${esc(total)}</span></td>
-      <td><span class="td-rate" style="font-size:11px">${targetErrors>0?targetErrors.toFixed(1):'—'}</span></td>
       <td><span class="pr ${pctTarget>=100?'pct-good':pctTarget>0?'pct-bad':'pct-none'}">${pctTarget>0&&pctTarget<999?pctTarget.toFixed(0)+'%':'—'}</span></td>
       <td><span class="quality-cohort">${esc(qualityValue(r,["cohort","Cohort"],""))}</span></td>
       <td><span class="pr ${qualitySigmaClass(sigma)}">Σ${Number.isFinite(sigma)?sigma.toFixed(1):'0.0'}</span></td>
@@ -3527,14 +3675,24 @@ function renderQuality(){
       })()}</td>
       <td title="${esc(_stationRaw)}"><span class="td-station">${esc(_stationDisp)}</span></td>
       <td>${present?'<span class="present-chk">✓</span>':'<span class="present-dash">—</span>'}</td>
-      <td>${coached?'<span class="coached-chk"><span class="chk-circle">✓</span></span>':'—'}</td>
+      <td>${coached
+            ? '<span class="coached-chk"><span class="chk-circle">✓</span></span>'
+            : (r.reactive
+                ? '<span class="q-reactive-flag" title="Recibió un coaching REACTIVO (HIGH_DEFECTS) de este topic. No cuenta como coaching manual.">⚡ Reactivo</span>'
+                : '—')}</td>
       <td style="text-align:left">${(()=>{
-        // Post-coaching anomaly: this associate kept making this error AFTER
-        // being coached. Just a ⚠️ icon (with tooltip) — no red text, per owner.
-        const postC = r.rc_post_coaching;
-        const anomaly = (postC > 0)
-          ? `<span style="font-size:13px;margin-right:4px;cursor:help" title="Anomaly detected — no improvement post coaching: ${postC} error${postC===1?"":"es"} tras el último coaching${r.rc_last_coaching?` (${esc(r.rc_last_coaching)})`:""}">⚠️</span>`
-          : "";
+        // Post-coaching outcome icon (rate-based) — shown before the split:
+        //   🎉 improved (rate dropped) · ⚠️ anomaly (no drop) · 🕒 observing (<1d).
+        const _pre = r.rc_pre_rate, _post = r.rc_post_rate, _lc = r.rc_last_coaching;
+        const _rateTip = (_pre!=null&&_post!=null) ? ` · ${_pre}→${_post} err/día` : "";
+        let anomaly = "";
+        if(_qIsAnomaly(r)){
+          anomaly = `<span style="font-size:13px;margin-right:4px;cursor:help" title="Anomalía — no mejoró tras el coaching${_lc?` (${esc(_lc)})`:""}${_rateTip}">⚠️</span>`;
+        } else if(_qIsImproved(r)){
+          anomaly = `<span style="font-size:13px;margin-right:4px;cursor:help" title="Improvement — bajó la tasa de errores tras el coaching${_lc?` (${esc(_lc)})`:""}${_rateTip}">🎉</span>`;
+        } else if(_qIsObserving(r)){
+          anomaly = `<span style="font-size:13px;margin-right:4px;cursor:help" title="En observación — coaching muy reciente${_lc?` (${esc(_lc)})`:""}; aún sin datos para juzgar (≥1 día)">🕒</span>`;
+        }
         // At-a-glance root-cause split (top 2) — like the Performance notes.
         const split = Array.isArray(r.rc_split) ? r.rc_split : [];
         if(!split.length) return anomaly || '<span style="color:var(--text-muted);font-size:11px">—</span>';
@@ -3570,7 +3728,11 @@ function renderQuality(){
             if(sameTopic.length){
               html += `<button class="row-btn q-cc-close pending-close" data-login="${esc(login)}" data-fc="${esc(fc)}" data-eid="${esc(eid)}" data-pending="${esc(JSON.stringify(sameTopic))}" title="Ya hay un coaching de este topic subido — ciérralo (completar o cancelar)">⏳ ${t("q_pending_close")}</button>`;
             } else {
-              html += `<button class="row-btn quality-upload" data-login="${esc(login)}" data-fc="${esc(fc)}" data-course="${esc(courseId)}" data-error="${esc(errorType)}" data-total="${total}" data-sigma="${sigma}" ${coached ? 'disabled style="opacity:.35;cursor:not-allowed"' : !courseId ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>${coached?'✓ Done':!courseId?'No Course':'↑ Upload'}</button>`;
+              // If already coached, the button becomes an ACTIVE "Reupload" (re-coaching)
+              // — same upload handler, just relabeled + green tint. Only "No Course"
+              // (no course_uuid mapped) truly disables it.
+              const _upTitle = coached ? 'Ya coacheado — subir de nuevo (re-coaching)' : '';
+              html += `<button class="row-btn quality-upload${coached?' q-reupload':''}" data-login="${esc(login)}" data-fc="${esc(fc)}" data-course="${esc(courseId)}" data-error="${esc(errorType)}" data-total="${total}" data-sigma="${sigma}" title="${_upTitle}" ${!courseId ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>${!courseId?'No Course':coached?'↻ Reupload':'↑ Upload'}</button>`;
               // Other-topic pendings still get a generic close button.
               const otherPend = pend.filter(p => !sameTopic.includes(p));
               if(otherPend.length){
@@ -3599,7 +3761,7 @@ function renderQuality(){
   // Pagination controls
   if(totalPages > 1){
     const paginationEl = document.createElement("tr");
-    paginationEl.innerHTML = `<td colspan="15" style="text-align:center;padding:8px 0">
+    paginationEl.innerHTML = `<td colspan="14" style="text-align:center;padding:8px 0">
       <button class="q-page-btn" ${window._qPage<=1?'disabled':''} onclick="window._qPage--;renderQuality()">← Prev</button>
       <span style="margin:0 12px;font-size:11px;color:var(--text-secondary)">Page ${window._qPage} of ${totalPages} (${rows.length} rows)</span>
       <button class="q-page-btn" ${window._qPage>=totalPages?'disabled':''} onclick="window._qPage++;renderQuality()">Next →</button>
@@ -3852,7 +4014,7 @@ document.addEventListener("click", (e)=>{
   openCloseFromRow(pending, {
     fc: rowFc, login, name: login,
     employee_id: eid, badge: eid, process: "ICQA",
-    onDone: ()=>loadQuality(),
+    onDone: null,   // no full reload — row action neutralized in place
   });
 });
 
@@ -3865,6 +4027,52 @@ function _rcBar(s, color){
       <div style="position:absolute;inset:0;width:${pct}%;background:${color};border-radius:5px"></div>
     </div>
     <div style="flex:0 0 92px;text-align:right;font-size:12px"><b>${s.pct}%</b> <span style="color:var(--text-muted)">(${s.count})</span></div>
+  </div>`;
+}
+
+// F5 — DPMO sparkline over days WITH VOLUME, with the coaching day marked.
+// `series` = [{day:'YYYY-MM-DD', dpmo, defects, opportunities}] (F4 output).
+// `coachingDay` = 'YYYY-MM-DD'. Points before the coaching are grey, the coaching
+// day is a vertical dashed marker, and points after are green (improved) / red
+// (rose) relative to the pre mean — so the coach SEES the "8 → 5 → 2 tras el
+// coaching del martes" story at a glance. Returns '' when there's nothing to plot.
+function _dpmoSparkline(series, coachingDay){
+  if(!Array.isArray(series) || series.length < 2) return "";
+  const W=260, H=48, padX=6, padY=8;
+  const xs = series.map((_,i)=>i);
+  const ys = series.map(p=>Math.max(0, Number(p.dpmo)||0));
+  const maxY = Math.max(1, ...ys);
+  const n = series.length;
+  const px = i => padX + (n===1?0:(i*(W-2*padX)/(n-1)));
+  const py = v => H-padY - (v/maxY)*(H-2*padY);
+  // Pre mean (days strictly before the coaching) for coloring post points.
+  const cd = String(coachingDay||"");
+  const preVals = series.filter(p=>String(p.day)<cd).map(p=>Number(p.dpmo)||0);
+  const preMean = preVals.length ? preVals.reduce((a,b)=>a+b,0)/preVals.length : null;
+  // Polyline path.
+  const path = series.map((p,i)=>`${i===0?"M":"L"}${px(i).toFixed(1)},${py(ys[i]).toFixed(1)}`).join(" ");
+  // Coaching-day marker: place between the last pre point and first post point.
+  let markerX = null;
+  for(let i=0;i<n;i++){ if(String(series[i].day) >= cd){ markerX = px(i); break; } }
+  if(markerX===null && cd) markerX = W-padX;
+  const dots = series.map((p,i)=>{
+    const after = String(p.day) > cd;
+    const on = String(p.day) === cd;
+    let color = "#94a3b8";                       // pre = grey
+    if(on) color = "#f59e0b";                    // coaching day = amber
+    else if(after) color = (preMean!=null && (Number(p.dpmo)||0) < preMean) ? "#16a34a" : "#dc2626";
+    const t = `${esc(p.day)} · DPMO ${Math.round(p.dpmo)} (${p.defects}/${p.opportunities})`;
+    return `<circle cx="${px(i).toFixed(1)}" cy="${py(ys[i]).toFixed(1)}" r="2.6" fill="${color}"><title>${t}</title></circle>`;
+  }).join("");
+  const marker = markerX!=null ? `<line x1="${markerX.toFixed(1)}" y1="${padY-4}" x2="${markerX.toFixed(1)}" y2="${H-padY+2}" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="3,2"/>
+    <text x="${Math.min(markerX+3,W-46).toFixed(1)}" y="${(padY+2).toFixed(1)}" font-size="8" fill="#f59e0b">coaching</text>` : "";
+  return `<div style="margin-top:8px" title="DPMO por día (sólo días con volumen); línea = día del coaching">
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="max-width:100%">
+      ${marker}
+      <path d="${path}" fill="none" stroke="var(--text-muted,#64748b)" stroke-width="1.3"/>
+      ${dots}
+    </svg>
+    <div style="font-size:9.5px;color:var(--text-muted);margin-top:1px">DPMO/día · <span style="color:#94a3b8">pre</span> · <span style="color:#16a34a">mejora</span> / <span style="color:#dc2626">sube</span> post-coaching</div>
   </div>`;
 }
 
@@ -3884,21 +4092,44 @@ async function openRcModal(login, fc, errorKey){
     const info = d.errors[errorKey];
     const palette = ["#2563eb","#f59e0b","#16a34a","#dc2626","#7c3aed","#0891b2","#db2777","#65a30d"];
     let html = `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">${info.total} eventos · split por <b>${esc(info.split_field)}</b></div>`;
-    // Post-coaching stickiness banner: errors AFTER the associate's last coaching.
-    // Only shown when we know their last coaching date (present in the payload).
+    // Post-coaching outcome banner: improved / anomaly / observing.
+    // When basis==='dpmo' the measure is the REAL Atlas DPMO on days WITH VOLUME
+    // (F4); otherwise it's the event-rate/day proxy. The sparkline shows the daily
+    // DPMO series with the coaching day marked (F5).
     if(info.last_coaching){
-        const post = info.errors_post_coaching;
-        if(post > 0){
-          // Anomaly: the associate kept making this error AFTER being coached —
-          // the coaching didn't stick. Flag it loudly.
+        const oc = info.outcome, isDpmo = (info.basis === "dpmo");
+        // WHO coached (ROI analysis): show the coach next to the coaching date.
+        const _coach = (info.coach_name || info.coach_login || "").trim();
+        const coachTxt = _coach ? ` · coach: <b>${esc(_coach)}</b>` : "";
+        // Metric text: prefer real DPMO (pre→post) when available, else the rate proxy.
+        let metricTxt = "";
+        if(isDpmo && info.pre_dpmo!=null && info.post_dpmo!=null){
+          metricTxt = ` (DPMO <b>${Math.round(info.pre_dpmo)}→${Math.round(info.post_dpmo)}</b>, sólo días con volumen)`;
+        } else if(isDpmo && info.post_dpmo!=null){
+          metricTxt = ` (DPMO post <b>${Math.round(info.post_dpmo)}</b>, sólo días con volumen)`;
+        } else if(info.pre_rate!=null && info.post_rate!=null){
+          metricTxt = ` (tasa <b>${info.pre_rate}→${info.post_rate}</b> err/día)`;
+        }
+        const spark = _dpmoSparkline(info.dpmo_series, info.last_coaching);
+        if(oc === "anomaly"){
           html += `<div style="font-size:12.5px;margin-bottom:10px;padding:9px 12px;border-radius:8px;background:rgba(220,38,38,.08);border:1px solid var(--red,#dc2626)">
-            <span style="font-weight:800;color:var(--red,#dc2626)">⚠️ Anomaly detected — no improvement post coaching</span>
-            <div style="font-size:11px;color:var(--text-secondary);margin-top:2px"><b>${post}</b> error${post===1?"":"es"} tras el último coaching (${esc(info.last_coaching)}). Considerar re-coaching / escalación.</div>
-          </div>`;
-        } else {
-          html += `<div style="font-size:12px;margin-bottom:10px;padding:7px 10px;border-radius:8px;background:var(--bg-panel,#fafbfd);border:1px solid var(--border)">
-            <span style="color:var(--green,#16a34a);font-weight:700">✓ Sin errores desde el último coaching</span>
-            <span style="color:var(--text-muted);font-size:11px"> · ${esc(info.last_coaching)}</span></div>`;
+            <span style="font-weight:800;color:var(--red,#dc2626)">⚠️ Anomalía — no mejoró tras el coaching</span>
+            <div style="font-size:11px;color:var(--text-secondary);margin-top:2px">${isDpmo?"El DPMO":"La tasa de errores"} no bajó${metricTxt} desde el último coaching (${esc(info.last_coaching)}${coachTxt}). Considerar re-coaching / escalación.</div>${spark}</div>`;
+        } else if(oc === "improved"){
+          // Improvement can come via DPMO (rate vs self) OR sigma (position vs site).
+          // When it was the SIGMA path, say so explicitly — the person may not have
+          // lowered their own DPMO but stopped being an outlier vs the site.
+          var _bySigma = (info.improve_reason === "sigma");
+          var _sigTxt = (info.sigma_at!=null && info.sigma_now!=null)
+              ? ` (σ <b>${info.sigma_at}→${info.sigma_now}</b>, bajó ${info.sigma_drop}σ vs el sitio)` : "";
+          var _body = _bySigma
+              ? `Bajó <b>≥1 sigma</b>${_sigTxt} desde el coaching del ${esc(info.last_coaching)}${coachTxt} — dejó de destacar frente al sitio (aunque su DPMO propio no bajó).`
+              : `Bajó ${isDpmo?"el DPMO":"la tasa de errores"}${metricTxt} desde el coaching del ${esc(info.last_coaching)}${coachTxt}.`;
+          html += `<div style="font-size:12.5px;margin-bottom:10px;padding:9px 12px;border-radius:8px;background:rgba(22,163,74,.08);border:1px solid var(--green,#16a34a)">
+            <span style="font-weight:800;color:var(--green,#16a34a)">🎉 Improvement — mejoró tras el coaching${_bySigma?' <span style="font-weight:600;font-size:10px;opacity:.8">(por sigma)</span>':''}</span>
+            <div style="font-size:11px;color:var(--text-secondary);margin-top:2px">${_body}</div>${spark}</div>`;
+        } else if(oc === "observing"){
+          html += `<div style="font-size:12px;margin-bottom:10px;padding:8px 12px;border-radius:8px;background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.5);color:var(--text-secondary)">🕒 En observación — coaching muy reciente (${esc(info.last_coaching)}${coachTxt}); aún sin ≥1 día con volumen para juzgar la mejora.${spark}</div>`;
         }
     }
     // Split bars
@@ -3912,18 +4143,10 @@ async function openRcModal(login, fc, errorKey){
         <summary style="cursor:pointer;font-weight:600;font-size:12px">${esc(s.name)} <span style="color:var(--text-muted)">(${s.count})</span></summary>
         <table style="width:100%;margin-top:6px;font-size:11px;border-collapse:collapse">
           <thead><tr style="text-align:left;color:var(--text-muted)">
-            <th style="padding:3px 6px">Día</th>${df.map(f=>`<th style="padding:3px 6px">${esc(f)}</th>`).join("")}<th style="padding:3px 6px;text-align:right">#</th>
+            ${df.map(f=>`<th style="padding:3px 6px">${esc(f)}</th>`).join("")}<th style="padding:3px 6px">Día</th><th style="padding:3px 6px;text-align:right">#</th>
           </tr></thead>
           <tbody>
-          ${rows.slice(0,50).map(rw=>{
-            // Day of the error (from OpenSearch timestamp). If it spans several
-            // days show the most recent + a count hint.
-            const days = Array.isArray(rw.days) ? rw.days : [];
-            const dayCell = rw.last_day
-              ? `${esc(rw.last_day)}${days.length>1?` <span style="color:var(--text-muted)">(+${days.length-1}d)</span>`:""}`
-              : `<span style="color:var(--text-muted)">—</span>`;
-            return `<tr style="border-top:1px solid var(--border)">
-            <td style="padding:3px 6px;white-space:nowrap">${dayCell}</td>
+          ${rows.slice(0,50).map(rw=>`<tr style="border-top:1px solid var(--border)">
             ${df.map(f=>{
               const val = String(rw[f]||"");
               // ASIN/FCSku columns become a clickable link to FC Research.
@@ -3933,8 +4156,9 @@ async function openRcModal(login, fc, errorKey){
               }
               return `<td style="padding:3px 6px">${esc(val)}</td>`;
             }).join("")}
+            <td style="padding:3px 6px;white-space:nowrap">${esc(rw.last_day||"")}${(Array.isArray(rw.days)&&rw.days.length>1)?` <span style="color:var(--text-muted)">(+${rw.days.length-1}d)</span>`:""}</td>
             <td style="padding:3px 6px;text-align:right;font-weight:700">${rw.count}</td>
-          </tr>`;}).join("")}
+          </tr>`).join("")}
           </tbody>
         </table>${rows.length>50?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px">+${rows.length-50} más…</div>`:""}
       </details>`;
@@ -4032,7 +4256,7 @@ async function openCoachQueue(fc){
     }));
     body.querySelectorAll(".cq-close").forEach(b=>b.addEventListener("click",()=>{
       let pend=[]; try{pend=JSON.parse(b.dataset.pending||"[]");}catch(_){}
-      openCloseFromRow(pend,{fc:b.dataset.fc,login:b.dataset.login,name:b.dataset.login,employee_id:b.dataset.eid,badge:b.dataset.eid,process:b.dataset.process,onDone:()=>{loadQuality&&loadQuality();openCoachQueue(fc);}});
+      openCloseFromRow(pend,{fc:b.dataset.fc,login:b.dataset.login,name:b.dataset.login,employee_id:b.dataset.eid,badge:b.dataset.eid,process:b.dataset.process,onDone:null});
     }));
   }catch(e){
     body.innerHTML = `<div style="color:var(--red,#dc2626);font-size:13px">Error: ${esc(e.message||String(e))}</div>`;
@@ -4275,7 +4499,12 @@ function openUploadPrefill(login){
   openModal("modalUpload");
 }
 
-$("btnUpload").addEventListener("click",()=>{
+// '↑ Upload Coaching' button was removed from the Performance toolbar
+// (calvenpj feedback 2026-07-24 — redundant with the GCA new-coaching flow).
+// Guard the listener so app.js doesn't throw when the button is absent; the
+// modalUpload flow stays wired for any other caller that still opens it.
+const _btnUpload = $("btnUpload");
+if(_btnUpload) _btnUpload.addEventListener("click",()=>{
   $("ul-result").innerHTML="";
   $("ul-login").value="";$("ul-fc").value=currentFC;
   $("ul-course").value="";$("ul-notes").value="";
@@ -4653,23 +4882,17 @@ $("btnPipeline").addEventListener("click", async ()=>{
                 shift: manualTimeMode ? "" : currentShift,
               }));
             }catch(ex){}
-            // After Performance finishes, kick GCA + Quality ONLY for the alerts
-            // the user opted into (Settings toggles, default OFF). Fire-and-forget
-            // server-side (they keep running even though we reload right after).
-            // Fire the opted-in alert polls. They share Midway/COM/FCLM/CSV, so
-            // the server serializes them with a non-blocking pipeline lock: if
-            // both land at once, the loser returns "pipeline busy" and its own
-            // background timer retries shortly. (We can't chain client-side here —
-            // the reload below would abort any pending .then(). The lock is the
-            // real guard.)
-            if(window._canAlerts){
-              if(_alertPref("gca")){
-                try{ fetch(`${API}/api/gca/poll?fc=${encodeURIComponent(currentFC)}`, {method:"POST"}); }catch(_){}
-              }
-              if(_alertPref("quality") && !_isAmzlContext()){
-                try{ fetch(`${API}/api/quality/poll?fc=${encodeURIComponent(currentFC)}`, {method:"POST"}); }catch(_){}
-              }
-            }
+            // After Performance finishes, ALWAYS refresh GCA so the pending-
+            // coaching column/flags reflect reality — calvenpj 2026-07-24: "the
+            // Performance pull should also pull GCA". This is a fire-and-forget
+            // POST with NO .then() handling of hd_items, so it NEVER shows the
+            // hyper-reactive alert modal (that only fires from the background
+            // _gcaPollOnce, which reads hd_items). The server serializes it
+            // against the just-finished pipeline via the shared lock. GCA runs
+            // regardless of the alerts opt-in now — it's data refresh, not an
+            // alert. (Quality is NOT auto-run: its queue is owner-driven and
+            // re-running it behind Team Leads confused them — feedback #3.)
+            try{ fetch(`${API}/api/gca/poll?fc=${encodeURIComponent(currentFC)}`, {method:"POST"}); }catch(_){}
             // window.location.reload() is the only reliable way to repaint in pywebview
             // after a pipeline. Auth cache is persisted in localStorage so the reload
             // is instant — loadUserInfo() reads the cache and skips the fetch entirely.
@@ -4690,6 +4913,51 @@ $("btnPipeline").addEventListener("click", async ()=>{
   };
   startXhr.send();
 });
+
+// ── Auto-refresh Performance (calvenpj 2026-07-24) ─────────────
+// Toggle button that re-runs the Performance pipeline every 15 min so leads can
+// leave it on a screen and see the floor update itself. It simply .click()s the
+// existing Start-Pipeline button (reusing its whole tested flow — preflight,
+// progress, GCA refresh, reload) so there's no duplicate pipeline logic. Skips a
+// tick if a pipeline is already running (button disabled). Preference persists.
+const PERF_AUTO_MS = 15 * 60 * 1000;
+let _perfAutoTimer = null;
+function _setPerfAutoUI(on){
+  // The toggle now lives in Settings (checkbox #spAutoRefresh); keep it in sync
+  // whenever the state changes so opening Settings always shows the real state.
+  const cb = $("spAutoRefresh");
+  if(cb) cb.checked = !!on;
+}
+function _startPerfAuto(){
+  if(_perfAutoTimer) return;
+  _perfAutoTimer = setInterval(()=>{
+    const pb = $("btnPipeline");
+    // Only fire when idle (button enabled) and we're on the Performance panel.
+    if(pb && !pb.disabled){ try{ pb.click(); }catch(_){} }
+  }, PERF_AUTO_MS);
+}
+function _stopPerfAuto(){
+  if(_perfAutoTimer){ clearInterval(_perfAutoTimer); _perfAutoTimer=null; }
+}
+function _applyPerfAuto(on){
+  _setPerfAutoUI(on);
+  try{ localStorage.setItem("argos_perf_auto", on ? "1" : "0"); }catch(_){}
+  if(on) _startPerfAuto(); else _stopPerfAuto();
+}
+// Settings toggle: set once, persists across sessions (localStorage). calvenpj 2026-07-24.
+$("spAutoRefresh") && $("spAutoRefresh").addEventListener("change",(e)=>{
+  const on = !!e.target.checked;
+  _applyPerfAuto(on);
+  showToast({
+    title: on ? "Auto-actualización ON" : "Auto-actualización OFF",
+    body:  on ? "Performance se actualizará cada 15 min (se recuerda). / Performance will refresh every 15 min (remembered)."
+              : "Se detuvo la actualización automática. / Auto-refresh stopped.",
+    type: "info", ms: 3500
+  });
+});
+// Restore the saved preference on load (default OFF) — reflects in the Settings
+// checkbox AND starts the timer, so the user only ever enables it once.
+(()=>{ try{ if(localStorage.getItem("argos_perf_auto")==="1") _applyPerfAuto(true); }catch(_){} })();
 
 // ── Toolbar ────────────────────────────────────────────────
 document.querySelectorAll("[data-curve]").forEach(btn=>{
@@ -4713,7 +4981,7 @@ $("btnRefresh") && $("btnRefresh").addEventListener("click",loadDashboard);
 })();
 $("maxInput").addEventListener("input",e=>{
   const v=parseInt(e.target.value,10);
-  state.maxRows=Number.isFinite(v)&&v>0?v:50;
+  state.maxRows=Number.isFinite(v)&&v>0?v:200;
   renderAll();
 });
 $("toggleCoached").addEventListener("click",()=>{
@@ -4917,14 +5185,10 @@ initProcessMs();
         ms: 4500,
       });
     }, 500);
-    // After a manual Start Pipeline, GCA + Quality were kicked off server-side.
-    // Give them time to finish, then open the Coaching Queue automatically so
-    // the coach sees who needs coaching (no need to wait for the poll baseline).
-    if(window._canAlerts){
-      setTimeout(function(){
-        try{ if(typeof openCoachQueue === "function") openCoachQueue(info.fc || currentFC); }catch(_){}
-      }, 20000);
-    }
+    // NOTE (calvenpj 2026-07-24): the Coaching Queue used to AUTO-OPEN ~20s after
+    // a Performance pipeline. Removed — it popped the Quality coaching queue in the
+    // Team Leads' faces even though they're not the queue owners (same confusion as
+    // feedback #3). The queue now opens ONLY when the user explicitly clicks it.
   }catch(ex){}
 })();
 
@@ -4954,7 +5218,44 @@ initProcessMs();
   }catch(ex){}
 })();
 
-_initApp().then(()=>loadDashboard());;
+// ── Necro permission check (non-blocking) — calvenpj 2026-07-24 ────────────
+// Poll the server's Necro permission status; if the user lacks the
+// necronomicon-productivity-e membership, show the top banner + a one-time
+// toast. Never blocks the tool — Necro data just won't load until they're added.
+let _necroWarnedOnce = false;
+async function _checkNecroPermission(){
+  try{
+    const st = await jget(`${API}/api/necro/permission-status`);
+    const has = !st || st.has_permission !== false;   // default true
+    const banner = $("necroPermBanner");
+    const link = $("necroPermLink");
+    if(link && st && st.team_url) link.href = st.team_url;
+    if(banner){
+      // Respect a manual dismiss for THIS session only (re-checks still run).
+      const dismissed = banner.dataset.dismissed === "1";
+      banner.style.display = (!has && !dismissed) ? "block" : "none";
+    }
+    if(!has && !_necroWarnedOnce){
+      _necroWarnedOnce = true;
+      showToast({
+        title: "⚠️ Missing Necro Permission",
+        body: "Ask your manager to add you to necronomicon-productivity-e (see the banner). Once added, everything will work. · Falta el permiso de Necro — pídelo a tu manager.",
+        type: "warn", ms: 9000
+      });
+    }
+  }catch(_){ /* status read failed — assume OK, never nag */ }
+}
+(()=>{
+  const b = $("necroPermDismiss");
+  if(b) b.addEventListener("click", ()=>{
+    const banner = $("necroPermBanner");
+    if(banner){ banner.dataset.dismissed = "1"; banner.style.display = "none"; }
+  });
+})();
+
+_initApp().then(()=>loadDashboard()).then(()=>_checkNecroPermission());
+// Re-check every 15 min (a user added mid-shift sees the banner clear on its own).
+setInterval(_checkNecroPermission, 15 * 60 * 1000);
 
 // ─── Settings Popover ──────────────────────────────────────────
 const _spPanel = $("settingsPopover");
@@ -4965,7 +5266,12 @@ if(_spBtn && _spPanel){
     _spPanel.style.display = _spPanel.style.display === "none" ? "block" : "none";
     // Refresh the alert toggles each time the popover opens (eligibility/site
     // context may have changed since login).
-    if(_spPanel.style.display !== "none" && window._syncAlertToggleUI) window._syncAlertToggleUI();
+    if(_spPanel.style.display !== "none"){
+      if(window._syncAlertToggleUI) window._syncAlertToggleUI();
+      // Reflect the persisted auto-refresh state in its checkbox.
+      const _ar = $("spAutoRefresh");
+      if(_ar){ try{ _ar.checked = localStorage.getItem("argos_perf_auto")==="1"; }catch(_){} }
+    }
   });
   document.addEventListener("click", (e) => {
     if(_spPanel.style.display !== "none" && !_spPanel.contains(e.target) && e.target !== _spBtn)
@@ -6202,17 +6508,13 @@ document.addEventListener("click",(e)=>{
     wrap.style.transformOrigin = "top center";
     const natW = active.scrollWidth, natH = active.scrollHeight;
     if(!natW || !natH) return;
-    const top = wrap.getBoundingClientRect().top;
-    const availH = window.innerHeight - top - 24;
     // Available width = the PARENT's inner width (the wrap is fit-content now,
     // so its own clientWidth == content width, which would defeat the fit).
     const parent = wrap.parentElement;
     const availW = (parent ? parent.clientWidth : window.innerWidth) - 8;
-    // Fit by WIDTH primarily and let the page scroll vertically. A tall vertical
-    // floor (e.g. P2's long STOW column) has a huge natH; scaling to fit that
-    // height shrank the whole map to an unreadable size. We only downscale to fit
-    // the width; height overflows into vertical scroll. MIN_SCALE keeps the map
-    // legible (never shrinks below it).
+    // Fit by WIDTH only + allow vertical SCROLL. Fitting by height too (the old
+    // Math.min(availW/natW, availH/natH, 1)) shrank the map to a tiny sliver when
+    // P2's long vertical lateral column made natH huge. MIN_SCALE keeps it legible.
     const MIN_SCALE = 0.55;
     let scale = Math.min(availW / natW, 1);   // fit width, never upscale
     if(scale < MIN_SCALE) scale = MIN_SCALE;
@@ -6334,7 +6636,10 @@ document.addEventListener("click",(e)=>{
   var perfMapProc = "ALL";
   document.querySelectorAll(".map-proc-btn").forEach(function(btn){
     btn.addEventListener("click", function(){
-      perfMapProc = btn.dataset.proc;
+      // Toggle: clicking the already-active process filter clears it back to
+      // ALL, so a user can un-filter by clicking the same button again (before,
+      // once a process was picked there was no way to deselect it).
+      perfMapProc = (perfMapProc === btn.dataset.proc) ? "ALL" : btn.dataset.proc;
       document.querySelectorAll(".map-proc-btn").forEach(function(b){
         var on = b.dataset.proc === perfMapProc;
         b.classList.toggle("on", on);
@@ -6667,6 +6972,13 @@ document.addEventListener("click",(e)=>{
   // Expose for re-render after pipeline and for GCA tab to share layout
   window._renderPerfMap = function(){ if(perfMapVisible) renderPerfMap(); };
   window._getFloors = _getFloors;
+  // Expose the map's OWN station→floor parser so the Performance PLANTA list
+  // filter uses identical logic (no separate implementation). Returns "p1".."p4"
+  // or "" — parsePerfStation is the map's in-scope parser. (calvenpj 2026-07-24)
+  window._floorOfStation = function(raw){
+    try{ var p = parsePerfStation(raw); return (p && p.floor) ? String(p.floor) : ""; }
+    catch(_){ return ""; }
+  };
 
   // Load layout for initial FC, and reload when FC changes
   _loadMapLayout(currentFC);
@@ -7112,11 +7424,9 @@ document.addEventListener("click",(e)=>{
     }
     // WS lines encode a SIDE in the line number: 11 = right, 12 = left (the two
     // last station digits are the real position). Show the side as the cell type
-    // and the position as the number, so the map reads e.g. "Der / 09" instead of
-    // a repeated "W11". Fallback to "W"+id for any other line (e.g. 14).
-    // WS line group: the first digit-pair identifies the line (11 → Línea 1,
-    // 12 → Línea 2); the last 2 digits are the station number. Owner prefers
-    // "Línea 1/2" over "Der/Izq".
+    // and the position as the number. The line number encodes which line
+    // (11 = Línea 1, 12 = Línea 2); the 2 last digits are the real station number.
+    // Header = "Línea 1/2/N", cell type = short "WS".
     function _wsSideLabel(id){ return id===11 ? "Línea 1" : id===12 ? "Línea 2" : ("Línea "+id); }
     function _lineGroup(title, prefix, ids, count, lblFn, typeLblFn){
       var active = ids.filter(function(id){ return _lineActive(prefix, id, count); });
@@ -7137,8 +7447,6 @@ document.addEventListener("click",(e)=>{
     var sIds = Object.keys(singlesLines).map(Number).sort(); if(!sIds.length) sIds=[1,2];
     _lineGroup("Singles", "singles", sIds, 20, function(id){ return "S"+String(id).padStart(2,"0"); });
     var wIds = Object.keys(wsLines).map(Number).sort();
-    // Column header = "Línea 1/2" (the side); cell type label stays short "WS"
-    // so it's not repeated on every cell. Cell number = 2-digit station.
     _lineGroup("WS", "ws", wIds, 24, function(id){ return _wsSideLabel(id); }, function(_id){ return "WS"; });
     var dIds = Object.keys(decantLines).map(Number).sort();
     _lineGroup("Decant", "decant", dIds, 20, function(id){ return "D"+String(id).padStart(2,"0"); });
@@ -7893,12 +8201,12 @@ document.addEventListener("click",(e)=>{
         openCloseCoaching({instanceId:b.dataset.iid, fc:currentFC, action:"complete",
           login:b.dataset.login, name:b.dataset.name,
           employee_id:b.dataset.eid, badge:b.dataset.eid, process:b.dataset.process,
-          onDone:()=>{ closeModal("modalHighDefects"); if(window._loadGcaDashboard) window._loadGcaDashboard(); }})));
+          onDone:()=>{ closeModal("modalHighDefects"); }})));
       listEl.querySelectorAll(".cc-cancel").forEach(b=>b.addEventListener("click",()=>
         openCloseCoaching({instanceId:b.dataset.iid, fc:currentFC, action:"cancel",
           login:b.dataset.login, name:b.dataset.name,
           employee_id:b.dataset.eid, badge:b.dataset.eid, process:b.dataset.process,
-          onDone:()=>{ closeModal("modalHighDefects"); if(window._loadGcaDashboard) window._loadGcaDashboard(); }})));
+          onDone:()=>{ closeModal("modalHighDefects"); }})));
     }
     if(!hd.length) return;
     // Only auto-open once per (fc + set of HD ids) so it doesn't nag on every reload.
@@ -7913,19 +8221,57 @@ document.addEventListener("click",(e)=>{
 
   // ── Render everything ──
 
-  // ═══ FLOOR MAP ═══
-  let floorMapVisible = false;  // collapsed by default
+  // ═══ GCA STATION MAP — POPUP FLOTANTE, coloreado por OWNER del topic ═══
+  // Burbuja abajo-derecha (solo visible en la pestaña GCA). Cada estación se
+  // pinta con franjas verticales, una por owner con pendings ahí; el centro del
+  // mapa muestra el TOTAL pending global. Reacciona a su propio Present-only.
+  let floorMapVisible = false;   // popup abierto?
+  let gcaMapPresentOnly = true;  // present-only del popup (independiente de la tabla)
   let activeFloor = "p2";
 
-  // Map toggle bar click
-  var _gcaMapToggleBar = document.getElementById("gcaMapToggleBar");
-  var _gcaMapBody = document.getElementById("gcaMapBody");
-  var _gcaMapArrow = document.getElementById("gcaMapArrow");
-  if(_gcaMapToggleBar) _gcaMapToggleBar.addEventListener("click", function(){
-    floorMapVisible = !floorMapVisible;
-    if(_gcaMapBody) _gcaMapBody.style.display = floorMapVisible ? "" : "none";
-    if(_gcaMapArrow) _gcaMapArrow.style.transform = floorMapVisible ? "rotate(90deg)" : "";
-    if(floorMapVisible) renderFloorMap();
+  // 6 owners de gca_legend.json → color. Mismo orden que las --own-* del CSS.
+  const GCA_OWNER_COLORS = {
+    "L&D":            "var(--own-ld)",
+    "Team Lead IB":   "var(--own-tlib)",
+    "Team Lead OB":   "var(--own-tlob)",
+    "ICQA":           "var(--own-icqa)",
+    "Area Manager IB":"var(--own-amib)",
+    "Area Manager OB":"var(--own-amob)",
+  };
+  function _gcaOwnerColor(owner){ return GCA_OWNER_COLORS[owner] || "var(--own-other)"; }
+
+  var _gcaPopup = document.getElementById("gcaMapPopup");
+  var _gcaFab   = document.getElementById("gcaMapFab");
+  function _openGcaMap(){
+    floorMapVisible = true;
+    if(_gcaPopup){ _gcaPopup.classList.add("open"); _gcaPopup.classList.remove("min"); }
+    if(_gcaFab) _gcaFab.style.display = "none";
+    renderFloorMap();
+  }
+  function _closeGcaMap(){
+    floorMapVisible = false;
+    if(_gcaPopup) _gcaPopup.classList.remove("open");
+    // Mostrar el FAB para reabrir (solo si estamos en la pestaña GCA).
+    _updateGcaFabVisibility();
+  }
+  function _updateGcaFabVisibility(){
+    var onGca = document.getElementById("panel-gca") && document.getElementById("panel-gca").classList.contains("active");
+    if(_gcaFab) _gcaFab.style.display = (onGca && !floorMapVisible) ? "inline-flex" : "none";
+    if(_gcaPopup && !onGca) _gcaPopup.classList.remove("open");  // ocultar popup fuera de GCA
+  }
+  window._updateGcaFabVisibility = _updateGcaFabVisibility;
+  if(_gcaFab) _gcaFab.addEventListener("click", _openGcaMap);
+  var _gcaMapClose = document.getElementById("gcaMapClose");
+  if(_gcaMapClose) _gcaMapClose.addEventListener("click", _closeGcaMap);
+  var _gcaMapMin = document.getElementById("gcaMapMin");
+  if(_gcaMapMin) _gcaMapMin.addEventListener("click", function(){ if(_gcaPopup) _gcaPopup.classList.toggle("min"); });
+  // Present-only del popup
+  var _gcaMapPresentBtn = document.getElementById("gcaMapPresentOnly");
+  if(_gcaMapPresentBtn) _gcaMapPresentBtn.addEventListener("click", function(){
+    gcaMapPresentOnly = !gcaMapPresentOnly;
+    _gcaMapPresentBtn.classList.toggle("active", gcaMapPresentOnly);
+    var ic = document.getElementById("gcaMapPresentIcon"); if(ic) ic.textContent = gcaMapPresentOnly ? "●" : "○";
+    renderFloorMap();
   });
 
   // Compliance details toggle
@@ -7939,9 +8285,9 @@ document.addEventListener("click",(e)=>{
     if(arrow) arrow.style.transform = show ? "rotate(90deg)" : "";
   });
 
-  // Build GCA floor tabs dynamically from shared layout
+  // Build GCA floor tabs dynamically from shared layout (into the popup).
   function _buildGcaFloorTabs(){
-    var tabBar = document.querySelector(".gca-floor-tabs");
+    var tabBar = document.getElementById("gcaMapTabs");
     var floorWrap = document.getElementById("gcaFloorWrap");
     if(!tabBar || !floorWrap) return;
     var floors = window._getFloors ? window._getFloors() : [{id:"p2",label:"P2 (AR)",type:"ar_ring"},{id:"p1",label:"P1 (Pack)",type:"pack"}];
@@ -7949,19 +8295,19 @@ document.addEventListener("click",(e)=>{
     floorWrap.innerHTML = "";
     floors.forEach(function(fl, i){
       var btn = document.createElement("button");
-      btn.className = "gca-floor-tab" + (i===0?" active":"");
+      btn.className = "gmp-tab" + (i===0?" active":"");
       btn.dataset.floor = fl.id;
       btn.textContent = fl.label;
       tabBar.appendChild(btn);
       var div = document.createElement("div");
       div.id = "gcaFloor_" + fl.id;
       div.className = "gca-floor-container";
-      div.style.cssText = "padding:12px;position:relative;min-height:400px;" + (i>0?"display:none":"");
+      div.style.cssText = "position:relative;min-height:200px;" + (i>0?"display:none":"");
       floorWrap.appendChild(div);
     });
-    tabBar.querySelectorAll(".gca-floor-tab").forEach(function(tab){
+    tabBar.querySelectorAll(".gmp-tab").forEach(function(tab){
       tab.addEventListener("click", function(){
-        tabBar.querySelectorAll(".gca-floor-tab").forEach(function(t){ t.classList.remove("active"); });
+        tabBar.querySelectorAll(".gmp-tab").forEach(function(t){ t.classList.remove("active"); });
         tab.classList.add("active");
         activeFloor = tab.dataset.floor;
         floorWrap.querySelectorAll(".gca-floor-container").forEach(function(c){ c.style.display="none"; });
@@ -7997,57 +8343,128 @@ document.addEventListener("click",(e)=>{
   // Floor id from a 4-digit AR station by thousands digit (2xxx→p2 … 9xxx→p9),
   // so robotic sites with >2 AR floors (MAD7 P4, etc.) map correctly.
   function _arFloorOf2(n){ var k=Math.floor(n/1000); return (k>=2&&k<=9)?("p"+k):"p2"; }
-  // Parse station string → {floor, stationNum}
+  // Parse a station string → the SAME shape the Performance map uses. We delegate
+  // to parsePerfStationCached (the complete/maintained parser) instead of a
+  // GCA-only copy — the old GCA parser recognised far fewer formats (no induct,
+  // rebin, P2R, WS-14, decant/rcv, 4-digit fallback), so many pending coachings
+  // never matched a cell and the GCA map looked empty. One parser = one truth.
   function parseStation(st){
-    if(!st) return null;
-    // dz-P-A2311 or dz-P-A3429 or dz-P-A4386
-    let m = st.match(/dz-P-A(\d{4})/);
-    if(m){ const n=parseInt(m[1]); return {floor: _arFloorOf2(n), num:n}; }
-    // ws-k-A-02-2133 or ws-k-A-04-4386 (floor prefix 02..09)
-    m = st.match(/ws-k-A-0(\d)-(\d{4})/);
-    if(m){ const n=parseInt(m[2]); return {floor: "p"+m[1], num:n}; }
-    // wsAFE1_101_05
-    m = st.match(/wsAFE(\d+)_(\d+)_(\d+)/);
-    if(m) return {floor:"p1", type:"afe", wall:parseInt(m[1]), pos:parseInt(m[3])};
-    // wsSINGLES_01_03
-    m = st.match(/wsSINGLES_(\d+)_(\d+)/);
-    if(m) return {floor:"p1", type:"singles", line:parseInt(m[1]), pos:parseInt(m[2])};
-    // ws11xx or ws12xx (WS lines)
-    m = st.match(/ws(1[12]\d{2})/);
-    if(m){ const n=parseInt(m[1]); return {floor:"p1", type:"ws", side: String(n).startsWith("12")?"left":"right", pos:n}; }
-    return null;
+    // GCA `station` can be a raw GCA location ID (a long all-digits number like
+    // "4300035091" or "1586283248701") instead of a physical station code —
+    // those are NOT floor stations. The shared parser's 4-digit fallback would
+    // wrongly read "4300035091" as station 4300 on P4. Skip pure-numeric strings
+    // longer than 4 digits so they don't pollute the map.
+    var s = String(st || "").trim();
+    if(/^\d{5,}$/.test(s)) return null;
+    return (typeof parsePerfStationCached === "function") ? parsePerfStationCached(s) : null;
+  }
+  // Build the SAME station key the Performance map builds (renderPerfMap), so a
+  // pending on station X lands on the exact cell the renderers look up.
+  function _gcaStationKey(parsed){
+    if(!parsed) return null;
+    if(parsed.num != null) return parsed.floor + "_" + parsed.num;
+    if(parsed.type === "induct") return parsed.floor + "_induct_" + parsed.wall;
+    if(parsed.type === "rebin")  return parsed.floor + "_rebin_0_" + parsed.wall + "_" + parsed.pos;
+    if(parsed.type === "ws")     return parsed.floor + "_ws_" + parsed.line + "_" + parsed.pos;
+    if(parsed.type === "singles")return parsed.floor + "_singles_" + (parsed.line != null ? parsed.line : parsed.id) + "_" + parsed.pos;
+    var wallPart = parsed.wall ? "_" + parsed.wall : "";
+    return parsed.floor + "_" + parsed.type + "_" + parsed.id + wallPart + "_" + parsed.pos;
+  }
+
+  // Add one pending item to a station bucket, tracking the per-owner breakdown.
+  function _gcaAddToStation(map, key, parsed, it){
+    if(!map[key]) map[key] = {count:0, items:[], parsed, byOwner:{}};
+    map[key].count++;
+    map[key].items.push(it);
+    var own = (it.owner || "").trim() || "—";
+    map[key].byOwner[own] = (map[key].byOwner[own] || 0) + 1;
   }
 
   function renderFloorMap(){
     if(!gcaData) return;
-    // Build pending map from items
     const items = (gcaData.items||[]).filter(i=>i.status==="PENDING");
-    // Update badge count always (even when map is collapsed)
-    var badge = document.getElementById("gcaMapPendingBadge");
-    if(badge) badge.textContent = items.length > 0 ? items.length+" pending" : "";
-    // Don't render DOM if map is collapsed
-    if(!floorMapVisible) return;
-    const presenceOn = gcaPresentOnly;
-    const filtered = presenceOn ? items.filter(i=>i.presence==="ACTIVE") : items;
+    // Present-only del popup (independiente de la tabla). Reactivo al toggle.
+    const filtered = gcaMapPresentOnly ? items.filter(i=>i.presence==="ACTIVE"||i.presence==="ON_SITE") : items;
 
-    // Group by parsed station
+    // FAB count + total (GLOBAL, todas las plantas) siempre actualizados.
+    var fabCount = document.getElementById("gcaFabCount");
+    if(fabCount) fabCount.textContent = filtered.length;
+    var totalEl = document.getElementById("gcaMapTotal");
+    if(totalEl) totalEl.textContent = filtered.length + " pending";
+
+    if(!floorMapVisible) return;
+
+    // Group by parsed station, con desglose por owner. TODAS las plantas (para el
+    // total global) — el render por planta filtra por prefijo de floor.
     const pendingByStation = {};
+    const ownersSeen = {};
     filtered.forEach(it=>{
+      var own = (it.owner || "").trim() || "—";
+      ownersSeen[own] = true;
       const parsed = parseStation(it.station);
       if(!parsed) return;
-      const key = parsed.num ? `${parsed.floor}_${parsed.num}` : `${parsed.floor}_${parsed.type}_${parsed.wall||parsed.line||parsed.side}_${parsed.pos}`;
-      if(!pendingByStation[key]) pendingByStation[key] = {count:0, items:[], parsed};
-      pendingByStation[key].count++;
-      pendingByStation[key].items.push(it);
+      const key = _gcaStationKey(parsed);
+      if(!key) return;
+      _gcaAddToStation(pendingByStation, key, parsed, it);
     });
+
+    // Leyenda de owners presentes (con su color).
+    var legEl = document.getElementById("gcaMapLegend");
+    if(legEl){
+      var owners = Object.keys(ownersSeen).sort();
+      legEl.innerHTML = owners.map(function(o){
+        return '<span><span class="ldot" style="background:'+_gcaOwnerColor(o)+'"></span>'+esc(o)+'</span>';
+      }).join("") || '<span style="color:var(--text-dim)">Sin pendings</span>';
+    }
 
     var gcaFloorDef = _gcaGetFloorDef(activeFloor);
     var gcaContainerId = "gcaFloor_" + activeFloor;
+    // total global para el centro del mapa
+    window._gcaGlobalPending = filtered.length;
     if(gcaFloorDef && gcaFloorDef.type === "ar_ring"){
       renderARFloor(gcaContainerId, gcaFloorDef.top||[], gcaFloorDef.left||[], gcaFloorDef.bottom||[], gcaFloorDef.right||[], activeFloor, pendingByStation);
     } else {
       renderP1Floor(gcaContainerId || "gcaFloorP1", pendingByStation);
     }
+  }
+
+  // Build a GCA station cell painted with vertical STRIPES, one per owner with
+  // pendings there (width ∝ that owner's share). label + count on top. Shared by
+  // AR + P1 renderers. `pending` = {count, items, byOwner:{owner:n}}.
+  function _buildGcaOwnerCell(pending, typeLbl, numLbl){
+    var div = document.createElement('div');
+    div.className = 'gca-cell' + (pending ? '' : ' gca-empty');
+    if(!pending){
+      div.innerHTML = '<span class="gca-lbl">'+esc(typeLbl)+'</span><span class="gca-cnt">'+esc(String(numLbl))+'</span>';
+      return div;
+    }
+    // Stripes ordered by descending share so the dominant owner reads first.
+    var owners = Object.keys(pending.byOwner).sort(function(a,b){ return pending.byOwner[b]-pending.byOwner[a]; });
+    var stripes = owners.map(function(o){
+      var w = pending.byOwner[o];
+      return '<span style="flex:'+w+';background:'+_gcaOwnerColor(o)+'" title="'+esc(o)+': '+w+'"></span>';
+    }).join('');
+    div.innerHTML =
+      '<div class="gca-stripes">'+stripes+'</div>' +
+      '<span class="sm-badge bg-red">'+pending.count+'</span>' +
+      '<span class="gca-lbl">'+esc(typeLbl)+'</span>' +
+      '<span class="gca-cnt">'+esc(String(numLbl))+'</span>';
+    div.onmouseenter = function(e){ showMapTooltip(e, (typeLbl?typeLbl+' ':'')+numLbl, pending, typeLbl); };
+    div.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=$g("gcaMapTooltip"); if(tt) tt.style.display="none";},150); };
+    return div;
+  }
+
+  // Center summary of the GCA map: TOTAL pending GLOBAL (all floors) + this
+  // floor's pending, matching the perf map's command-center look.
+  function _gcaCenterHtml(floorId, floorPending){
+    var globalPending = window._gcaGlobalPending || 0;
+    return '<div class="sm-summary">' +
+      '<div class="sm-summary-title">'+esc(String(floorId).toUpperCase())+'</div>' +
+      '<div class="sm-counts">' +
+        '<div class="sm-count"><span class="sm-count-val sm-c-danger" style="font-size:34px">'+globalPending+'</span><span class="sm-count-lbl">Total Pending</span></div>' +
+        '<div class="sm-count"><span class="sm-count-val">'+floorPending+'</span><span class="sm-count-lbl">'+esc(String(floorId).toUpperCase())+' Pending</span></div>' +
+      '</div>' +
+    '</div>';
   }
 
   function renderARFloor(containerId, topRow, leftCol, bottomRow, rightCol, floorId, pendingMap){
@@ -8057,32 +8474,76 @@ document.addEventListener("click",(e)=>{
     el.style.position = 'relative';
     el.style.padding = '12px';
 
+    var floorNum = parseInt(String(floorId).replace(/[^0-9]/g, "")) || 2;
+    var base = floorNum * 1000;
+
+    // AUTO-MODE (ported from the perf map): if the layout has no explicit station
+    // lists for this floor (e.g. BCN4 p3/p4 are empty in map_layouts.json), build
+    // the ring arrays from the pending stations themselves by their offset within
+    // the floor (100s=top, 200s=left, 300s=bottom, 400s=right). This is what keeps
+    // the perf map from rendering blank floors — GCA now does the same.
+    topRow = (topRow||[]).slice(); leftCol=(leftCol||[]).slice();
+    bottomRow=(bottomRow||[]).slice(); rightCol=(rightCol||[]).slice();
+    if(!topRow.length && !leftCol.length && !bottomRow.length && !rightCol.length){
+      Object.keys(pendingMap).forEach(function(k){
+        if(k.indexOf(floorId+"_")!==0) return;
+        var sn = parseInt(k.split("_")[1]); if(isNaN(sn)) return;
+        var rel = sn - base;
+        if(rel>=100 && rel<200) topRow.push(sn);
+        else if(rel>=200 && rel<300) leftCol.push(sn);
+        else if(rel>=300 && rel<400) bottomRow.push(sn);
+        else if(rel>=400 && rel<500) rightCol.push(sn);
+      });
+      topRow.sort(function(a,b){return b-a;}); leftCol.sort(function(a,b){return a-b;});
+      bottomRow.sort(function(a,b){return a-b;}); rightCol.sort(function(a,b){return b-a;});
+    }
+
     function getTypeLabel(stNum){
-      var base = stNum >= 3000 ? stNum - 1000 : stNum;
-      if(base >= 2050 && base <= 2197){
+      var b = stNum >= 3000 ? stNum - 1000 : stNum;
+      if(b >= 2050 && b <= 2197){
         var ptrs = [2197,2196,2187,2186,2177,2176,2168,2167,2160,2159,2151,2150,2143,2142,2134,2133,2125,2124,2116,2115];
-        return ptrs.indexOf(base) > -1 ? 'PTR' : 'NU';
+        return ptrs.indexOf(b) > -1 ? 'PTR' : 'NU';
       }
-      if(base >= 2200 && base <= 2295) return 'NU';
-      if(base >= 2306 && base <= 2395) return 'NA';
-      if(base >= 2422 && base <= 2494) return 'NS';
+      if(b >= 2200 && b <= 2295) return 'NU';
+      if(b >= 2306 && b <= 2395) return 'NA';
+      if(b >= 2422 && b <= 2494) return 'NS';
       return 'NU';
     }
 
-    function buildGcaStation(stNum){
-      var key = floorId + '_' + stNum;
-      var pending = pendingMap[key];
+    // SMART-SLOT (ported from the perf map): a pending may sit on a station that
+    // isn't in the ring layout. Place each such station into the nearest EMPTY
+    // grid slot of its section, so it still shows instead of vanishing.
+    var allGridSet = {};
+    topRow.concat(leftCol).concat(bottomRow).concat(rightCol).forEach(function(n){ allGridSet[String(n)]=true; });
+    var nonGrid = [];
+    Object.keys(pendingMap).forEach(function(k){
+      if(k.indexOf(floorId+"_")!==0) return;
+      var sn = parseInt(k.split("_")[1]); if(isNaN(sn)) return;
+      if(allGridSet[String(sn)]) return;
+      nonGrid.push(sn);
+    });
+    var emptyBySec = {top:[],left:[],bottom:[],right:[]};
+    topRow.forEach(function(n){ if(!pendingMap[floorId+"_"+n]) emptyBySec.top.push(n); });
+    leftCol.forEach(function(n){ if(!pendingMap[floorId+"_"+n]) emptyBySec.left.push(n); });
+    bottomRow.forEach(function(n){ if(!pendingMap[floorId+"_"+n]) emptyBySec.bottom.push(n); });
+    rightCol.forEach(function(n){ if(!pendingMap[floorId+"_"+n]) emptyBySec.right.push(n); });
+    var assigned = {};
+    nonGrid.sort(function(a,b){return a-b;});
+    nonGrid.forEach(function(sn){
+      var rel = sn - base;
+      var sec = rel>=100&&rel<200?"top":rel>=200&&rel<300?"left":rel>=300&&rel<400?"bottom":"right";
+      var empties = emptyBySec[sec];
+      var best=-1, bestD=Infinity;
+      for(var i=0;i<empties.length;i++){ var d=Math.abs(empties[i]-sn); if(d<bestD){bestD=d;best=i;} }
+      if(best>-1){ assigned[String(empties[best])]=sn; empties.splice(best,1); }
+      else { topRow.push(sn); }  // no empty slot: append to top so it still shows
+    });
+
+    function buildGcaStation(gridNum){
+      var sn = assigned[String(gridNum)] || gridNum;
+      var pending = pendingMap[floorId + '_' + sn];
       if(!pending) return null; // only show stations with pending items
-      var type = getTypeLabel(stNum);
-      var div = document.createElement('div');
-      div.className = 'sm-station ' + (pending ? 'sm-danger' : 'sm-empty');
-      var badge = pending ? '<span class="sm-badge bg-red">'+pending.count+'</span>' : '';
-      div.innerHTML = badge + '<span class="sm-type">'+type+'</span><span class="sm-num">'+String(stNum)+'</span>';
-      if(pending){
-        div.onmouseenter = function(e){ showMapTooltip(e, stNum, pending, type); };
-        div.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=$g("gcaMapTooltip"); if(tt) tt.style.display="none";},150);};
-      }
-      return div;
+      return _buildGcaOwnerCell(pending, getTypeLabel(sn), String(sn));
     }
 
     // Layout
@@ -8102,17 +8563,9 @@ document.addEventListener("click",(e)=>{
 
     var centerDiv = document.createElement('div');
     centerDiv.className = 'sm-center';
-    var totalSt = topRow.length + leftCol.length + bottomRow.length + rightCol.length;
-    var pendingCount = 0;
-    [topRow,leftCol,bottomRow,rightCol].forEach(function(arr){ arr.forEach(function(n){ if(pendingMap[floorId+'_'+n]) pendingCount++; }); });
-    centerDiv.innerHTML = '<div class="sm-summary">' +
-      '<div class="sm-summary-title">'+floorId.toUpperCase()+'</div>' +
-      '<div class="sm-counts">' +
-        '<div class="sm-count"><span class="sm-count-val sm-c-danger">'+pendingCount+'</span><span class="sm-count-lbl">Pending</span></div>' +
-        '<div class="sm-count"><span class="sm-count-val">'+totalSt+'</span><span class="sm-count-lbl">Total</span></div>' +
-        '<div class="sm-count"><span class="sm-count-val sm-c-empty">'+(totalSt-pendingCount)+'</span><span class="sm-count-lbl">Clear</span></div>' +
-      '</div>' +
-    '</div>';
+    var floorPending = 0;
+    Object.keys(pendingMap).forEach(function(k){ if(k.indexOf(floorId+'_')===0) floorPending += pendingMap[k].count; });
+    centerDiv.innerHTML = _gcaCenterHtml(floorId, floorPending);
 
     var rightDiv = document.createElement('div');
     rightDiv.className = 'sm-col sm-right';
@@ -8141,24 +8594,39 @@ document.addEventListener("click",(e)=>{
     el.innerHTML = '';
     el.style.padding = '12px';
 
+    // 8 AFE walls (101-108, matching the perf P1 map) + Singles + WS lines.
     const sections = [
       {title:'AFE', lines:[
-        {label:'AFE 1', prefix:'afe', wall:1, count:20},
-        {label:'AFE 2', prefix:'afe', wall:2, count:20},
-        {label:'AFE 3', prefix:'afe', wall:3, count:20},
-        {label:'AFE 4', prefix:'afe', wall:4, count:20}
+        {label:'Muro 101', prefix:'afe', wall:101, count:8},
+        {label:'Muro 102', prefix:'afe', wall:102, count:8},
+        {label:'Muro 103', prefix:'afe', wall:103, count:8},
+        {label:'Muro 104', prefix:'afe', wall:104, count:8},
+        {label:'Muro 105', prefix:'afe', wall:105, count:8},
+        {label:'Muro 106', prefix:'afe', wall:106, count:8},
+        {label:'Muro 107', prefix:'afe', wall:107, count:8},
+        {label:'Muro 108', prefix:'afe', wall:108, count:8}
       ]},
       {title:'Singles', lines:[
-        {label:'L01', prefix:'singles', line:1, count:20},
-        {label:'L02', prefix:'singles', line:2, count:20},
-        {label:'L03', prefix:'singles', line:3, count:20},
-        {label:'L04', prefix:'singles', line:4, count:20}
+        {label:'S01', prefix:'singles', line:1, count:20},
+        {label:'S02', prefix:'singles', line:2, count:20},
+        {label:'S03', prefix:'singles', line:3, count:20},
+        {label:'S04', prefix:'singles', line:4, count:20}
       ]},
-      {title:'Sobres', lines:[
-        {label:'L1', prefix:'ws', line:1, count:10},
-        {label:'L2', prefix:'ws', line:2, count:10}
+      {title:'WS', lines:[
+        {label:'Línea 1', prefix:'ws', line:11, count:24},
+        {label:'Línea 2', prefix:'ws', line:12, count:24},
+        {label:'Línea 14', prefix:'ws', line:14, count:24}
       ]}
     ];
+
+    // Center: total global pending (mismo bloque que AR).
+    var floorPending = 0;
+    Object.keys(pendingMap).forEach(function(k){ if(k.indexOf('p1_')===0) floorPending += pendingMap[k].count; });
+    var centerWrap = document.createElement('div');
+    centerWrap.className = 'sm-center';
+    centerWrap.style.cssText = 'justify-content:flex-start;margin-bottom:10px';
+    centerWrap.innerHTML = _gcaCenterHtml('p1', floorPending);
+    el.appendChild(centerWrap);
 
     sections.forEach(function(section){
       var secDiv = document.createElement('div');
@@ -8168,25 +8636,27 @@ document.addEventListener("click",(e)=>{
         var row = document.createElement('div');
         row.style.cssText = 'display:flex;align-items:center;gap:2px;margin-bottom:2px;flex-wrap:wrap;';
         row.innerHTML = '<span style="width:36px;font-size:9px;color:var(--text-muted);text-align:right;flex-shrink:0">'+ln.label+'</span>';
+        var anyInLine = false;
         for(let pos=1; pos<=ln.count; pos++){
+          // Keys MUST match the perf-map convention (renderPerfMap):
+          //   AFE     → p1_afe_1_<wall>_<pos>  (id=1)
+          //   Singles → p1_singles_<line>_<pos>
+          //   WS      → p1_ws_<line>_<pos>     (line = 11/12/14)
           let key;
-          if(ln.prefix==='afe') key = 'p1_afe_'+ln.wall+'_'+pos;
+          if(ln.prefix==='afe') key = 'p1_afe_1_'+ln.wall+'_'+pos;
           else if(ln.prefix==='singles') key = 'p1_singles_'+ln.line+'_'+pos;
-          else key = 'p1_ws_'+((ln.line||1)+10)+'_'+pos;
+          else key = 'p1_ws_'+ln.line+'_'+pos;
           let pending = pendingMap[key];
-          let div = document.createElement('div');
-          div.className = 'sm-station ' + (pending ? 'sm-danger' : 'sm-empty');
-          let badge = pending ? '<span class="sm-badge bg-red">'+pending.count+'</span>' : '';
-          div.innerHTML = badge + '<span class="sm-type">'+ln.prefix.slice(0,3).toUpperCase()+'</span><span class="sm-num">'+pos+'</span>';
-          if(pending){
-            div.onmouseenter = function(e){ showMapTooltip(e, ln.label+' #'+pos, pending, ln.prefix); };
-            div.onmouseleave = function(){ window._ttHideTimer=setTimeout(function(){ var tt=$g("gcaMapTooltip"); if(tt) tt.style.display="none";},150);};
-          }
-          row.appendChild(div);
+          if(!pending) continue;  // popup shows only stations WITH pending
+          anyInLine = true;
+          var lbl = ln.prefix==='afe' ? ('Pk'+ln.wall) : ln.prefix.slice(0,3).toUpperCase();
+          row.appendChild(_buildGcaOwnerCell(pending, lbl, pos));
         }
-        secDiv.appendChild(row);
+        // Only render the line row if it has at least one pending station.
+        if(anyInLine) secDiv.appendChild(row);
       });
-      el.appendChild(secDiv);
+      // Only render the section if it produced any line rows.
+      if(secDiv.children.length > 1) el.appendChild(secDiv);
     });
   }
 
@@ -8228,6 +8698,11 @@ document.addEventListener("click",(e)=>{
 
   function renderGca(){
     if(!gcaData) return;
+    // Keep the station-map FAB + its pending count in sync whenever GCA renders
+    // (data just loaded, tab switched, present-only toggled…). renderFloorMap()
+    // updates the FAB/total counters even while the popup is closed.
+    renderFloorMap();
+    if(window._updateGcaFabVisibility) window._updateGcaFabVisibility();
     const k = gcaData.kpis || {};
     // Large KPI cards: % big + count small. Completed/Cancelled/Pending are % of
     // the total resolved; Expiring ≤3d/≤7d are % OF PENDING (7d includes 3d).
@@ -8270,19 +8745,20 @@ document.addEventListener("click",(e)=>{
     const hdPill = $g("gcaHdPill");
     if(hdPill) hdPill.addEventListener("click", ()=>openModal("modalHighDefects"));
 
-    // Stacked compliance bar: Completed / Pending / Cancelled / Expired, with
-    // each segment's % of the total resolved shown in its label.
+    // Stacked compliance bar: Completed / Pending / Cancelled, with each segment's
+    // % of the total resolved shown in its label. (EXPIRED is no longer pulled —
+    // owner: too slow — so it's dropped from the bar; any legacy cached EXPIRED
+    // item simply isn't counted here.)
     const os = gcaData.owner_stats || {};
     const barsEl = $g("gcaBars");
     const items4 = gcaData.items || [];
     const cnt = st => items4.filter(i=>i.status===st).length;
-    const sc = { completed: cnt("COMPLETED"), pending: cnt("PENDING"), cancelled: cnt("CANCELLED"), expired: cnt("EXPIRED") };
-    const scTotal = sc.completed + sc.pending + sc.cancelled + sc.expired;
+    const sc = { completed: cnt("COMPLETED"), pending: cnt("PENDING"), cancelled: cnt("CANCELLED") };
+    const scTotal = sc.completed + sc.pending + sc.cancelled;
     const segDef = [
       {k:"completed", lbl:"Completed"},
       {k:"pending",   lbl:"Pending"},
       {k:"cancelled", lbl:"Cancelled"},
-      {k:"expired",   lbl:"Expired"},
     ];
     // Build a stacked bar (Completed/Pending/Cancelled/Expired) for a given
     // count object — reused for the global bar and each owner row.
@@ -8322,7 +8798,7 @@ document.addEventListener("click",(e)=>{
     const filtersEl = $g("gcaOwnerFilters");
     const presenceOn = gcaPresentOnly;
     let pending = (gcaData.items||[]).filter(i=>i.status==="PENDING");
-    if(presenceOn) pending = pending.filter(i=>i.presence==="ACTIVE");
+    if(presenceOn) pending = pending.filter(i=>i.presence==="ACTIVE"||i.presence==="ON_SITE");
     const countAll = pending.length;
     let pills = `<span class="gca-pill ${!gcaOwnerFilter?"active":""}" data-owner="">All (${countAll})</span>`;
     GCA_OWNERS.forEach(owner=>{
@@ -8355,7 +8831,7 @@ document.addEventListener("click",(e)=>{
 
     // Table
     let items = (gcaData.items||[]).filter(i=>i.status==="PENDING");
-    if(presenceOn) items = items.filter(i=>i.presence==="ACTIVE");
+    if(presenceOn) items = items.filter(i=>i.presence==="ACTIVE"||i.presence==="ON_SITE");
     if(gcaOwnerFilter) items = items.filter(i=>i.owner===gcaOwnerFilter);
     // Login/name search filter.
     const gcaQuery = ($g("gcaSearchInput")?.value || "").trim().toLowerCase();
@@ -8375,6 +8851,17 @@ document.addEventListener("click",(e)=>{
         const cmp = ts(a.expiration) - ts(b.expiration);
         return gcaSortExp === "asc" ? cmp : -cmp;
       });
+    } else {
+      // DEFAULT ORDER: stalest-last-seen FIRST — so cancelling top-down hits the
+      // most obsolete pendings first (13d ago before 12d ago). Present associates
+      // (ACTIVE/ON_SITE, no last_seen) sink to the bottom — they're not cancel
+      // candidates. Older last_seen = larger "days ago" = higher up.
+      const ageMs = it => {
+        if(it.presence==="ACTIVE" || it.presence==="ON_SITE") return -1;  // present → bottom
+        const ms = Number(it.last_seen_ms);
+        return isFinite(ms) && ms>0 ? (Date.now()-ms) : -0.5;             // no data → just above present
+      };
+      items = items.slice().sort((a,b)=> ageMs(b) - ageMs(a));           // biggest age first
     }
     const _arrow = $g("gcaSortArrow");
     if(_arrow) _arrow.textContent = gcaSortExp === "asc" ? "▲" : gcaSortExp === "desc" ? "▼" : "";
@@ -8388,13 +8875,15 @@ document.addEventListener("click",(e)=>{
         const loginDisplay = it.login || it.employee_id || "—";
         const notes = it.comment ? `<span style="font-size:11px" title="${esc(it.comment)}">${esc(it.comment.length>40?it.comment.slice(0,40)+"…":it.comment)}</span>` : `<span style="color:var(--text-muted)">—</span>`;
         const isActive = it.presence === "ACTIVE";
+        const isOnSite = it.presence === "ON_SITE";   // present per roster, ELS had no fix
+        const isPresent = isActive || isOnSite;
         const stationInfo = it.station ? (it.process_path ? `${it.station} · ${it.process_path}` : it.station) : "";
-        // Last-seen line (ELS arrivalTimestamp) — only meaningful when NOT active:
+        // Last-seen line (ELS arrivalTimestamp) — only meaningful when NOT present:
         // "last seen 5d ago" flags a stale pending the coach can likely cancel.
-        const _ls = !isActive ? lastSeen(it.last_seen_ms) : null;
+        const _ls = !isPresent ? lastSeen(it.last_seen_ms) : null;
         const lsLine = _ls ? `<div style="font-size:9.5px;font-weight:700;color:${_ls.color};margin-top:1px" title="${esc(_ls.full)}">${esc(_ls.text)}</div>` : "";
-        const presenceDot = isActive
-          ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green)"></span> <span style="font-size:10px">Active</span>${stationInfo ? `<div style="font-size:9.5px;color:var(--text-muted);margin-top:1px">${esc(stationInfo)}</div>` : ""}`
+        const presenceDot = isPresent
+          ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green)"></span> <span style="font-size:10px">${isActive?"Active":"On site"}</span>${stationInfo ? `<div style="font-size:9.5px;color:var(--text-muted);margin-top:1px">${esc(stationInfo)}</div>` : ""}`
           : `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#cbd5e1"></span> <span style="font-size:10px;color:var(--text-muted)">${esc(it.presence||"Unknown")}</span>${stationInfo ? `<div style="font-size:9.5px;color:var(--text-muted);margin-top:1px">${esc(stationInfo)}</div>` : ""}${lsLine}`;
         const photoHtml = it.photo_url
           ? `<img src="${esc(it.photo_url)}" loading="lazy" decoding="async" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-right:6px;vertical-align:middle" onerror="this.style.display='none'">`
@@ -8424,7 +8913,9 @@ document.addEventListener("click",(e)=>{
         </tr>`;
       }).join("");
       // Wire per-row close buttons (one coaching = one instance_id).
-      const _onClose = ()=>{ if(window._loadGcaDashboard) window._loadGcaDashboard(); };
+      // No full reload on close — _markCoachingRowDone neutralizes the row in
+      // place; the list refreshes on the next natural GCA update.
+      const _onClose = null;
       tbody.querySelectorAll(".cc-complete").forEach(b=>b.addEventListener("click",()=>
         openCloseCoaching({instanceId:b.dataset.iid, fc:currentFC, action:"complete",
           login:b.dataset.login, name:b.dataset.name,
@@ -8452,14 +8943,22 @@ document.addEventListener("click",(e)=>{
   function _bcRows(){
     // Same filtered/sorted pending set the table shows (respects owner + search + present).
     let items = (gcaData?.items||[]).filter(i=>i.status==="PENDING");
-    if(gcaPresentOnly) items = items.filter(i=>i.presence==="ACTIVE");
+    if(gcaPresentOnly) items = items.filter(i=>i.presence==="ACTIVE"||i.presence==="ON_SITE");
     if(gcaOwnerFilter) items = items.filter(i=>i.owner===gcaOwnerFilter);
     const q = ($g("gcaSearchInput")?.value || "").trim().toLowerCase();
     if(q){
       items = items.filter(i=>[i.login,i.name,i.employee_id,i.station,i.insight,i.course_title]
         .map(x=>String(x||"").toLowerCase()).join(" ").includes(q));
     }
-    return items;
+    // Stalest-last-seen FIRST — same order the table uses, so cancelling
+    // top-down hits the most obsolete pendings first (13d ago before 12d).
+    // Present associates (no last_seen) sink to the bottom.
+    const ageMs = it => {
+      if(it.presence==="ACTIVE" || it.presence==="ON_SITE") return -1;  // present → bottom
+      const ms = Number(it.last_seen_ms);
+      return isFinite(ms) && ms>0 ? (Date.now()-ms) : -0.5;             // no data → just above present
+    };
+    return items.slice().sort((a,b)=> ageMs(b) - ageMs(a));            // biggest age first
   }
   function _bcUpdateCount(){
     const boxes = Array.from(document.querySelectorAll("#bcList .bc-chk"));
@@ -8490,14 +8989,19 @@ document.addEventListener("click",(e)=>{
           const login = it.login || it.employee_id || "—";
           const _exp = coachingExpiry(it.expiration);
           const expTxt = _exp ? `<span style="font-size:10px;color:${_exp.color};font-weight:700">${esc(_exp.text)}</span>` : "";
-          const pres = it.presence==="ACTIVE" ? `<span style="color:var(--green);font-size:10px">● Active</span>` : `<span style="color:var(--text-muted);font-size:10px">○ ${esc(it.presence||"—")}</span>`;
+          const _isPresent = (it.presence==="ACTIVE"||it.presence==="ON_SITE");
+          const pres = _isPresent ? `<span style="color:var(--green);font-size:10px">● ${it.presence==="ACTIVE"?"Active":"On site"}</span>` : `<span style="color:var(--text-muted);font-size:10px">○ ${esc(it.presence||"—")}</span>`;
+          // Last-seen line — only when NOT present, so a coach can confirm how
+          // stale the pending is before cancelling ("Last seen 13d ago").
+          const _ls = !_isPresent ? lastSeen(it.last_seen_ms) : null;
+          const lsTxt = _ls ? `<br><span style="font-size:9.5px;font-weight:700;color:${_ls.color}" title="${esc(_ls.full)}">${esc(_ls.text)}</span>` : "";
           return `<label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer">
             <input type="checkbox" class="bc-chk" data-iid="${esc(it.id||"")}" data-login="${esc(login)}">
             <div style="flex:1;min-width:0">
               <div style="font-size:12px;font-weight:600">${esc(login)} <span style="font-weight:400;color:var(--text-secondary)">· ${esc(it.owner||"")}</span></div>
               <div style="font-size:10.5px;color:var(--text-muted)">${esc(it.insight||it.course_title||"—")}</div>
             </div>
-            <div style="text-align:right;white-space:nowrap">${pres}<br>${expTxt}</div>
+            <div style="text-align:right;white-space:nowrap">${pres}${lsTxt}<br>${expTxt}</div>
           </label>`;
         }).join("");
         list.querySelectorAll(".bc-chk").forEach(cb=>cb.addEventListener("change", _bcUpdateCount));
@@ -8567,7 +9071,9 @@ document.addEventListener("click",(e)=>{
     return String(enumVal).replace(/_/g," ").toLowerCase().replace(/\b\w/g, c=>c.toUpperCase());
   }
 
-  // Cancelled / Expired tab — informational, no actions (these are terminal).
+  // Cancelled tab — informational, no actions (these are terminal). EXPIRED is no
+  // longer pulled (owner: too slow), so this now shows CANCELLED only. Any legacy
+  // cached EXPIRED item is included so an old cache still renders sanely.
   function renderGcaClosed(){
     if(!gcaData) return;
     let items = (gcaData.items||[]).filter(i=>i.status==="CANCELLED" || i.status==="EXPIRED");
@@ -8629,7 +9135,9 @@ document.addEventListener("click",(e)=>{
     }
     const totalC = (gcaData.items||[]).filter(i=>i.status==="CANCELLED").length;
     const totalE = (gcaData.items||[]).filter(i=>i.status==="EXPIRED").length;
-    $g("gcaShowing").textContent = `Showing ${Math.min(items.length,200)} of ${items.length} · ${totalC} cancelled · ${totalE} expired (last 7 days)`;
+    // EXPIRED no longer pulled — only mention it if a legacy cache still has some.
+    const expiredNote = totalE ? ` · ${totalE} expired (legacy)` : "";
+    $g("gcaShowing").textContent = `Showing ${Math.min(items.length,200)} of ${items.length} · ${totalC} cancelled${expiredNote} (last 7 days)`;
   }
 
   // ── CSV download button ──
@@ -8808,7 +9316,7 @@ document.addEventListener("click",(e)=>{
     if(!gcaData || !gcaData.items) return;
     var items = gcaData.items.filter(function(i){return i.status==="PENDING";});
     var presenceOn = gcaPresentOnly;
-    if(presenceOn) items = items.filter(function(i){return i.presence==="ACTIVE";});
+    if(presenceOn) items = items.filter(function(i){return i.presence==="ACTIVE"||i.presence==="ON_SITE";});
     if(gcaOwnerFilter) items = items.filter(function(i){return i.owner===gcaOwnerFilter;});
 
     // Group by whatever floor the parser resolved (p2..p9 for AR, p1 for pack),

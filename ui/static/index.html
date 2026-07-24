@@ -689,7 +689,7 @@ html.theme-transitioning *::after{
 .pf.on-p3{background:rgba(220,38,38,0.1);border-color:var(--red);color:var(--red);box-shadow:0 2px 6px rgba(220,38,38,0.12)}
 .pf.on-p2{background:rgba(217,119,6,0.1);border-color:var(--orange);color:var(--orange);box-shadow:0 2px 6px rgba(217,119,6,0.12)}
 .pf.on-p1{background:rgba(5,150,105,0.1);border-color:var(--green);color:var(--green);box-shadow:0 2px 6px rgba(5,150,105,0.12)}
-.pf.on{background:var(--accent-light);border-color:var(--accent);color:var(--accent-text);box-shadow:0 2px 6px rgba(0,0,0,0.08)}
+.pf.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;box-shadow:0 0 0 2px var(--accent-light),0 3px 10px rgba(0,0,0,0.22)}
 .nf{padding:4px 11px;font-size:11px;border-radius:14px;border:1px solid var(--border-strong);background:var(--bg-input);color:var(--text-muted);cursor:pointer;font-weight:600;transition:all .15s}
 .nf:hover{border-color:var(--accent)}
 .nf.on{background:var(--accent-light);border-color:var(--accent-border);color:var(--accent-text)}
@@ -2031,11 +2031,6 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
   <div class="toolbar toolbar-sticky">
     <div class="tb-search"><span style="color:#ccc;font-size:13px">⌕</span><input id="searchInput" placeholder="Login, role, station…"></div>
-    <div class="sep"></div>
-    <span class="tb-label" title="Prioridad de coaching por severidad (no es la planta)">PRIO</span>
-    <button class="pf on-p3" data-p="3" id="fp3" title="Prioridad 3 (más severo)">P3</button>
-    <button class="pf on-p2" data-p="2" id="fp2" title="Prioridad 2">P2</button>
-    <button class="pf on-p1" data-p="1" id="fp1" title="Prioridad 1">P1</button>
     <div class="sep bl-fc-only"></div>
     <span class="tb-label bl-fc-only" title="Filtrar por planta física">PLANTA</span>
     <span id="floorFilterBtns" class="bl-fc-only" style="display:inline-flex;gap:4px"></span>
@@ -3318,7 +3313,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
-<script src="/static/app.js?v=v250_autorefresh_settings_20260724" defer></script>
+<script src="/static/app.js?v=v251_planta_only_20260724" defer></script>
 </body>
 </html>
 

@@ -37,7 +37,7 @@
       },
       "INDUCT": {
         "file": "FCLM_1003051.csv",
-        "function_contains": "AFE 1 Induct"
+        "function_contains": "Induct"
       },
       "AFE_REBIN": {
         "file": "FCLM_1003051.csv",
@@ -136,7 +136,7 @@
       },
       "INDUCT": {
         "file": "FCLM_1003051.csv",
-        "function_contains": "AFE 1 Induct"
+        "function_contains": "Induct"
       },
       "AFE_REBIN": {
         "file": "FCLM_1003051.csv",
@@ -235,7 +235,7 @@
       },
       "INDUCT": {
         "file": "FCLM_1003051.csv",
-        "function_contains": "AFE 1 Induct"
+        "function_contains": "Induct"
       },
       "AFE_REBIN": {
         "file": "FCLM_1003051.csv",
@@ -349,7 +349,7 @@
       },
       "INDUCT": {
         "file": "FCLM_1003051.csv",
-        "function_contains": "AFE 1 Induct"
+        "function_contains": "Induct"
       },
       "AFE_REBIN": {
         "file": "FCLM_1003051.csv",
@@ -448,7 +448,7 @@
       },
       "INDUCT": {
         "file": "FCLM_1003051.csv",
-        "function_contains": "AFE 1 Induct"
+        "function_contains": "Induct"
       },
       "AFE_REBIN": {
         "file": "FCLM_1003051.csv",
@@ -551,7 +551,7 @@
       },
       "INDUCT": {
         "file": "FCLM_1003051.csv",
-        "function_contains": "AFE 1 Induct"
+        "function_contains": "Induct"
       },
       "AFE_REBIN": {
         "file": "FCLM_1003051.csv",

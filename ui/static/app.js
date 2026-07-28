@@ -674,7 +674,9 @@ function norm(r){
   const idle_pct = (r.idle_pct!=null && r.idle_pct!=="") ? Number(r.idle_pct) : null;
   const idle_min = (r.idle_min!=null && r.idle_min!=="") ? Number(r.idle_min) : null;
   const pending_coachings = Array.isArray(r.pending_coachings) ? r.pending_coachings : [];
-  return{login,name,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,coached_label:String(r.coached_label??"").trim(),notes,rate,rateAdj,pct,pctAdj,target,vetAvg,course_id,employee_id,transcript_url,photo_url,pending_coachings,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,idle_pct,idle_min,_search};
+  const newHire = !!r.new_hire;
+  const daysSinceHire = (r.days_since_hire==null ? null : Number(r.days_since_hire));
+  return{login,name,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,coached_label:String(r.coached_label??"").trim(),notes,rate,rateAdj,pct,pctAdj,target,vetAvg,course_id,employee_id,transcript_url,photo_url,pending_coachings,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,newHire,daysSinceHire,idle_pct,idle_min,_search};
 }
 
 // Build the notes string to upload (rate + pct + comments)
@@ -1405,11 +1407,10 @@ async function _gcaPollOnce(){
 }
 
 function _startGcaBackgroundPoll(){
-  if(_gcaPollTimer) return;   // already running
-  // Kick off one poll shortly after login (baseline), then every 10 min.
-  _gcaNextRunAt = Date.now() + 15000;
-  setTimeout(_gcaPollOnce, 15000);
-  _gcaPollTimer = setInterval(_gcaPollOnce, GCA_POLL_MS);
+  // GCA no longer runs its own colliding interval — the master _autoExec timer
+  // runs it in sequence (see _autoExecTick). This just arms that single timer.
+  // (The first cold-start refresh is handled by the first-run queue below.)
+  _armAutoExec();
 }
 
 // ── Quality background poll ────────────────────────────────────
@@ -1478,15 +1479,10 @@ async function _qualityPollOnce(){
 }
 
 function _startQualityBackgroundPoll(){
-  if(_qualityPollTimer) return;
-  // Stagger the baseline well AFTER GCA's (~15s): both pipelines share the
-  // server lock, so if Quality's baseline fires while GCA is still running it
-  // would skip and never establish its alert baseline. 90s gives GCA time to
-  // finish first. (The recurring 15-min ticks can still occasionally collide;
-  // the server lock makes the loser skip + its timer retries — no corruption.)
-  _qualityNextRunAt = Date.now() + 90000;
-  setTimeout(_qualityPollOnce, 90000);   // baseline ~90s after login (after GCA)
-  _qualityPollTimer = setInterval(_qualityPollOnce, QUALITY_POLL_MS);
+  // Quality no longer runs its own colliding interval — the master _autoExec
+  // timer runs it in sequence AFTER GCA (see _autoExecTick), so they never skip
+  // each other on the server lock. This just arms that single timer.
+  _armAutoExec();
   _startPollCountdownTicker();            // paint the topbar countdown pill
 }
 
@@ -1564,10 +1560,12 @@ function _setAlertPref(kind, on){
 function _stopGcaBackgroundPoll(){
   if(_gcaPollTimer){ clearInterval(_gcaPollTimer); _gcaPollTimer = null; }
   _gcaNextRunAt = null;
+  _maybeStopAutoExec();
 }
 function _stopQualityBackgroundPoll(){
   if(_qualityPollTimer){ clearInterval(_qualityPollTimer); _qualityPollTimer = null; }
   _qualityNextRunAt = null;
+  _maybeStopAutoExec();
 }
 
 // Called on login and whenever a toggle flips: (re)arm or tear down each poll
@@ -1588,13 +1586,13 @@ function _applyAlertsAccess(canAlerts){
   // GCA alerts
   if(_alertPref("gca")) _startGcaBackgroundPoll();
   else _stopGcaBackgroundPoll();
-  // Quality auto-poll DISABLED (owner/calvenpj feedback 2026-07-24): the Quality
-  // poll re-ran the whole Quality pipeline (run_quality_pipeline force_download)
-  // every 15 min on its own, which regenerated the coaching queue behind the
-  // Team Leads' backs — they are not the queue owners and it confused them ("it
-  // runs by itself"). Quality now refreshes ONLY when the user opens/refreshes it
-  // explicitly. GCA alerts are unaffected. Always stop any running Quality timer.
-  _stopQualityBackgroundPoll();
+  // Quality auto-poll is TOGGLE-DRIVEN (Settings → Alertas → Quality). It runs
+  // ONLY when the user opts in, so it never fires behind a Team Lead's back (the
+  // calvenpj 2026-07-24 issue was that it ran for everyone by default — the fix
+  // is to honour the toggle, not to force it off). ON → poll every 15 min; OFF →
+  // never. The poll re-runs the Quality pipeline, so keep it opt-in.
+  if(_alertPref("quality")) _startQualityBackgroundPoll();
+  else _stopQualityBackgroundPoll();
   _startPollCountdownTicker();
   _paintPollPill();
 }
@@ -2721,6 +2719,7 @@ function renderTable(){
             <div class="ident-id">
               <span class="login-name">${esc(r.login||"—")}</span>
               ${r.name?`<span class="assoc-name">${esc(r.name)}</span>`:""}
+              ${r.newHire?`<span class="newhire-badge" title="Primeros días — excluido de flags de coaching / First days — excluded from coaching flags">🆕 Day ${r.daysSinceHire||1}</span>`:""}
             </div>
             <div class="ident-links">
               <a class="fclm-link" href="${(siteBL(currentFC)==="AMZL"
@@ -4922,6 +4921,9 @@ $("btnPipeline").addEventListener("click", async ()=>{
 // tick if a pipeline is already running (button disabled). Preference persists.
 const PERF_AUTO_MS = 15 * 60 * 1000;
 let _perfAutoTimer = null;
+// Declared up here (not in the freshness block below) because _startPerfAuto's
+// interval reads it, and the auto-refresh restore runs before that block loads.
+let _freshBusy = false;
 function _setPerfAutoUI(on){
   // The toggle now lives in Settings (checkbox #spAutoRefresh); keep it in sync
   // whenever the state changes so opening Settings always shows the real state.
@@ -4929,15 +4931,15 @@ function _setPerfAutoUI(on){
   if(cb) cb.checked = !!on;
 }
 function _startPerfAuto(){
-  if(_perfAutoTimer) return;
-  _perfAutoTimer = setInterval(()=>{
-    const pb = $("btnPipeline");
-    // Only fire when idle (button enabled) and we're on the Performance panel.
-    if(pb && !pb.disabled){ try{ pb.click(); }catch(_){} }
-  }, PERF_AUTO_MS);
+  // Performance no longer runs its own colliding interval. The master _autoExec
+  // timer runs Performance FIRST in the sequence (Perf→GCA→Quality), so it never
+  // blocks GCA/Quality on the server lock. This just arms that single timer;
+  // whether Performance actually runs each tick is gated by argos_perf_auto.
+  _armAutoExec();
 }
 function _stopPerfAuto(){
   if(_perfAutoTimer){ clearInterval(_perfAutoTimer); _perfAutoTimer=null; }
+  _maybeStopAutoExec();
 }
 function _applyPerfAuto(on){
   _setPerfAutoUI(on);
@@ -4958,6 +4960,165 @@ $("spAutoRefresh") && $("spAutoRefresh").addEventListener("change",(e)=>{
 // Restore the saved preference on load (default OFF) — reflects in the Settings
 // checkbox AND starts the timer, so the user only ever enables it once.
 (()=>{ try{ if(localStorage.getItem("argos_perf_auto")==="1") _applyPerfAuto(true); }catch(_){} })();
+
+// ── Data-freshness widget + "Actualizar todo" queue ──────────────────────────
+// Shows how long ago each source (Performance / GCA / Quality) was refreshed, so
+// users stop blindly re-running the pipeline. The button runs the three in a
+// QUEUE (sequential) — they share the server lock, so running them one-after-
+// another (instead of at once) avoids the "skip because another pipeline is
+// running" collisions. Each stage shows a spinner while it runs.
+const FRESH_STALE_SEC = 30 * 60;   // >30 min → amber "stale"
+// _freshBusy is declared earlier (near PERF_AUTO_MS) so the auto-refresh interval
+// can read it; don't re-declare it here.
+
+function _fmtAge(sec){
+  if(sec == null) return "—";
+  if(sec < 60) return "ahora";
+  const m = Math.floor(sec / 60);
+  if(m < 60) return m + "m";
+  const h = Math.floor(m / 60);
+  if(h < 24) return h + "h";
+  return Math.floor(h / 24) + "d";
+}
+function _paintFreshSeg(id, label, age){
+  const el = $(id); if(!el) return;
+  el.textContent = `${label} ${_fmtAge(age)}`;
+  el.classList.toggle("stale", age != null && age >= FRESH_STALE_SEC);
+}
+async function _refreshFreshness(){
+  if(_freshBusy) return;   // while the queue runs, the segs show their own state
+  try{
+    const fc = (localStorage.getItem("argos-default-fc") || currentFC || "BCN4");
+    const r = await fetch(`${API}/api/system/freshness?fc=${encodeURIComponent(fc)}`);
+    const j = await r.json().catch(()=>null);
+    if(!j) return;
+    _paintFreshSeg("freshPerf", "Perf", j.performance?.age_seconds);
+    _paintFreshSeg("freshGca",  "GCA",  j.gca?.age_seconds);
+    _paintFreshSeg("freshQual", "Q",    j.quality?.age_seconds);
+  }catch(_){ /* transient — try again on the next tick */ }
+}
+function _setFreshLoading(id, label){
+  const el = $(id); if(!el) return;
+  el.textContent = `${label} ⟳`;
+  el.classList.remove("stale"); el.classList.add("loading");
+}
+function _clearFreshLoading(id){ const el=$(id); if(el) el.classList.remove("loading"); }
+
+// Run the Performance pipeline and RESOLVE only when it finishes (or errors).
+// Mirrors the btnPipeline flow (start → poll job status) but headless for the queue.
+function _runPerformanceOnce(){
+  return new Promise((resolve)=>{
+    const fc = currentFC;
+    const url = API+"/api/pipeline/start?fc="+encodeURIComponent(fc)+"&shift="+encodeURIComponent(manualTimeMode ? "" : currentShift);
+    fetch(url, {method:"POST"}).then(r=>r.json()).then(j=>{
+      const jobId = j && j.job_id;
+      if(!jobId){ resolve(false); return; }
+      const poll = ()=>{
+        fetch(`${API}/api/pipeline/status/${encodeURIComponent(jobId)}`).then(r=>r.json()).then(st=>{
+          if(st && (st.status === "done" || st.status === "error" || (st.pct||0) >= 100)){
+            resolve(st.status !== "error");
+          } else { setTimeout(poll, 2000); }
+        }).catch(()=>resolve(false));
+      };
+      setTimeout(poll, 2000);
+    }).catch(()=>resolve(false));
+  });
+}
+
+// Run the enabled sources in SEQUENCE (never in parallel — they share the server
+// lock, so parallel = collisions + skips). `opts.only` limits which sources run
+// (the master auto-exec timer passes the user-enabled set); default = all three.
+// `opts.firstRun`/`opts.silent` tune the UI feedback.
+async function _refreshAllQueue(opts){
+  opts = opts || {};
+  const firstRun = !!opts.firstRun;
+  const silent = !!opts.silent;          // background auto-exec → no toasts
+  const only = opts.only || {perf:true, gca:true, quality:true};
+  if(_freshBusy) return;
+  const btn = $("btnRefreshAll");
+  const pill = $("freshPill");
+  const pb = $("btnPipeline");
+  // Don't start if a pipeline is already running (manual Start or auto-refresh).
+  if(pb && pb.disabled){
+    if(!firstRun && !silent) showToast({title:"Ya hay un pipeline en curso", body:"Espera a que termine para actualizar todo.", type:"info", ms:3500});
+    return;
+  }
+  _freshBusy = true;
+  if(btn){ btn.disabled = true; btn.textContent = firstRun ? "⏳ Cargando datos…" : "⟳ Actualizando…"; }
+  if(pill && firstRun) pill.classList.add("firstrun");
+  const fc = (localStorage.getItem("argos-default-fc") || currentFC || "BCN4");
+  const _step = (label)=>{ if(firstRun && btn) btn.textContent = `⏳ ${label}…`; };
+  try{
+    if(only.perf){
+      _step("Performance"); _setFreshLoading("freshPerf", "Perf");
+      await _runPerformanceOnce();
+      _clearFreshLoading("freshPerf"); _refreshFreshness();
+      try{ if(typeof loadDashboard === "function") loadDashboard(); }catch(_){}
+    }
+    if(only.gca){
+      _step("GCA"); _setFreshLoading("freshGca", "GCA");
+      try{ await fetch(`${API}/api/gca/poll?fc=${encodeURIComponent(fc)}`, {method:"POST"}); }catch(_){}
+      _clearFreshLoading("freshGca"); _refreshFreshness();
+    }
+    if(only.quality){
+      _step("Quality"); _setFreshLoading("freshQual", "Q");
+      try{ await fetch(`${API}/api/quality/poll?fc=${encodeURIComponent(fc)}`, {method:"POST"}); }catch(_){}
+      _clearFreshLoading("freshQual"); _refreshFreshness();
+    }
+    if(!silent) showToast({title:"✅ Todo actualizado", body:"Datos al día.", type:"ok", ms:3500});
+  }catch(e){
+    if(!silent) showToast({title:"Actualización incompleta", body:String(e&&e.message||e), type:"warn", ms:4000});
+  }finally{
+    _freshBusy = false;
+    if(btn){ btn.disabled = false; btn.textContent = "↻ Actualizar todo"; }
+    if(pill) pill.classList.remove("firstrun");
+    _refreshFreshness();
+    try{ if(typeof loadDashboard === "function") loadDashboard(); }catch(_){}
+  }
+}
+$("btnRefreshAll") && $("btnRefreshAll").addEventListener("click", ()=>_refreshAllQueue());
+
+// ── Master auto-exec timer (replaces the 3 colliding per-source timers) ───────
+// ONE 15-min timer runs the user-enabled sources IN SEQUENCE via the queue above,
+// so they never collide on the server lock (the "GCA/Quality skipped: pipeline
+// running" loop). Which sources run is driven by the SAME prefs the old per-source
+// timers used: Performance = argos_perf_auto; GCA/Quality = their alert toggles.
+const AUTO_EXEC_MS = 15 * 60 * 1000;
+let _autoExecTimer = null;
+function _autoExecTick(){
+  const only = {
+    perf:    (localStorage.getItem("argos_perf_auto") === "1"),
+    gca:     (window._canAlerts && _alertPref("gca")),
+    quality: (window._canAlerts && _alertPref("quality") && !_isAmzlContext()),
+  };
+  if(!only.perf && !only.gca && !only.quality) return;   // nothing enabled
+  _refreshAllQueue({only, silent:true});
+}
+function _armAutoExec(){
+  if(_autoExecTimer) return;
+  _autoExecTimer = setInterval(_autoExecTick, AUTO_EXEC_MS);
+}
+function _maybeStopAutoExec(){
+  // Stop only when NOTHING is enabled (perf off + no alert access/prefs).
+  const anyOn = (localStorage.getItem("argos_perf_auto") === "1")
+             || (window._canAlerts && (_alertPref("gca") || _alertPref("quality")));
+  if(!anyOn && _autoExecTimer){ clearInterval(_autoExecTimer); _autoExecTimer = null; }
+}
+window._armAutoExec = _armAutoExec;
+window._maybeStopAutoExec = _maybeStopAutoExec;
+// Prime the widget on load + refresh it every 60s (cheap read, no pipeline).
+_refreshFreshness();
+setInterval(_refreshFreshness, 60 * 1000);
+
+// ── First-run auto-refresh ───────────────────────────────────────────────────
+// On a cold app start nothing was refreshing on its own (Performance had no
+// baseline; GCA/Quality collided on the server lock and skipped). So a few
+// seconds after load — once auth/dashboard settled — kick the SAME sequential
+// queue ONCE automatically, with the widget in its loud "firstrun" state so the
+// user sees data loading instead of pulling "Actualizar todo" themselves.
+// After this, the per-source background polls take over based on what the user
+// enabled in Settings. Runs at most once per app load.
+setTimeout(()=>{ try{ _refreshAllQueue({firstRun:true}); }catch(_){} }, 8000);
 
 // ── Toolbar ────────────────────────────────────────────────
 document.querySelectorAll("[data-curve]").forEach(btn=>{
@@ -8877,7 +9038,11 @@ document.addEventListener("click",(e)=>{
         const isActive = it.presence === "ACTIVE";
         const isOnSite = it.presence === "ON_SITE";   // present per roster, ELS had no fix
         const isPresent = isActive || isOnSite;
-        const stationInfo = it.station ? (it.process_path ? `${it.station} · ${it.process_path}` : it.station) : "";
+        // Only show the station when it's a LIVE ELS fix (ACTIVE). For ON_SITE the
+        // person is present per the roster punch but ELS had no recent fix, so
+        // it.station is a STALE last-known location (e.g. dz-P-A2127) that misleads
+        // — show just "On site", no location. (owner 2026-07-28)
+        const stationInfo = (isActive && it.station) ? (it.process_path ? `${it.station} · ${it.process_path}` : it.station) : "";
         // Last-seen line (ELS arrivalTimestamp) — only meaningful when NOT present:
         // "last seen 5d ago" flags a stale pending the coach can likely cancel.
         const _ls = !isPresent ? lastSeen(it.last_seen_ms) : null;

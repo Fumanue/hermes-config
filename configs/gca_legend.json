@@ -248,6 +248,21 @@
       "insight": "Ship Failed move",
       "cat": "Shipping",
       "owner": "L&D"
+    },
+    "EUCF_QUALITY_GCAM_ARS/TS/TNS_PACK_Pack Damage": {
+      "insight": "Damage (concession)",
+      "cat": "Concessions",
+      "owner": "L&D"
+    },
+    "EUCF_CHK_ALL_Instructor/Peer_Audit": {
+      "insight": "INCA",
+      "cat": "Reactive",
+      "owner": "L&D"
+    },
+    "EUCF_ILT_BD1_F2F ARS Pick to Tote": {
+      "insight": "Pick Tote F2F (BTS)",
+      "cat": "Reactive",
+      "owner": "L&D"
     }
   },
   "derive_rules": {

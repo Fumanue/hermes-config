@@ -546,6 +546,18 @@ html.theme-transitioning *::after{
 .t-midway[data-state="expired"] .t-midway-label,
 .t-midway[data-state="missing"] .t-midway-label{color:var(--red)}
 .t-poll{display:flex;align-items:center;gap:4px;padding:4px 9px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;font-size:10.5px;color:var(--text-muted);white-space:nowrap;cursor:default;flex-shrink:0}
+/* Data-freshness widget (topbar): "Perf 2h · GCA 6m · Q 11m" + Actualizar todo. */
+.t-fresh{display:flex;align-items:center;gap:6px;padding:4px 8px 4px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;font-size:10.5px;color:var(--text-muted);white-space:nowrap;flex-shrink:0}
+.t-fresh-seg{font-weight:600;font-variant-numeric:tabular-nums}
+.t-fresh-seg.stale{color:var(--orange,#d97706)}
+.t-fresh-seg.loading{color:var(--accent);animation:pulse 1.2s infinite}
+.t-fresh-sep{width:1px;height:11px;background:var(--border-strong,var(--border))}
+.t-fresh-btn{flex-shrink:0;padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:10.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+.t-fresh-btn:hover:not(:disabled){filter:brightness(1.1)}
+.t-fresh-btn:disabled{opacity:.55;cursor:progress}
+/* First-run: make the freshness widget POP so the user sees data loading on a
+   cold start (instead of thinking it's frozen and hitting Start Pipeline). */
+.t-fresh.firstrun{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-light,rgba(124,58,237,.25));animation:pulse 1.4s infinite}
 /* Action buttons (delivery/manual-time/settings) must NEVER be pushed off the
    right edge — they carry the theme/lang/config controls. They never shrink;
    the informational pills (poll, user) yield space first via the rules below. */
@@ -808,6 +820,9 @@ body[data-bl="amzl"] .curve-label{font-size:13px}
 .photo-cell img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .no-photo{width:100%;height:100%;background:var(--bg-input);display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:14px;border-radius:50%}
 .prio-badge{position:absolute;top:-4px;right:-4px;font-size:10px;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;z-index:2}
+/* First-days (new-hire) badge — associate in their day 1..N grace window, excluded
+   from coaching flags. Green = "welcome/new", distinct from the amber priority badge. */
+.newhire-badge{display:inline-flex;align-items:center;gap:2px;margin-left:6px;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;background:#dcfce7;color:#166534;border:1px solid #86efac;white-space:nowrap;vertical-align:middle}
 .pr{font-weight:700;font-size:13px}
 .pr.p3{color:var(--red)}.pr.p2{color:var(--orange)}.pr.p1{color:var(--green)}.pr.p0{color:var(--blue)}
 .td-rate{font-family:'SF Mono','Cascadia Code',Consolas,monospace;font-size:13px;color:var(--text-secondary)}
@@ -1824,6 +1839,17 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <span class="t-poll-sep"></span>
       <span class="t-poll-seg" id="pollQuality">Q —</span>
     </div>
+    <!-- Data freshness widget: shows how long ago each source was refreshed +
+         a single "Actualizar todo" button that runs them in a queue (so users
+         see what's stale instead of blindly re-running the pipeline). -->
+    <div class="t-fresh" id="freshPill" title="Última actualización de cada fuente de datos">
+      <span class="t-fresh-seg" id="freshPerf">Perf —</span>
+      <span class="t-fresh-sep"></span>
+      <span class="t-fresh-seg" id="freshGca">GCA —</span>
+      <span class="t-fresh-sep"></span>
+      <span class="t-fresh-seg" id="freshQual">Q —</span>
+    </div>
+    <button class="t-fresh-btn" id="btnRefreshAll" title="Actualizar Performance, GCA y Quality en orden (uno tras otro)">↻ Actualizar todo</button>
     <div class="t-user" id="userPill" title="Checking user...">
       <span class="t-user-dot loading" id="userDot"></span>
       <span class="t-user-name" id="userName">Checking…</span>
@@ -2073,10 +2099,11 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <button class="act-btn act-pipeline" id="btnPipeline" data-i18n="btn_run_pipeline">▶ Start Pipeline</button>
     <button class="act-btn act-csv" id="btnDownloadCSV">↓ CSV</button>
     <button class="act-btn" id="btnPerfMap" style="display:none;background:var(--accent-light);color:var(--accent-text);border:1px solid var(--accent-border)">🗺️ Map</button>
-    <button class="act-btn" id="btnAdoption" style="display:none;background:var(--accent-light);color:var(--accent-text);border:1px solid var(--accent-border)" title="Super admin: Argos adoption (DDD)">📊 Adoption</button>
+    <!-- 📊 Adoption + 🧭 Path removed from the Performance toolbar (calvenpj
+         2026-07-24): declutter. Adoption stays reachable for super-admins via
+         its modal; Path still lives in the GCA tab. -->
     <button class="act-btn" id="btnExempt" style="display:none;font-size:11px;padding:7px 12px;background:var(--bg-panel);border:1px solid var(--border)" title="Admin: excluir asociados del coaching (Performance + Calidad)">🚫 Exempt</button>
     <button class="act-btn" id="btnShiftTracker" style="display:none;font-size:11px;padding:7px 12px;background:var(--bg-panel);border:1px solid var(--border)" title="Admin: progreso de rates vs Plan/OP2 durante 24h">📈 Shift Tracker</button>
-    <button onclick="if(window._showCoachingPath)window._showCoachingPath()" class="act-btn bl-fc-only" style="font-size:11px;padding:7px 14px;background:var(--bg-panel);border:1px solid var(--border)">🧭 Path</button>
 
     <div class="tb-count">Showing <b id="rowCount">0</b> of <b id="totalCount">0</b></div>
   </div>
@@ -3313,7 +3340,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
-<script src="/static/app.js?v=v251_planta_only_20260724" defer></script>
+<script src="/static/app.js?v=v257_master_autoexec_20260728" defer></script>
 </body>
 </html>
 

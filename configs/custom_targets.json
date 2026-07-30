@@ -761,7 +761,7 @@
       },
       {
         "key": "QUANTITY_STOW",
-        "target_uph": 450,
+        "target_uph": 500,
         "applies_to_role": "QUANTITY_STOW"
       },
       {

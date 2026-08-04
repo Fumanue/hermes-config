@@ -1,5 +1,5 @@
 ﻿{
-    "version":  "2.1.2",
+    "version":  "2.3.2",
     "files":  {
                   "area_roles.json":  "configs/area_roles.json",
                   "cleaning_rules.json":  "configs/cleaning_rules.json",
@@ -21,6 +21,8 @@
                   "ui/static/index.html":  "ui/static/index.html",
                   "quality_errors.json":  "configs/quality_errors.json",
                   "ppr_rates.json":  "configs/ppr_rates.json",
+                  "calm_codes.json":  "configs/calm_codes.json",
+                  "path_geometry.json":  "configs/path_geometry.json",
                   "quality_courses.json":  "configs/quality_courses.json",
                   "quality_mode.json":  "configs/quality_mode.json",
                   "sigma_coaching.json":  "configs/sigma_coaching.json"

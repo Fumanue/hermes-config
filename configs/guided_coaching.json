@@ -86,30 +86,6 @@
     "QUANTITY_STOW": {
       "uuid": "9a0d4ba3-188c-5307-be24-56e74979af2e",
       "applies_to": "both"
-    },
-    "Bolsas BP": {
-      "uuid": "e0d8939f-79b6-5d2e-b94d-8951ff597918",
-      "applies_to": "both"
-    },
-    "SIOC": {
-      "uuid": "e0d8939f-79b6-5d2e-b94d-8951ff597918",
-      "applies_to": "both"
-    },
-    "Sioc/Siob": {
-      "uuid": "e0d8939f-79b6-5d2e-b94d-8951ff597918",
-      "applies_to": "both"
-    },
-    "SM1": {
-      "uuid": "74f2884f-6b1a-5123-9970-50f5f76ed60f",
-      "applies_to": "both"
-    },
-    "SM3": {
-      "uuid": "74f2884f-6b1a-5123-9970-50f5f76ed60f",
-      "applies_to": "both"
-    },
-    "SNS": {
-      "uuid": "e0d8939f-79b6-5d2e-b94d-8951ff597918",
-      "applies_to": "both"
     }
   },
   "coached_check_keys": {

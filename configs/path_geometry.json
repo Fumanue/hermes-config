@@ -1,0 +1,95 @@
+{
+  "_source": "owner-provided cardinal anchors (2026-07-30) + P2R walls from live data",
+  "_note": "Per-side first/last station anchors for real path interpolation. P2R = pick-to-rebin walls (18 per floor).",
+  "cardinals": {
+    "BCN4": {
+      "p2": {
+        "N": [
+          2197,
+          2104
+        ],
+        "S": [
+          2307,
+          2395
+        ],
+        "E": [
+          2494,
+          2422
+        ],
+        "O": [
+          2295,
+          2211
+        ]
+      },
+      "p3": {
+        "N": [
+          3197,
+          3104
+        ],
+        "S": [
+          3306,
+          3396
+        ],
+        "E": [
+          3421,
+          3492
+        ],
+        "O": [
+          3296,
+          3209
+        ]
+      }
+    }
+  },
+  "p2r_walls": {
+    "_note": "20 muros/floor, 1 PICKER (PTR) per muro + 2 pack faces per muro. HIGHEST PTR = muro 1 (trainer-confirmed 2026-07-30, DESC): 3197→muro1 ... 3115→muro20 (P2 = -1000). PICKER=PTR on Norte ring (ws-k-A/dz-P-A, real number). PACKER=wsPickToRebin{fl}_{FfWW}_{face}: WW=muro(01-20), face=pack side(01/02).",
+    "BCN4": {
+      "muros_per_floor": 20,
+      "pack_faces_per_muro": 2,
+      "picker_ptr_to_muro_p2": {
+        "2197": 1,
+        "2196": 2,
+        "2187": 3,
+        "2186": 4,
+        "2177": 5,
+        "2176": 6,
+        "2168": 7,
+        "2167": 8,
+        "2160": 9,
+        "2159": 10,
+        "2151": 11,
+        "2150": 12,
+        "2142": 13,
+        "2141": 14,
+        "2134": 15,
+        "2133": 16,
+        "2125": 17,
+        "2124": 18,
+        "2116": 19,
+        "2115": 20
+      },
+      "picker_ptr_to_muro_p3": {
+        "3197": 1,
+        "3196": 2,
+        "3187": 3,
+        "3186": 4,
+        "3177": 5,
+        "3176": 6,
+        "3168": 7,
+        "3167": 8,
+        "3160": 9,
+        "3159": 10,
+        "3151": 11,
+        "3150": 12,
+        "3142": 13,
+        "3141": 14,
+        "3134": 15,
+        "3133": 16,
+        "3125": 17,
+        "3124": 18,
+        "3116": 19,
+        "3115": 20
+      }
+    }
+  }
+}

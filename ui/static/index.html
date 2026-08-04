@@ -387,6 +387,27 @@
 }
 [data-theme="graphite"] .topbar .settings-btn{color:#f4f4f5}
 [data-theme="graphite"] .topbar .t-tab.on{background:#3f3f46;color:#fff}
+/* FC + shift selects sit in the DARK graphite topbar but used var(--accent-text)
+   (#27272a, near-black from the light root) → invisible on the dark band. Force a
+   light text/border inside the topbar so FC reads. (bug fix 2026-07-29) */
+[data-theme="graphite"] .topbar #fcSelect,
+[data-theme="graphite"] .topbar .t-fc-sel{color:#f4f4f5;background:#26272b;border-color:#4a4b52}
+[data-theme="graphite"] .topbar .t-fc-label{color:#c4c4c8}
+/* Rest of the topbar chrome in graphite: title/subtitle, Midway/user/poll pills
+   and the freshness widget all sit on the dark band; force light text so nothing
+   fades to black-on-black. Uses .topbar scope so it doesn't leak into panels. */
+[data-theme="graphite"] .topbar .app-title,
+[data-theme="graphite"] .topbar .app-subtitle,
+[data-theme="graphite"] .topbar h1,
+[data-theme="graphite"] .topbar .t-midway,
+[data-theme="graphite"] .topbar .t-user,
+[data-theme="graphite"] .topbar .t-poll,
+[data-theme="graphite"] .topbar .t-fresh{color:#f4f4f5;background:#26272b;border-color:#4a4b52}
+[data-theme="graphite"] .topbar .t-midway-label,
+[data-theme="graphite"] .topbar .t-user-name,
+[data-theme="graphite"] .topbar .t-user-role,
+[data-theme="graphite"] .topbar .t-poll-seg,
+[data-theme="graphite"] .topbar .t-fresh-seg{color:#f4f4f5}
 
 [data-theme="graphitenoir"]{
   /* Graphite Noir (dark) — near-black canvas, charcoal cards, light grey as the
@@ -608,7 +629,7 @@ html.theme-transitioning *::after{
 .t-time-input::-webkit-calendar-picker-indicator{padding:0;margin:0;opacity:.6;cursor:pointer}
 .t-time-input::-webkit-calendar-picker-indicator:hover{opacity:1}
 .t-time-sep{color:var(--text-secondary);font-size:11px;font-weight:600}
-.settings-popover{position:fixed;top:60px;right:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:9999;min-width:220px}
+.settings-popover{position:fixed;top:60px;right:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:9999;min-width:220px;max-height:calc(100vh - 76px);overflow-y:auto;overscroll-behavior:contain}
 .sp-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px}
 .sp-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .sp-label{font-size:11px;color:var(--text-secondary);font-weight:600}
@@ -813,6 +834,7 @@ body[data-bl="amzl"] .curve-label{font-size:13px}
 .main-table td{padding:9px 12px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--text)}
 .main-table tr:hover td{background:var(--row-hover)}
 .main-table .td-assoc{text-align:left}
+.td-manager{font-size:11.5px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;display:inline-block;vertical-align:middle}
 .main-table .login-link{color:var(--blue);text-decoration:none;font-weight:600;font-size:13px}
 .main-table .login-link:hover{color:var(--accent)}
 .photo-wrap{display:flex;align-items:center;gap:8px}
@@ -961,6 +983,52 @@ body[data-bl="amzl"] .curve-label{font-size:13px}
 #hdList .hd-row:last-child{border-bottom:none}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
 .modal-overlay.show{display:flex}
+/* Captain Mode (tab) */
+#panel-captain{padding:16px 20px 40px}
+.cap-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+.cap-title{font-size:19px;font-weight:800;color:var(--text)}
+.cap-title .cap-sub{font-size:12px;font-weight:500;color:var(--text-muted);margin-left:8px}
+.cap-modes{display:flex;gap:6px}
+.cap-mode{font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:18px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-secondary);cursor:pointer;transition:all .15s}
+.cap-mode:hover{border-color:var(--accent);color:var(--accent)}
+.cap-mode.on{background:#1e3a5f;color:#fff;border-color:#1e3a5f;font-weight:700}
+.cap-controls{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.cap-dates{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cap-lbl{font-size:12px;font-weight:600;color:var(--text-secondary);display:flex;align-items:center;gap:6px}
+.cap-quick{font-size:12px;font-weight:600;padding:6px 12px;border-radius:16px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);cursor:pointer}
+.cap-quick:hover{border-color:var(--accent);color:var(--accent)}
+.cap-quick.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.cap-meta{font-size:12px;color:var(--text-secondary);font-weight:600}
+.cap-add{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.cap-empty{padding:40px;text-align:center;color:var(--text-muted);font-size:13px}
+/* Monitor cards */
+.cap-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.cap-card{border:1px solid var(--border);border-radius:14px;background:var(--bg-card);padding:14px;display:flex;gap:12px;box-shadow:0 3px 10px rgba(0,0,0,.05);position:relative}
+.cap-card .cap-photo{width:56px;height:56px;border-radius:50%;object-fit:cover;background:var(--bg-input);flex-shrink:0;border:2px solid var(--border)}
+.cap-card .cap-nophoto{width:56px;height:56px;border-radius:50%;background:var(--bg-input);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:22px;flex-shrink:0;border:2px solid var(--border)}
+.cap-card .cap-info{flex:1;min-width:0}
+.cap-card .cap-login{font-weight:800;font-size:14px;color:var(--text)}
+.cap-card .cap-name{font-size:11.5px;color:var(--text-secondary)}
+.cap-card .cap-station{display:inline-block;font-size:12px;font-weight:800;color:#1e3a5f;background:#e8f0f7;border-radius:8px;padding:3px 10px;margin-top:5px}
+.cap-card .cap-metrics{display:flex;gap:14px;margin-top:8px;font-size:12px}
+.cap-card .cap-metrics b{color:var(--text);font-size:15px}
+.cap-card .cap-metrics .m-lbl{color:var(--text-muted);font-size:10px;text-transform:uppercase;display:block}
+.cap-card .cap-defs{margin-top:8px}
+.cap-drop{position:absolute;top:8px;right:10px;cursor:pointer;color:var(--text-muted);font-weight:700;border:none;background:none;font-size:15px}
+.cap-drop:hover{color:#c0392b}
+.cap-day{display:inline-block;font-size:10.5px;font-weight:800;padding:1px 8px;border-radius:10px;background:#1e3a5f;color:#fff}
+.cap-day.d2{background:#2a6ea5}
+.cap-def{display:inline-block;font-size:11px;padding:1px 7px;border-radius:8px;background:#fdecec;color:#c0392b;font-weight:700;margin:1px 2px}
+.cap-def.none{background:#eef8f3;color:#0a8a4f}
+.cap-manual-badge{font-size:9.5px;font-weight:700;color:#8e44ad;background:#f3e9fa;border-radius:8px;padding:1px 6px;margin-left:4px}
+/* Reporting table (Day1 vs Day2) */
+.cap-table-wrap{max-height:60vh;overflow-y:auto;border:1px solid var(--border);border-radius:10px}
+table.cap-table{width:100%;border-collapse:collapse;font-size:12.5px}
+table.cap-table th{position:sticky;top:0;background:var(--bg-panel,#233);color:var(--text);text-align:left;padding:9px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.03em;z-index:1}
+table.cap-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+table.cap-table tr:hover td{background:var(--row-hover,rgba(0,0,0,.03))}
+.cap-delta{font-weight:800}
+.cap-delta.up{color:#0a8a4f}.cap-delta.down{color:#c0392b}.cap-delta.flat{color:var(--text-muted)}
 .modal{background:var(--bg-modal);border:1px solid var(--border);border-radius:16px;width:500px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px var(--shadow)}
 .modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
 .modal-title{font-size:15px;font-weight:700;color:var(--text)}
@@ -1673,6 +1741,115 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 .path-summary{background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px 14px;margin-top:12px;font-size:11px;color:var(--green)}
 .sm-station.on-path{border-color:var(--accent)!important;background:rgba(59,130,246,0.15)!important;box-shadow:0 0 8px rgba(59,130,246,0.4)}
 
+/* Coaching-path CARDS (left panel): one per coaching, act inline. */
+.path-hd{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:10px}
+.path-floor-hd{font-size:11px;font-weight:800;color:var(--text-muted);letter-spacing:.04em;margin:12px 0 6px;padding-bottom:3px;border-bottom:1px dashed var(--border)}
+.path-floor-hd:first-child{margin-top:0}
+/* Floor-change transition banner (how to move between floors) */
+.path-floor-move{display:flex;align-items:center;gap:6px;justify-content:center;margin:16px 0 4px;padding:8px 12px;border-radius:10px;font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-light,rgba(59,130,246,.1));border:1px dashed var(--accent-border,rgba(59,130,246,.4))}
+.path-calm-chip{margin-left:auto;flex-shrink:0;font-size:10.5px;font-weight:800;color:var(--accent);background:var(--accent-light,rgba(59,130,246,.12));border:1px solid var(--accent-border,rgba(59,130,246,.35));border-radius:20px;padding:2px 9px;white-space:nowrap}
+.path-calm-chip.path-calm-unk{color:var(--text-muted);background:var(--bg-input);border-color:var(--border)}
+/* KPI cards at the top of the path list */
+.path-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px}
+.path-kpi{display:flex;flex-direction:column;gap:2px;padding:9px 10px;border-radius:10px;border:1px solid var(--border);background:var(--bg-card)}
+.path-kpi-hero{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,#000));border-color:transparent}
+.path-kpi-hero .pk-num,.path-kpi-hero .pk-lbl,.path-kpi-hero .pk-u{color:#fff}
+.pk-num{font-size:20px;font-weight:800;color:var(--text);line-height:1}
+.pk-u{font-size:11px;font-weight:600;margin-left:2px;opacity:.7}
+.pk-lbl{font-size:10px;font-weight:600;color:var(--text-muted)}
+.path-subnote{font-size:10.5px;color:var(--text-muted);margin:-4px 0 8px}
+/* Floor tabs above the path map */
+/* Continuous multi-floor route (stacked, NOT tabs) */
+.path-map-floor-title{font-size:12px;font-weight:700;color:var(--text-secondary);margin:0 0 6px;padding:4px 2px}
+.path-map-floor-title b{color:var(--text)}
+.path-map-canvas{position:relative;margin-bottom:6px}
+.path-map-connector{display:flex;align-items:center;justify-content:center;gap:6px;margin:4px 0 12px;padding:7px 12px;border-radius:10px;font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-light,rgba(59,130,246,.1));border:1px dashed var(--accent-border,rgba(59,130,246,.4));position:relative}
+/* vertical connector line into/out of the transition band */
+.path-map-connector::before,.path-map-connector::after{content:"";position:absolute;left:50%;width:2px;height:8px;background:var(--accent);opacity:.5}
+.path-map-connector::before{top:-8px}
+.path-map-connector::after{bottom:-8px}
+.path-map-empty{display:flex;min-height:360px;align-items:center;justify-content:center;color:var(--text-muted);font-size:12px;text-align:center;padding:20px}
+/* Path frame — real ring shape, ONLY coaching stops, perimeter line 1→🏁 */
+.path-frame{position:relative;display:flex;flex-direction:column;gap:10px;min-height:360px;padding:10px}
+.pm-row{display:flex;align-items:center;gap:10px;justify-content:center;min-height:52px}
+.pm-row .pm-stops{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.pm-p2r{margin-top:-4px;padding-bottom:8px;border-bottom:1px dashed rgba(168,85,247,.35)}
+.pm-p2r .pc-dir{color:#a855f7}
+.pm-mid{display:flex;align-items:stretch;gap:10px;flex:1;min-height:140px}
+.pm-col{display:flex;align-items:center;gap:8px}
+.pm-w{flex-direction:row}.pm-e{flex-direction:row-reverse}
+.pm-col .pm-stops.pm-vert{display:flex;flex-direction:column;gap:8px}
+.pm-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:1px dashed var(--border);border-radius:12px;opacity:.7}
+.pm-stop{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:56px;padding:8px 10px;border-radius:10px;border:2px solid var(--accent);background:var(--accent-light,rgba(59,130,246,.12));z-index:2}
+.pm-stop.sm-p2r{border-color:#a855f7;background:rgba(168,85,247,.14)}
+.pm-stop.pc-first{border-color:var(--green,#16a34a);background:rgba(34,197,94,.16)}
+.pm-stop.pc-last{border-color:var(--accent);background:var(--accent)}
+.pm-stop.pc-last .sm-type,.pm-stop.pc-last .sm-num{color:#fff}
+.pm-stop .pc-badge{position:absolute;top:-8px;left:50%;transform:translateX(-50%);min-width:17px;height:17px;padding:0 3px;border-radius:9px;background:var(--accent);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:3}
+.pm-stop.pc-first .pc-badge{background:var(--green,#16a34a)}
+.pm-stop.sm-p2r .pc-badge{background:#a855f7}
+.pm-stop .sm-type{font-size:8.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase}
+.pm-stop .sm-num{font-size:12px;font-weight:800;color:var(--text)}
+.pm-stop.pc-last .sm-type{color:rgba(255,255,255,.8)}
+.pc-none{font-size:10px;color:var(--text-muted);opacity:.4}
+/* On-site without a station — bottom section (not routeable, don't forget them) */
+.path-ns-hd{color:var(--text-muted);border-bottom-color:var(--border)}
+.path-ns-note{font-size:10.5px;color:var(--text-muted);margin:-2px 0 8px}
+.path-card-ns{opacity:.9;border-style:dashed}
+.path-num-ns{background:var(--bg-input)!important;color:var(--text-muted)!important}
+/* Path owner-scope filter pills (header) */
+.path-owner-filters{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.path-owner-pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-secondary);cursor:pointer;white-space:nowrap}
+.path-owner-pill:hover{border-color:var(--accent);color:var(--accent)}
+.path-owner-pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* CALM chip on a path card is now clickable (override / Other) */
+.path-calm-chip[role="button"]{cursor:pointer;user-select:none}
+.path-calm-chip[role="button"]:hover{filter:brightness(1.05);border-color:var(--accent)}
+/* ── Path COMPASS map (only coaching stops, placed on their cardinal side) ── */
+.path-compass{display:flex;flex-direction:column;gap:10px;min-height:380px;padding:6px}
+.pc-row{display:flex;align-items:center;gap:10px;justify-content:center;min-height:56px}
+.pc-row .pc-stops{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.pc-mid{display:flex;align-items:stretch;gap:10px;flex:1;min-height:150px}
+.pc-side{display:flex;align-items:center;gap:8px}
+.pc-side .pc-stops.pc-vert{display:flex;flex-direction:column;gap:8px}
+.pc-w{flex-direction:row}.pc-e{flex-direction:row-reverse}
+.pc-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:1px dashed var(--border);border-radius:12px;opacity:.85}
+.pc-floor{font-size:34px;font-weight:800;color:var(--text-muted);opacity:.35}
+.pc-legend{display:flex;gap:12px;font-size:10px;color:var(--text-muted)}
+.pc-lg-start{color:var(--green,#16a34a);font-weight:700}
+.pc-dir{font-size:10.5px;font-weight:800;color:var(--text-muted);letter-spacing:.05em;white-space:nowrap}
+.pc-none{font-size:10px;color:var(--text-muted);opacity:.4}
+.pc-stop{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:58px;padding:8px 10px;border-radius:10px;border:2px solid var(--accent);background:var(--accent-light,rgba(59,130,246,.1));z-index:2}
+.pc-stop.pc-first{border-color:var(--green,#16a34a);background:rgba(34,197,94,.12)}
+.pc-stop.pc-last{border-color:var(--accent);background:var(--accent);}
+.pc-stop.pc-last .pc-type,.pc-stop.pc-last .pc-num{color:#fff}
+.pc-badge{position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:17px;height:17px;border-radius:50%;background:var(--accent);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:3}
+.pc-first .pc-badge{background:var(--green,#16a34a)}
+.pc-type{font-size:8.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase}
+.pc-num{font-size:12px;font-weight:800;color:var(--text)}
+/* P2R (Pack→Rebin) central aisle row — distinct from ring sides */
+/* P2R band is GLUED under the Norte row (the picker feeds the multis packers in
+   the North) — a tight horizontal strip right below N, not a central aisle. */
+.pc-p2r-band{display:flex;align-items:center;gap:10px;justify-content:center;margin-top:-4px;padding:4px 0 8px;border-bottom:1px dashed rgba(168,85,247,.35)}
+.pc-p2r-band .pc-dir{color:#a855f7}
+.pc-p2r-band .pc-stops{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.pc-stop.pc-p2r{border-color:#a855f7;background:rgba(168,85,247,.12);min-width:50px;padding:6px 8px}
+.pc-stop.pc-p2r .pc-badge{background:#a855f7}
+.pc-stop.pc-p2r.pc-last{background:#a855f7}
+.pc-stop.pc-p2r.pc-last .pc-type,.pc-stop.pc-p2r.pc-last .pc-num{color:#fff}
+.path-card{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--bg-card)}
+.path-card-hd{display:flex;align-items:center;gap:9px}
+.path-photo{width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--bg-input)}
+.path-who{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.path-who b{font-size:13px;color:var(--text)}
+.path-st{font-size:10.5px;color:var(--text-muted)}
+.path-insight{font-size:11.5px;color:var(--text-secondary);margin:6px 0 8px}
+.path-acts{display:flex;gap:5px;flex-wrap:wrap}
+.path-btn{flex:1;min-width:60px;padding:5px 8px;border-radius:8px;border:1px solid var(--border-strong);background:var(--bg-input);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap}
+.path-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.path-btn.pb-close{background:var(--accent);color:#fff;border-color:var(--accent)}
+.path-btn.pb-close:hover:not(:disabled){filter:brightness(1.1);color:#fff}
+.path-btn.pb-cmt{flex:0 0 auto;min-width:40px}
 /* ── Adoption modal (super admin / DDD) ── */
 .adopt-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;display:flex;align-items:center;justify-content:center;padding:24px}
 .adopt-modal{background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;width:min(940px,96vw);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.4)}
@@ -1820,6 +1997,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <!--<div class="t-tab" data-tab="history" data-i18n="tab_history">History</div>-->
     <div class="t-tab" data-tab="targets" data-i18n="tab_targets">Targets</div>
     <div class="t-tab" data-tab="quality" id="tabQuality" data-i18n="tab_quality" style="display:none">Quality</div>
+    <div class="t-tab" data-tab="captain" id="tabCaptain" style="display:none">🧭 Captain</div>
     <div class="t-tab" data-tab="courses" id="tabCourses">📚 Courses</div>
     <div class="t-tab" data-tab="faq" data-i18n="tab_faq">FAQ</div>
     <div class="t-tab" data-tab="gca" id="tabGca" style="display:none">GCA</div>
@@ -1881,6 +2059,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <span class="t-time-sep">→</span>
       <input type="datetime-local" id="manualEnd" class="t-time-input" title="Fecha/hora fin" />
     </div>
+    <button id="btnCaptainMode" class="settings-btn bl-fc-only" title="Captain Mode — report de Day-1/Day-2 con errores de calidad">🧭</button>
     <button id="btnDeliveryMode" class="settings-btn" title="Modo Delivery (AMZL)">🚚</button>
     <button id="btnManualTime" class="settings-btn" title="Modo manual de hora">🕐</button>
     <button class="settings-btn" id="btnSettings" title="Settings">⚙️</button>
@@ -2057,6 +2236,14 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
   <div class="toolbar toolbar-sticky">
     <div class="tb-search"><span style="color:#ccc;font-size:13px">⌕</span><input id="searchInput" placeholder="Login, role, station…"></div>
+    <span class="tb-label bl-fc-only" title="Filtrar por manager">MGR</span>
+    <div class="ms bl-fc-only" id="mgrMs" title="Filter the board by manager (multi-select)">
+      <button class="ms-btn" id="mgrMsBtn" type="button" aria-haspopup="listbox" aria-expanded="false" style="min-width:120px">
+        <span class="ms-label" id="mgrMsLabel">All</span>
+        <span class="ms-caret">▾</span>
+      </button>
+      <div class="ms-panel" id="mgrMsPanel" role="listbox" aria-multiselectable="true"></div>
+    </div>
     <div class="sep bl-fc-only"></div>
     <span class="tb-label bl-fc-only" title="Filtrar por planta física">PLANTA</span>
     <span id="floorFilterBtns" class="bl-fc-only" style="display:inline-flex;gap:4px"></span>
@@ -2070,12 +2257,15 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <button class="nf bl-fc-only" data-curve="VETERAN">VET</button>
     <div class="sep bl-fc-only"></div>
     <span class="tb-label bl-fc-only">T</span>
-    <select id="tenureFilter" class="tselect bl-fc-only" style="height:26px;min-width:60px;font-size:11px;background:#fff;border:1px solid #ccc;color:#111">
-      <option value="">All</option>
-      <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
-      <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
-    </select>
+    <div class="ms bl-fc-only" id="tenureMs" title="Filter by tenure week (multi-select)">
+      <button class="ms-btn" id="tenureMsBtn" type="button" aria-haspopup="listbox" aria-expanded="false" style="min-width:64px">
+        <span class="ms-label" id="tenureMsLabel">All</span>
+        <span class="ms-caret">▾</span>
+      </button>
+      <div class="ms-panel" id="tenureMsPanel" role="listbox" aria-multiselectable="true"></div>
+    </div>
     <div class="sep bl-fc-only"></div>
+    <button class="toggle-btn bl-fc-only" id="toggleFirstDays" style="display:none" title="Mostrar solo asociados en sus primeros días (Day 1 / Day 2)"><span id="firstDaysIcon">○</span> 🆕 <span data-i18n="btn_first_days">First days</span></button>
     <button class="toggle-btn" id="toggleCoached"><span id="coachToggleIcon">○</span> <span data-i18n="btn_hide_coached">Hide Coached</span></button>
     <div class="sep bl-fc-only"></div>
     <select id="noteFilterSelect" class="bl-fc-only" style="padding:4px 8px;font-size:11px;border-radius:6px;border:1px solid var(--border-strong);background:var(--bg-input);color:var(--text);cursor:pointer">
@@ -2112,6 +2302,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <thead>
         <tr>
           <th class="th-left" style="width:260px" data-i18n="th_associate">Associate</th>
+          <th data-k="manager" class="th-left bl-fc-only" style="width:130px" data-i18n="th_manager">Manager</th>
           <th data-k="dept"    class="bl-fc-only" style="width:60px" data-i18n="th_dept">Dept</th>
           <th data-k="cohort"  class="bl-fc-only" style="width:90px" data-i18n="th_cohort">Cohort</th>
           <th data-k="lc"      class="bl-amzl-only" style="width:110px">Learning Curve</th>
@@ -2755,16 +2946,19 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 
 <!-- Coaching Path Modal -->
 <div id="gcaPathModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9000;background:rgba(0,0,0,0.5);padding:20px;overflow-y:auto;align-items:flex-start;justify-content:center">
-  <div style="max-width:1100px;width:100%;margin:0 auto;background:var(--bg-card);border-radius:12px;border:1px solid var(--border);box-shadow:0 16px 48px rgba(0,0,0,0.3)">
-    <div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border)">
+  <div id="gcaPathCard" style="max-width:1100px;width:100%;margin:0 auto;background:var(--bg-card);border-radius:12px;border:1px solid var(--border);box-shadow:0 16px 48px rgba(0,0,0,0.3)">
+    <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap">
       <span style="font-weight:700;font-size:14px">🧭 Coaching Path</span>
-      <span id="pathSubtitle" style="margin-left:8px;font-size:11px;color:var(--text-muted)"></span>
-      <div style="flex:1"></div>
-      <button onclick="document.getElementById('gcaPathModal').style.display='none'" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary)">&times;</button>
+      <span id="pathSubtitle" style="font-size:11px;color:var(--text-muted)"></span>
+      <div style="flex:1;min-width:20px"></div>
+      <div id="pathOwnerFilters" class="path-owner-filters"></div>
+      <select id="pathOrigin" title="¿Dónde estás? La ruta se optimiza desde aquí" style="font-size:11px;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);max-width:230px"></select>
+      <button id="pathFullBtn" title="Pantalla completa (Esc para salir)" style="background:var(--bg-input);border:1px solid var(--border);border-radius:8px;font-size:14px;cursor:pointer;color:var(--text-secondary);padding:4px 9px">⛶</button>
+      <button id="pathCloseBtn" title="Cerrar" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary)">&times;</button>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;padding:16px">
-      <div id="gcaPathMap" style="min-height:400px;position:relative;border:1px solid var(--border);border-radius:8px;padding:12px;overflow:hidden"></div>
-      <div id="gcaPathList" style="max-height:500px;overflow-y:auto"></div>
+    <div id="gcaPathBody" style="display:grid;grid-template-columns:420px 1fr;gap:16px;padding:16px">
+      <div id="gcaPathList" style="max-height:600px;overflow-y:auto"></div>
+      <div id="gcaPathMapWrap"><div id="gcaPathMap" style="min-height:400px;max-height:600px;overflow-y:auto;position:relative;border:1px solid var(--border);border-radius:8px;padding:12px"></div></div>
     </div>
   </div>
 </div>
@@ -2934,6 +3128,57 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <div class="modal-header"><span class="modal-title" id="modalHistoryTitle">Coaching History</span><button class="modal-close" data-close="modalHistory">×</button></div>
     <div class="modal-body"><div id="modalHistoryList" class="hmodal-list"><div class="hmodal-empty">Loading…</div></div></div>
     <div class="modal-footer"><button class="act-btn act-secondary" data-close="modalHistory">Close</button></div>
+  </div>
+</div>
+
+<!-- ═══ CAPTAIN MODE — tab panel (Monitor in-shift + Reporting Day1/Day2) ═══ -->
+<div class="tab-panel" id="panel-captain">
+  <div class="cap-head">
+    <div class="cap-title">🧭 Captain Mode <span class="cap-sub">First-days coaching — monitor &amp; report</span></div>
+    <div class="cap-modes">
+      <button class="cap-mode on" data-cap-mode="monitor">👁️ Monitor (in shift)</button>
+      <button class="cap-mode" data-cap-mode="report">📊 Reporting (Day 1 vs Day 2)</button>
+    </div>
+  </div>
+
+  <!-- MONITOR: Day-1 associates on shift now, photo + station -->
+  <div class="cap-pane" id="capPaneMonitor">
+    <div class="cap-controls">
+      <div class="cap-dates">
+        <span class="cap-quick on" data-cap-day="0">Today</span>
+        <span class="cap-quick" data-cap-day="1">Yesterday</span>
+        <span class="cap-quick" data-cap-day="2">-2 days</span>
+        <input type="date" id="capDate" class="t-time-input" title="Date">
+        <button class="act-btn act-primary" id="capRun" style="padding:6px 16px">↻ Refresh</button>
+      </div>
+      <div class="cap-meta" id="capMeta"></div>
+    </div>
+    <div class="cap-add">
+      <input id="capAddLogin" class="tb-search" style="min-width:160px" placeholder="Add a login manually…">
+      <button class="act-btn act-secondary" id="capAddBtn" style="padding:6px 12px">+ Add</button>
+      <span class="note" style="font-size:11px;color:var(--text-muted)">Auto-detects Day-1/Day-2 on shift. Add any missed · ✕ to drop.</span>
+      <button class="act-btn act-secondary" id="capCsv" style="padding:6px 12px;margin-left:auto;display:none">↓ CSV</button>
+    </div>
+    <div id="capCards" class="cap-cards"><div class="cap-empty">Loading first-days on shift…</div></div>
+  </div>
+
+  <!-- REPORTING: same associate Day 1 → Day 2 with deltas -->
+  <div class="cap-pane" id="capPaneReport" style="display:none">
+    <div class="cap-controls">
+      <div class="cap-dates">
+        <label class="cap-lbl">Day 1 <input type="date" id="capD1" class="t-time-input"></label>
+        <label class="cap-lbl">Day 2 <input type="date" id="capD2" class="t-time-input"></label>
+        <button class="act-btn act-primary" id="capCompareRun" style="padding:6px 16px">▶ Compare</button>
+      </div>
+      <div class="cap-meta" id="capCompMeta"></div>
+    </div>
+    <div class="cap-add">
+      <input id="capCompAdd" class="tb-search" style="min-width:160px" placeholder="Add a login…">
+      <button class="act-btn act-secondary" id="capCompAddBtn" style="padding:6px 12px">+ Add</button>
+      <span class="note" style="font-size:11px;color:var(--text-muted)">Compares the same associate's Day 1 vs Day 2: rate delta + defects.</span>
+      <button class="act-btn act-secondary" id="capCompCsv" style="padding:6px 12px;margin-left:auto;display:none">↓ CSV</button>
+    </div>
+    <div id="capCompWrap" class="cap-table-wrap"><div class="cap-empty">Pick a <b>Day 1</b> and <b>Day 2</b> date, then <b>Compare</b>.</div></div>
   </div>
 </div>
 
@@ -3207,6 +3452,10 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
         <div class="form-hint" id="cc-calm-hint"></div>
         <div id="cc-calm-result" style="font-size:12px;margin-top:6px"></div>
       </div>
+      <!-- Path mode: compact read-only CALM code display (the code was already
+           resolved from the wiki on the card) + an "Other" toggle. Rendered by
+           _renderPathCalmInfo; the free-text box reuses cc-calm-code. -->
+      <div id="cc-path-calm" style="display:none;background:var(--bg-panel,#fafbfd);border:1px solid var(--border,#e5e7eb);border-radius:10px;padding:10px 12px;margin-bottom:14px"></div>
       <!-- Complete: category 1-5 -->
       <div class="form-group" id="cc-category-wrap">
         <label class="form-label">Categoría</label>
@@ -3320,27 +3569,11 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   </div>
 </div>
 
-<!-- ADOPTION MODAL (super admin only — DDD projection) -->
-<div class="adopt-overlay" id="adoptionModal" style="display:none">
-  <div class="adopt-modal">
-    <div class="adopt-head">
-      <span class="adopt-title">📊 Argos Adoption</span>
-      <div class="adopt-controls">
-        <select id="adoptFC" class="adopt-sel" title="FC scope"></select>
-        <label class="adopt-toggle" title="Show only the current ISO week (daily DDD view)">
-          <input type="checkbox" id="adoptWk"/> <span>Only this wk</span>
-        </label>
-        <label class="adopt-toggle" title="Include Learning &amp; Development / trainers">
-          <input type="checkbox" id="adoptLD"/> <span>Include L&amp;D</span>
-        </label>
-        <button class="adopt-x" onclick="closeAdoption()">✕</button>
-      </div>
-    </div>
-    <div class="adopt-body" id="adoptionBody"></div>
-  </div>
-</div>
+<!-- ADOPTION MODAL removed from the UI (2026-07-29): the button was retired
+     2026-07-24 and adoption is no longer a user-facing view. The /api/adoption
+     endpoint and argos_usage.csv are kept for out-of-band analysis. -->
 
-<script src="/static/app.js?v=v257_master_autoexec_20260728" defer></script>
+<script src="/static/app.js?v=v293_captain_tab_monitor_report_20260804" defer></script>
 </body>
 </html>
 

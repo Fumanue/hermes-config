@@ -15,7 +15,7 @@ const I18N = {
     kpi_coached: "Coached", kpi_coached_sub: "Este turno",
     btn_show: "VER", btn_max: "MAX", btn_curve: "Curva",
     lbl_showing: "Mostrando", lbl_of: "de", lbl_associates: "asociados",
-    th_associate: "Asociado", th_dept: "Dept", th_cohort: "Cohort", th_role: "Rol",
+    th_associate: "Asociado", th_manager: "Manager", th_dept: "Dept", th_cohort: "Cohort", th_role: "Rol",
     th_station: "Estación", th_prio: "Prio", th_rate: "Rate", th_pct_target: "% Target",
     th_notes: "Notas", th_coached: "Coached", th_action: "Acción",
     // Quality
@@ -23,7 +23,7 @@ const I18N = {
     q_subtitle: "Acumulado Atlas · últimos 7 días · detección sigma por Error Type",
     q_opportunities: "Oportunidades", q_present: "Presentes", q_coached: "Coached", q_pending: "Pendientes",
     q_sigma2_hint: "σ ≥ 2",
-    btn_present_only: "Solo presentes", btn_hide_coached: "Ocultar coached",
+    btn_present_only: "Solo presentes", btn_hide_coached: "Ocultar coached", btn_first_days: "Primeros días",
     btn_hide_on_target: "Ocultar on-target", btn_run_pipeline: "▶ Start Pipeline",
     btn_refresh: "↻ Refresh", btn_sync_gc: "⟳ Sync GC",
     btn_upload_coaching: "↑ Subir Coaching", btn_summary: "📊 Resumen", btn_bulk: "↑↑ Subida masiva", btn_csv: "↓ CSV",
@@ -169,14 +169,14 @@ const I18N = {
     kpi_coached: "Coached", kpi_coached_sub: "This shift",
     btn_show: "SHOW", btn_max: "MAX", btn_curve: "Curve",
     lbl_showing: "Showing", lbl_of: "of", lbl_associates: "associates",
-    th_associate: "Associate", th_dept: "Dept", th_cohort: "Cohort", th_role: "Role",
+    th_associate: "Associate", th_manager: "Manager", th_dept: "Dept", th_cohort: "Cohort", th_role: "Role",
     th_station: "Station", th_prio: "Prio", th_rate: "Rate", th_pct_target: "% Target",
     th_notes: "Notes", th_coached: "Coached", th_action: "Action",
     q_title: "Quality Coaching",
     q_subtitle: "Cumulative Atlas · last 7 days · sigma detection by Error Type",
     q_opportunities: "Opportunities", q_present: "Present", q_coached: "Coached", q_pending: "Pending",
     q_sigma2_hint: "σ ≥ 2",
-    btn_present_only: "Present only", btn_hide_coached: "Hide Coached",
+    btn_present_only: "Present only", btn_hide_coached: "Hide Coached", btn_first_days: "First days",
     btn_hide_on_target: "Hide On-Target", btn_run_pipeline: "▶ Start Pipeline",
     btn_refresh: "↻ Refresh", btn_sync_gc: "⟳ Sync GC",
     btn_upload_coaching: "↑ Upload Coaching", btn_summary: "📊 Summary", btn_bulk: "↑↑ Bulk Upload", btn_csv: "↓ CSV",
@@ -535,8 +535,15 @@ const _stationParseCache = new Map();
 function parsePerfStationCached(raw){
   if(!raw) return null;
   if(_stationParseCache.has(raw)) return _stationParseCache.get(raw);
-  // parsePerfStation is defined later in a closure — use it via window
-  const result = (typeof parsePerfStation === "function") ? parsePerfStation(raw) : null;
+  // parsePerfStation lives INSIDE the map closure — reach it via window (the map
+  // exposes it as window.parsePerfStation). The old `typeof parsePerfStation` test
+  // ran in the GLOBAL scope where the name is undefined, so it always returned
+  // null and the GCA map came up empty. Use the window ref (with a bare-name
+  // fallback for any scope where it IS visible).
+  const _fn = (typeof window !== "undefined" && typeof window.parsePerfStation === "function")
+    ? window.parsePerfStation
+    : (typeof parsePerfStation === "function" ? parsePerfStation : null);
+  const result = _fn ? _fn(raw) : null;
   if(result !== undefined) _stationParseCache.set(raw, result);
   return result;
 }
@@ -668,6 +675,7 @@ function norm(r){
   const photo_url     = String(r.photo_url??"").trim()
     ||(login?`https://badgephotos.amazon.com/?Region=Master&FullsizeImage=Yes&uid=${encodeURIComponent(login)}`:"");
 
+  const manager = String(r.manager??"").trim();
   // Pre-compute the lowercased search blob ONCE per row so the search
   // filter doesn't .toLowerCase() every cell on every keystroke.
   const _search = (login+" "+name+" "+role+" "+station+" "+dept+" "+cohort+" "+nhFlag).toLowerCase();
@@ -676,7 +684,7 @@ function norm(r){
   const pending_coachings = Array.isArray(r.pending_coachings) ? r.pending_coachings : [];
   const newHire = !!r.new_hire;
   const daysSinceHire = (r.days_since_hire==null ? null : Number(r.days_since_hire));
-  return{login,name,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,coached_label:String(r.coached_label??"").trim(),notes,rate,rateAdj,pct,pctAdj,target,vetAvg,course_id,employee_id,transcript_url,photo_url,pending_coachings,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,newHire,daysSinceHire,idle_pct,idle_min,_search};
+  return{login,name,manager,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,coached_label:String(r.coached_label??"").trim(),notes,rate,rateAdj,pct,pctAdj,target,vetAvg,course_id,employee_id,transcript_url,photo_url,pending_coachings,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,newHire,daysSinceHire,idle_pct,idle_min,_search};
 }
 
 // Build the notes string to upload (rate + pct + comments)
@@ -702,6 +710,11 @@ function buildUploadNotes(row){
   const _pctNote = Number.isFinite(row.pctAdj) ? row.pctAdj : row.pct;
   if(_pctNote != null && Number.isFinite(_pctNote)) parts.push(`${_pctNote.toFixed(1)}% to Target`);
 
+  // [Argos] tag at the END so every Argos-uploaded coaching is unambiguously
+  // identifiable in Guided Coaching later (impact/ROI analysis filters on it —
+  // cleaner than pattern-matching the "… Performance" prefix). Keep it last.
+  parts.push("[Argos]");
+
   return parts.join(" | ");
 }
 
@@ -712,6 +725,8 @@ const state={
   hideCoached:false,
   coachedOnly:false,
   q:"",
+  mgr:new Set(),      // multi-select: empty = ALL managers
+  tenureSet:new Set(),// multi-select: empty = ALL tenure weeks
   // No default sorting. Sorting is applied only after user clicks a header.
   sortKey:"",
   sortAsc:true,
@@ -720,10 +735,26 @@ const state={
   sub:new Set(),
   floor:new Set(),   // physical-floor filter (p1/p2/p3/p4). empty = ALL. calvenpj 2026-07-24
   curve:"ALL",
-  tenureFilter:"",
   priorityOnly:false,
+  firstDaysOnly:false,   // trainer filter: only Day 1/Day 2 associates
   noteFilter:"",
 };
+
+// Tenure bands (by hours-in-process, from tenure_hours). Coaching-meaningful
+// groups instead of raw weeks 1..60. XT/Veteran come from the curve; the NH
+// week bands from tenure_wk. Order = display order in the multi-select.
+const TENURE_BANDS = [
+  {label:"NH 1-2",   test:r=> r.curve==="NH" && (parseInt(r.tenure_wk||0)>=1 && parseInt(r.tenure_wk||0)<=2)},
+  {label:"NH 3-5",   test:r=> r.curve==="NH" && (parseInt(r.tenure_wk||0)>=3 && parseInt(r.tenure_wk||0)<=5)},
+  {label:"NH 6-10",  test:r=> r.curve==="NH" && (parseInt(r.tenure_wk||0)>=6 && parseInt(r.tenure_wk||0)<=10)},
+  {label:"Cross-Trainee", test:r=> r.curve==="XT"},
+  {label:"Veteran",  test:r=> r.curve==="VETERAN"},
+];
+// Which band a row belongs to ("" if none matched → excluded when a band filter is active).
+function tenureBandOf(r){
+  for(const b of TENURE_BANDS){ if(b.test(r)) return b.label; }
+  return "";
+}
 
 // ── Modals ─────────────────────────────────────────────────
 const openModal =id=>$(id).classList.add("show");
@@ -768,6 +799,23 @@ function _markCoachingRowDone(instanceId, isCancel){
 }
 
 // opts: {instanceId, fc, action:"complete"|"cancel", login, name, onDone}
+// Path-mode CALM display in the close modal: purely informational. The code was
+// already resolved (and logging happens on the CARD's Logar button, where the
+// "Other" override lives), so here we just show which code was used, read-only.
+// Passing "" clears/hides it.
+function _renderPathCalmInfo(code){
+  const box = $("cc-path-calm");
+  if(!box) return;
+  if(!code){ box.style.display = "none"; box.innerHTML = ""; return; }
+  box.style.display = "";
+  box.innerHTML =
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+    +   '<span style="font-size:12px;color:var(--text-secondary)">Labor tracking (CALM):</span>'
+    +   '<span style="font-size:12.5px;font-weight:800;color:var(--accent);background:var(--accent-light,rgba(59,130,246,.12));border:1px solid var(--accent-border,rgba(59,130,246,.35));border-radius:20px;padding:2px 10px">🎓 '+esc(code)+'</span>'
+    +   '<span style="font-size:11px;color:var(--text-muted)">se registra desde la card «Logar»</span>'
+    + '</div>';
+}
+
 async function openCloseCoaching(opts){
   const o = opts || {};
   // Closing a coaching (complete/cancel + writing notes) is allowed for ANY team
@@ -799,7 +847,15 @@ async function openCloseCoaching(opts){
   if(calmWrap){
     const badge = String(o.badge || o.employee_id || "").replace(/\D/g,"");
     const proc  = String(o.process || o.role || "").trim();
-    if(!isCancel && badge){
+    // From the Path we already know the official CALM code (wiki), so hide the
+    // process picker but SHOW the code that will be used read-only, with an
+    // "Other" toggle in case the coach needs a variation. `pathCalm` carries the
+    // resolved code; the free-text "Other" box (cc-calm-code) still applies.
+    if(o.hideCalm){
+      calmWrap.style.display = "none";
+      _renderPathCalmInfo(o.pathCalm || "");
+    } else if(!isCancel && badge){
+      _renderPathCalmInfo("");   // clear any path-mode CALM info from a prior open
       calmWrap.style.display = "";
       $("cc-calm-result").innerHTML = "";
       // Associate photo next to the CALM controls (login-based badge photo).
@@ -824,6 +880,7 @@ async function openCloseCoaching(opts){
       if(hint) hint.textContent = `Verifica el proceso y pulsa «Logar AA»; usa «Deslogar» al terminar.`;
     } else {
       calmWrap.style.display = "none";
+      _renderPathCalmInfo("");
     }
   }
 
@@ -1895,6 +1952,7 @@ async function loadUserInfo(){
     // hidden only for AMZL/Delivery sites (no station map there) via
     // _applySiteBL. Config, multi-site and Adoption stay admin-only.
     if($("tabQuality")) $("tabQuality").style.display = "";
+      if($("tabCaptain")) $("tabCaptain").style.display = "";
     if($("tabGca")) $("tabGca").style.display = "";
     if($("tabMap")) $("tabMap").style.display = "";   // _applySiteBL hides it for DS
     // Restore admin state from cache
@@ -1902,7 +1960,6 @@ async function loadUserInfo(){
       window._isAdmin = true;
       window._isSuperAdmin = d.admin.is_super_admin || false;
       document.body.classList.add("is-admin");
-      if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
       if($("btnExempt")) $("btnExempt").style.display = "inline-flex";
       // Shift Tracker retired — button + tab stay hidden (code left inert).
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "inline-flex";
@@ -1966,14 +2023,15 @@ async function loadUserInfo(){
       if($("tabConfig")) $("tabConfig").style.display = "";
       // Show beta tabs (Quality, GCA, Map)
       if($("tabQuality")) $("tabQuality").style.display = "";
+      if($("tabCaptain")) $("tabCaptain").style.display = "";
       if($("tabGca")) $("tabGca").style.display = "";
       if($("tabMap")) $("tabMap").style.display = "";   // _applySiteBL hides it for DS
-      if($("btnAdoption")) $("btnAdoption").style.display = window._isSuperAdmin ? "inline-flex" : "none";
     } else {
       // Non-admin: Quality + GCA + Map are open to any Coaching team member
       // (single-site only — the multi-site button stays admin-only). Map is
       // hidden only for AMZL/Delivery sites via _applySiteBL, not by role.
       if($("tabQuality")) $("tabQuality").style.display = "";
+      if($("tabCaptain")) $("tabCaptain").style.display = "";
       if($("tabGca")) $("tabGca").style.display = "";
       if($("tabMap")) $("tabMap").style.display = "";   // _applySiteBL hides it for DS
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "none";
@@ -2034,6 +2092,7 @@ function switchTab(name){
   if(name==="courses" && window._onCoursesTab) window._onCoursesTab();
   if(name==="shifttracker" && window._onShiftTrackerTab) window._onShiftTrackerTab();
   if(name==="map" && window._onMapTab) window._onMapTab();
+  if(name==="captain" && window._onCaptainTab) window._onCaptainTab();
   // GCA station-map FAB/popup: only lives on the GCA tab. Show the FAB when
   // entering GCA (if the popup isn't already open); hide FAB + popup elsewhere.
   if(window._updateGcaFabVisibility) window._updateGcaFabVisibility();
@@ -2182,7 +2241,7 @@ function msSetOpen(msId, open){
   if(!root) return;
   // Close all others first
   if(open){
-    ["procMs","subMs"].forEach(id=>{
+    ["procMs","subMs","mgrMs","tenureMs"].forEach(id=>{
       if(id !== msId){
         const other=$(id);
         if(other) other.classList.remove("open");
@@ -2200,11 +2259,11 @@ function msIsOpen(msId){
   return root ? root.classList.contains("open") : false;
 }
 function msCloseAll(){
-  ["procMs","subMs"].forEach(id=>msSetOpen(id,false));
+  ["procMs","subMs","mgrMs","tenureMs"].forEach(id=>msSetOpen(id,false));
 }
 document.addEventListener("click",(e)=>{
   const t=e.target;
-  if(!t.closest("#procMs") && !t.closest("#subMs")) msCloseAll();
+  if(!t.closest("#procMs") && !t.closest("#subMs") && !t.closest("#mgrMs") && !t.closest("#tenureMs")) msCloseAll();
 });
 document.addEventListener("keydown",(e)=>{
   if(e.key==="Escape") msCloseAll();
@@ -2367,6 +2426,41 @@ function initProcessMs(){
   const btn2=$("subMsBtn");
   if(btn2) btn2.onclick=()=>msSetOpen("subMs", !msIsOpen("subMs"));
 
+  // Manager multi-select: options = distinct ManagerName present in the data.
+  const mgrNames = new Set();
+  (state.all||[]).forEach(r=>{ const m=String(r.manager||"").trim(); if(m) mgrNames.add(m); });
+  const mgrOptions = Array.from(mgrNames).sort((a,b)=>a.localeCompare(b));
+  msRender("mgrMs", mgrOptions, (state.mgr instanceof Set)? state.mgr : new Set(), (newSet)=>{
+    state.mgr = newSet;
+    renderAll();
+  });
+  const mBtn=$("mgrMsBtn");
+  if(mBtn) mBtn.onclick=()=>msSetOpen("mgrMs", !msIsOpen("mgrMs"));
+
+  // Tenure multi-select: coaching-meaningful BANDS by hours-in-process, not raw
+  // weeks (roster tenure goes up to 60+ → a per-week list is unusable). Bands:
+  // 1-2 / 3-5 / 6-10 (new-hire ramp), plus XT (cross-trainee) and Veteran.
+  const twBandOptions = TENURE_BANDS.map(b=>b.label);
+  msRender("tenureMs", twBandOptions, (state.tenureSet instanceof Set)? state.tenureSet : new Set(), (newSet)=>{
+    state.tenureSet = newSet;
+    renderAll();
+  });
+  const tBtn=$("tenureMsBtn");
+  if(tBtn) tBtn.onclick=()=>msSetOpen("tenureMs", !msIsOpen("tenureMs"));
+
+  // "First days" trainer toggle: show ONLY if there's a Day 1 or Day 2 associate
+  // in the current data (owner: appears if and only if there are day-1/day-2).
+  const _fdBtn=$("toggleFirstDays");
+  if(_fdBtn){
+    const hasFirstDays=(state.all||[]).some(r=>r.daysSinceHire!=null && r.daysSinceHire>=1 && r.daysSinceHire<=2);
+    _fdBtn.style.display = hasFirstDays ? "" : "none";
+    if(!hasFirstDays && state.firstDaysOnly){   // data no longer has any → reset
+      state.firstDaysOnly=false;
+      _fdBtn.classList.remove("active");
+      const ic=$("firstDaysIcon"); if(ic) ic.textContent="○";
+    }
+  }
+
   // PLANTA filter (FC-only): one toggle button per floor present in the data.
   if(!isAmzl) renderFloorFilter();
 }
@@ -2475,6 +2569,8 @@ function getFiltered(opts){
   if(state.hideCoached) rows=rows.filter(r=>!r.coached);
   // Priority mode filter (Sigma >= Mode)
   if(state.priorityOnly) rows=rows.filter(r=>r.is_priority);
+  // Trainer filter: only associates in their first days (Day 1 / Day 2).
+  if(state.firstDaysOnly) rows=rows.filter(r=>r.daysSinceHire!=null && r.daysSinceHire>=1 && r.daysSinceHire<=2);
   // Note type filter
   if(state.noteFilter){
     const nf = state.noteFilter.toUpperCase();
@@ -2509,10 +2605,10 @@ function getFiltered(opts){
   if(state.curve && state.curve !== "ALL"){
     rows = rows.filter(r => String(r.curve||"").toUpperCase() === state.curve.toUpperCase());
   }
-  // Tenure level filter
-  if(state.tenureFilter){
-    const tf = parseInt(state.tenureFilter);
-    if(tf > 0) rows = rows.filter(r => parseInt(r.tenure_wk||0) === tf);
+  // Tenure BAND filter (multi-select). Empty Set = ALL; "__none__" = nothing.
+  if(state.tenureSet instanceof Set && state.tenureSet.size){
+    if(state.tenureSet.has("__none__")) rows=[];
+    else rows = rows.filter(r => state.tenureSet.has(tenureBandOf(r)));
   }
   // __none__ sentinel = user blanked the filter → show nothing for that dimension
   const _isAmzlView = (typeof siteBL === "function" && siteBL(currentFC) === "AMZL");
@@ -2548,6 +2644,12 @@ function getFiltered(opts){
       for(let i=0;i<tokens.length;i++) if(!blob.includes(tokens[i])) return false;
       return true;
     });
+  }
+  // Dedicated "by manager" multi-select (requested by managers): matches exact
+  // ManagerName. Empty Set = ALL; "__none__" sentinel = user blanked it → nothing.
+  if(state.mgr instanceof Set && state.mgr.size){
+    if(state.mgr.has("__none__")) rows=[];
+    else rows=rows.filter(r=>state.mgr.has(String(r.manager||"").trim()));
   }
   // No default ranking by performance: the table is NOT auto-sorted worst-first.
   // Sorting is applied ONLY when the user explicitly clicks a column header
@@ -2730,6 +2832,7 @@ function renderTable(){
           </div>
         </div>
       </td>
+      <td class="bl-fc-only" title="${esc(r.manager||"")}"><span class="td-manager">${esc(r.manager||"—")}</span></td>
       <td class="bl-fc-only"><span class="td-dept">${esc(r.dept)}</span></td>
       <td class="bl-fc-only"><span class="td-dept">${esc(r.cohort||"—")}</span>${(()=>{
         if(r.curve==="VETERAN") return '<div class="curve-label curve-vet">VET</div>';
@@ -4866,7 +4969,8 @@ $("btnPipeline").addEventListener("click", async ()=>{
               localStorage.setItem("argos_filter_restore", JSON.stringify({
                 prio: Array.from(state.prio),
                 curve: state.curve,
-                tenureFilter: state.tenureFilter,
+                tenureSet: Array.from(state.tenureSet||[]),
+                mgr: Array.from(state.mgr||[]),
                 q: state.q,
                 hideCoached: state.hideCoached,
                 maxRows: state.maxRows
@@ -5025,6 +5129,24 @@ function _runPerformanceOnce(){
   });
 }
 
+// POST a poll endpoint, retrying a few times if the server replies
+// `skipped: pipeline busy` (another pipeline still holds the shared lock). This
+// is the safety net over the server-side race fix: even if a poll lands during
+// the brief window a prior pipeline is finishing, we retry until it actually
+// runs instead of silently missing the refresh (the bug where auto-update
+// didn't pick up the full GCA pipeline).
+async function _pollWithRetry(url, tries){
+  tries = tries || 4;
+  for(var i=0;i<tries;i++){
+    try{
+      const r = await fetch(url, {method:"POST"});
+      const j = await r.json().catch(function(){return {};});
+      if(!(j && j.skipped)) return j;         // ran (or a real error) → done
+    }catch(_){ return; }                       // network error → give up quietly
+    await new Promise(function(res){ setTimeout(res, 3000); });  // wait for the lock to free
+  }
+}
+
 // Run the enabled sources in SEQUENCE (never in parallel — they share the server
 // lock, so parallel = collisions + skips). `opts.only` limits which sources run
 // (the master auto-exec timer passes the user-enabled set); default = all three.
@@ -5057,12 +5179,12 @@ async function _refreshAllQueue(opts){
     }
     if(only.gca){
       _step("GCA"); _setFreshLoading("freshGca", "GCA");
-      try{ await fetch(`${API}/api/gca/poll?fc=${encodeURIComponent(fc)}`, {method:"POST"}); }catch(_){}
+      await _pollWithRetry(`${API}/api/gca/poll?fc=${encodeURIComponent(fc)}`);
       _clearFreshLoading("freshGca"); _refreshFreshness();
     }
     if(only.quality){
       _step("Quality"); _setFreshLoading("freshQual", "Q");
-      try{ await fetch(`${API}/api/quality/poll?fc=${encodeURIComponent(fc)}`, {method:"POST"}); }catch(_){}
+      await _pollWithRetry(`${API}/api/quality/poll?fc=${encodeURIComponent(fc)}`);
       _clearFreshLoading("freshQual"); _refreshFreshness();
     }
     if(!silent) showToast({title:"✅ Todo actualizado", body:"Datos al día.", type:"ok", ms:3500});
@@ -5120,16 +5242,37 @@ setInterval(_refreshFreshness, 60 * 1000);
 // enabled in Settings. Runs at most once per app load.
 setTimeout(()=>{ try{ _refreshAllQueue({firstRun:true}); }catch(_){} }, 8000);
 
+// ── Usage ping (adoption) — human-presence gated ─────────────────────────────
+// Adoption used to be inferred from pipeline runs, but the auto-exec timer now
+// runs pipelines unattended every 15 min, so an idle machine would fake usage.
+// Instead we record ONE usage row on the first REAL human interaction of the day
+// (click or keydown). Debounced via localStorage to once-per-day per browser;
+// the server also guards once-per-user-per-day. A background timer never fires
+// this because it's wired to genuine input events only.
+function _maybePingUsage(){
+  try{
+    var today = new Date().toISOString().slice(0,10);   // YYYY-MM-DD
+    if(localStorage.getItem("argos_usage_pinged") === today) return _disarmUsagePing();
+    localStorage.setItem("argos_usage_pinged", today);   // set first → no double-fire
+    var fc = (localStorage.getItem("argos-default-fc") || currentFC || "BCN4");
+    fetch(`${API}/api/usage/ping?fc=${encodeURIComponent(fc)}`, {method:"POST"}).catch(function(){});
+  }catch(_){}
+  _disarmUsagePing();
+}
+function _disarmUsagePing(){
+  document.removeEventListener("click", _maybePingUsage, true);
+  document.removeEventListener("keydown", _maybePingUsage, true);
+}
+// Capture phase so any real click/keypress counts, even if handlers stop propagation.
+document.addEventListener("click", _maybePingUsage, true);
+document.addEventListener("keydown", _maybePingUsage, true);
+
 // ── Toolbar ────────────────────────────────────────────────
 document.querySelectorAll("[data-curve]").forEach(btn=>{
   btn.addEventListener("click",()=>{
     state.curve = btn.dataset.curve || "ALL";
     renderAll();
   });
-});
-$("tenureFilter") && $("tenureFilter").addEventListener("change",e=>{
-  state.tenureFilter = e.target.value;
-  renderAll();
 });
 $("btnRefresh") && $("btnRefresh").addEventListener("click",loadDashboard);
 (()=>{
@@ -5149,6 +5292,12 @@ $("toggleCoached").addEventListener("click",()=>{
   state.hideCoached=!state.hideCoached;
   $("toggleCoached").classList.toggle("active",state.hideCoached);
   $("coachToggleIcon").textContent=state.hideCoached?"●":"○";
+  renderAll();
+});
+$("toggleFirstDays") && $("toggleFirstDays").addEventListener("click",()=>{
+  state.firstDaysOnly=!state.firstDaysOnly;
+  $("toggleFirstDays").classList.toggle("active",state.firstDaysOnly);
+  $("firstDaysIcon").textContent=state.firstDaysOnly?"●":"○";
   renderAll();
 });
 $("noteFilterSelect") && $("noteFilterSelect").addEventListener("change",e=>{
@@ -5362,7 +5511,8 @@ initProcessMs();
     var f = JSON.parse(raw);
     if(f.prio) state.prio = new Set(f.prio);
     if(f.curve) state.curve = f.curve;
-    if(f.tenureFilter != null) state.tenureFilter = f.tenureFilter;
+    if(Array.isArray(f.tenureSet)) state.tenureSet = new Set(f.tenureSet);
+    if(Array.isArray(f.mgr)) state.mgr = new Set(f.mgr);
     if(f.q) state.q = f.q;
     if(f.hideCoached != null) state.hideCoached = f.hideCoached;
     if(f.maxRows) state.maxRows = f.maxRows;
@@ -5417,6 +5567,127 @@ async function _checkNecroPermission(){
 _initApp().then(()=>loadDashboard()).then(()=>_checkNecroPermission());
 // Re-check every 15 min (a user added mid-shift sees the banner clear on its own).
 setInterval(_checkNecroPermission, 15 * 60 * 1000);
+
+// ─── Captain Mode (tab) ─────────────────────────────────────────
+// Two modes: MONITOR (Day-1/2 on shift now, photo+station cards) and REPORTING
+// (same associate Day 1 vs Day 2: rate delta + defects). Add/drop logins.
+(function(){
+  let _capData=null, _capComp=null;
+  const _adds=new Set(), _drops=new Set(), _compAdds=new Set();
+  function _ymd(daysAgo){ const d=new Date(); if(daysAgo!=null) d.setDate(d.getDate()-daysAgo); return d.toISOString().slice(0,10); }
+  function _capMode(m){
+    document.querySelectorAll(".cap-mode").forEach(b=>b.classList.toggle("on",b.dataset.capMode===m));
+    $("capPaneMonitor").style.display = m==="monitor"?"":"none";
+    $("capPaneReport").style.display  = m==="report"?"":"none";
+    if(m==="report" && !$("capD1").value){ $("capD1").value=_ymd(1); $("capD2").value=_ymd(0); }
+  }
+  // ── MONITOR ──
+  async function _monRun(){
+    const date=$("capDate").value||_ymd(0);
+    const wrap=$("capCards"); if(wrap) wrap.innerHTML='<div class="cap-empty">Loading…</div>';
+    const q=[..._adds].join(","), x=[..._drops].join(",");
+    try{
+      _capData=await jget(`${API}/api/captain/report?fc=${encodeURIComponent(currentFC)}&date=${encodeURIComponent(date)}`
+        +(q?`&logins=${encodeURIComponent(q)}`:"")+(x?`&exclude=${encodeURIComponent(x)}`:""));
+      _monRender();
+    }catch(e){ if(wrap) wrap.innerHTML=`<div class="cap-empty" style="color:#c0392b">Error: ${esc(e.message||String(e))}</div>`; }
+  }
+  function _monRender(){
+    const d=_capData; if(!d) return;
+    $("capMeta").innerHTML=`<b>${d.count}</b> first-days · ${d.auto_detected} auto${d.is_past?' · <span style="color:#c98500">past day</span>':' · on shift'} · ${esc(d.date)}`;
+    const rows=d.rows||[]; const wrap=$("capCards");
+    if(!rows.length){ wrap.innerHTML='<div class="cap-empty">No Day-1/Day-2 associates. Add a login manually if needed.</div>'; $("capCsv").style.display="none"; return; }
+    wrap.innerHTML=rows.map(r=>{
+      const photo = r.photo_url?`<img class="cap-photo" src="${esc(r.photo_url)}" onerror="this.outerHTML='<div class=cap-nophoto>?</div>'">`:`<div class="cap-nophoto">?</div>`;
+      const defs=(r.defects&&r.defects.length)?r.defects.map(x=>`<span class="cap-def">${esc(x.error)}: ${x.defects}</span>`).join(""):`<span class="cap-def none">no defects</span>`;
+      const rate=(r.rate!=null)?Math.round(r.rate):'<span style="color:#c98500" title="No rate — needs FCLM">—</span>';
+      const vet=(r.vet_rate!=null)?Math.round(r.vet_rate):'—';
+      return `<div class="cap-card">
+        <button class="cap-drop" data-drop="${esc(r.login)}" title="Remove">✕</button>
+        ${photo}
+        <div class="cap-info">
+          <div><span class="cap-day ${r.day===2?'d2':''}">Day ${r.day||'?'}</span> <span class="cap-login">${esc(r.login)}</span>${r.manual?'<span class="cap-manual-badge">manual</span>':''}</div>
+          <div class="cap-name">${esc(r.name||'')} · ${esc(r.manager||'—')}</div>
+          <div class="cap-station">📍 ${esc(r.station||'—')} · ${esc(r.subprocess||r.process||'')}</div>
+          <div class="cap-metrics"><span><span class="m-lbl">Rate</span><b>${rate}</b></span><span><span class="m-lbl">Vet rate</span><b>${vet}</b></span></div>
+          <div class="cap-defs">${defs}</div>
+        </div></div>`;
+    }).join("");
+    $("capCsv").style.display="";
+    wrap.querySelectorAll("[data-drop]").forEach(b=>b.addEventListener("click",()=>{ const lg=b.dataset.drop.toLowerCase(); _drops.add(lg); _adds.delete(lg); _monRun(); }));
+  }
+  function _monCsv(){
+    const d=_capData; if(!d||!d.rows.length) return;
+    const head=["Day","Login","Name","Manager","Station","Sub-process","Rate","Vet rate","Defects"];
+    const lines=[head.join(",")];
+    for(const r of d.rows){ const defs=(r.defects||[]).map(x=>`${x.error}:${x.defects}`).join("; ");
+      lines.push([r.day||"",r.login,r.name||"",r.manager||"",r.station||"",r.subprocess||"",r.rate!=null?Math.round(r.rate):"",r.vet_rate!=null?Math.round(r.vet_rate):"",defs].map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")); }
+    const b=new Blob([lines.join("\n")],{type:"text/csv"}); const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download=`captain_monitor_${d.date}_${d.fc}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  }
+  // ── REPORTING (Day1 vs Day2) ──
+  async function _compRun(){
+    const d1=$("capD1").value, d2=$("capD2").value;
+    if(!d1||!d2){ $("capCompWrap").innerHTML='<div class="cap-empty">Pick both dates.</div>'; return; }
+    const wrap=$("capCompWrap"); wrap.innerHTML='<div class="cap-empty">Comparing…</div>';
+    const q=[..._compAdds].join(",");
+    try{
+      _capComp=await jget(`${API}/api/captain/compare?fc=${encodeURIComponent(currentFC)}&date1=${d1}&date2=${d2}`+(q?`&logins=${encodeURIComponent(q)}`:""));
+      _compRender();
+    }catch(e){ wrap.innerHTML=`<div class="cap-empty" style="color:#c0392b">Error: ${esc(e.message||String(e))}</div>`; }
+  }
+  function _compRender(){
+    const d=_capComp; if(!d) return;
+    $("capCompMeta").innerHTML=`<b>${d.count}</b> associates · Day 1 = ${esc(d.date1)} → Day 2 = ${esc(d.date2)}`;
+    const rows=d.rows||[]; const wrap=$("capCompWrap");
+    if(!rows.length){ wrap.innerHTML='<div class="cap-empty">No associates for these dates.</div>'; $("capCompCsv").style.display="none"; return; }
+    const defList=a=>(a&&a.length)?a.map(x=>`<span class="cap-def">${esc(x.error)}: ${x.defects}</span>`).join(""):`<span class="cap-def none">0</span>`;
+    let h=`<table class="cap-table"><thead><tr><th>Login</th><th>Station</th><th>Sub-process</th>
+      <th>Rate D1<br><span style="font-weight:400">${esc(d.date1)}</span></th><th>Rate D2<br><span style="font-weight:400">${esc(d.date2)}</span></th><th>Δ Rate</th>
+      <th>Defects D1</th><th>Defects D2</th></tr></thead><tbody>`;
+    for(const r of rows){
+      const dl=r.rate_delta;
+      const dcls=dl==null?'flat':(dl>0?'up':(dl<0?'down':'flat'));
+      const dtxt=dl==null?'—':(dl>0?`▲ +${Math.round(dl)}`:(dl<0?`▼ ${Math.round(dl)}`:'0'));
+      h+=`<tr>
+        <td><b>${esc(r.login)}</b><br><span style="font-size:11px;color:var(--text-secondary)">${esc(r.name||'')}</span></td>
+        <td>${esc(r.station||'—')}</td>
+        <td>${esc(r.subprocess||'—')}</td>
+        <td>${r.rate_d1!=null?Math.round(r.rate_d1):'<span style="color:#c98500">—</span>'}</td>
+        <td>${r.rate_d2!=null?Math.round(r.rate_d2):'<span style="color:#c98500">—</span>'}</td>
+        <td class="cap-delta ${dcls}">${dtxt}</td>
+        <td>${defList(r.defects_d1)}</td>
+        <td>${defList(r.defects_d2)}</td>
+      </tr>`;
+    }
+    h+=`</tbody></table>`; wrap.innerHTML=h; $("capCompCsv").style.display="";
+  }
+  function _compCsv(){
+    const d=_capComp; if(!d||!d.rows.length) return;
+    const head=["Login","Name","Manager","Station","Sub-process",`Rate D1 (${d.date1})`,`Rate D2 (${d.date2})`,"Delta rate","Defects D1","Defects D2"];
+    const lines=[head.join(",")];
+    for(const r of d.rows){ const f=a=>(a||[]).map(x=>`${x.error}:${x.defects}`).join("; ");
+      lines.push([r.login,r.name||"",r.manager||"",r.station||"",r.subprocess||"",r.rate_d1!=null?Math.round(r.rate_d1):"",r.rate_d2!=null?Math.round(r.rate_d2):"",r.rate_delta!=null?Math.round(r.rate_delta):"",f(r.defects_d1),f(r.defects_d2)].map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")); }
+    const b=new Blob([lines.join("\n")],{type:"text/csv"}); const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download=`captain_compare_${d.date1}_vs_${d.date2}_${d.fc}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  }
+  // ── wiring ──
+  window._onCaptainTab=function(){ if(!_capData){ $("capDate").value=_ymd(0); _monRun(); } };
+  document.querySelectorAll(".cap-mode").forEach(b=>b.addEventListener("click",()=>_capMode(b.dataset.capMode)));
+  document.querySelectorAll("#capPaneMonitor .cap-quick").forEach(q=>q.addEventListener("click",()=>{
+    document.querySelectorAll("#capPaneMonitor .cap-quick").forEach(z=>z.classList.remove("on")); q.classList.add("on");
+    $("capDate").value=_ymd(parseInt(q.dataset.capDay)); _monRun();
+  }));
+  $("capDate") && $("capDate").addEventListener("change",()=>{ document.querySelectorAll("#capPaneMonitor .cap-quick").forEach(z=>z.classList.remove("on")); _monRun(); });
+  $("capRun") && $("capRun").addEventListener("click",_monRun);
+  $("capCsv") && $("capCsv").addEventListener("click",_monCsv);
+  function _add(){ const el=$("capAddLogin"); const lg=(el.value||"").trim().toLowerCase(); if(!lg) return; _adds.add(lg); _drops.delete(lg); el.value=""; _monRun(); }
+  $("capAddBtn") && $("capAddBtn").addEventListener("click",_add);
+  $("capAddLogin") && $("capAddLogin").addEventListener("keydown",e=>{ if(e.key==="Enter") _add(); });
+  $("capCompareRun") && $("capCompareRun").addEventListener("click",_compRun);
+  $("capCompCsv") && $("capCompCsv").addEventListener("click",_compCsv);
+  function _cadd(){ const el=$("capCompAdd"); const lg=(el.value||"").trim().toLowerCase(); if(!lg) return; _compAdds.add(lg); el.value=""; _compRun(); }
+  $("capCompAddBtn") && $("capCompAddBtn").addEventListener("click",_cadd);
+  $("capCompAdd") && $("capCompAdd").addEventListener("keydown",e=>{ if(e.key==="Enter") _cadd(); });
+})();
 
 // ─── Settings Popover ──────────────────────────────────────────
 const _spPanel = $("settingsPopover");
@@ -6994,16 +7265,20 @@ document.addEventListener("click",(e)=>{
     // P1: SINGLES — "wsSINGLES_03_08" or "SINGLES-03-
     m = s.match(/SINGLES[_-](\d+)[_-](\d+)/i);
     if(m) return {floor:"p1", type:"singles", id:parseInt(m[1]), pos:parseInt(m[2])};
-    // P2R — "wsPickToRebin2_216_01" (P2) or "wsPickToRebin3_316_02" (P3).
-    // The muro is numbered per floor: P2 = 2xx (202..220), P3 = 3xx (302..320).
-    // Normalise the muro to its 2xx base before computing the slot so both
-    // floors map into the same 50.. offset and render in the P2R row (not as a
-    // plain station). num = floor*1000 + 50 + (muroBase-202)*2 + pos.
+    // P2R (Pack→Rebin) — "wsPickToRebin2_207_02". Owner's naming (auto-detect,
+    // no hardcoded wall list):
+    //   grp1 = floor (2 or 3)
+    //   grp2 = FfWW where F=floor digit, WW = muro (01..20 → 20 walls per floor)
+    //   grp3 = pack FACE fed by this muro's single P2R picker (01 / 02) — there
+    //          is ONE P2R per muro feeding TWO pack faces, so the suffix is the
+    //          face, not a second picker.
+    // The real wall is grp2 % 100 (07, 15, …). num is a synthetic per-floor id
+    // (fl*1000+50 + wall*2 + face) that never collides with ring stations; each
+    // face is its own map cell (owner wants one cell per station). p2r:true.
     m = s.match(/(?:P2R|PickToRebin)(\d+)[_-](\d+)[_-](\d+)/);
     if(m){
-      var fl=parseInt(m[1]); var muro=parseInt(m[2]); var pos2=parseInt(m[3]);
-      var muroBase = muro % 100 + 200;            // 302 -> 202, 216 -> 216
-      return {floor: "p"+fl, num: fl*1000+50+(muroBase-202)*2+pos2};
+      var fl=parseInt(m[1]); var wall=parseInt(m[2]) % 100; var face=parseInt(m[3]);
+      return {floor: "p"+fl, num: fl*1000+50+(wall-1)*2+face, p2r:true, wall:wall, pos:face, face:face};
     }
     // P1: WS lines — "ws1117", "ws1209", "ws1412" → these are LINES (like
     // Singles), NOT walls. Line = the 11/12/14 group, pos = last 2 digits.
@@ -7140,10 +7415,21 @@ document.addEventListener("click",(e)=>{
     try{ var p = parsePerfStation(raw); return (p && p.floor) ? String(p.floor) : ""; }
     catch(_){ return ""; }
   };
+  // Expose the FULL parser too. parsePerfStationCached (global scope) referenced
+  // `parsePerfStation` directly, but that function lives INSIDE this closure — so
+  // from the global scope `typeof parsePerfStation` was always false and the cache
+  // returned null for EVERY station. That silently emptied the GCA station map
+  // (0 pending per floor). Exposing it on window lets the cache reach the real
+  // parser. (bug fix 2026-07-29)
+  window.parsePerfStation = parsePerfStation;
 
   // Load layout for initial FC, and reload when FC changes
   _loadMapLayout(currentFC);
   window._reloadMapLayout = function(fc){ _mapLayout = null; _loadMapLayout(fc, function(){ if(perfMapVisible) renderPerfMap(); }); };
+  // Expose the raw layout so code in OTHER closures (e.g. the coaching-path
+  // geometry) can read top-level fields like side_meters without referencing
+  // _mapLayout directly (which lives only in this IIFE's scope).
+  window._getMapLayout = function(){ return _mapLayout; };
 
   function renderPerfARFloor(containerId, floorDef, stationData){
     var floorId = floorDef.id;
@@ -7338,13 +7624,17 @@ document.addEventListener("click",(e)=>{
     topDiv.className = 'sm-row sm-top';
     renderRow(topRow, topDiv);
 
-    // P2R Pack row
+    // P2R Pack row — 20 walls per floor (1..20), 2 faces each. Numbering matches
+    // the parser (parsePerfStation): num = fl*1000 + 50 + (wall-1)*2 + face,
+    // wall = 1..20. Walls run LEFT→RIGHT in muro order 1..20 (trainer-confirmed:
+    // highest PTR = muro 1). This replaced the old (muro-202)*2 formula + the
+    // hardcoded descending [220..202] list, which no longer matched the keys.
     var p2rDiv = document.createElement('div');
     p2rDiv.className = 'sm-row sm-p2r';
     p2rDiv.style.cssText = 'margin-top:6px;';
-    p2rMuros.forEach(function(muro){
-      for(let pos=1; pos<=2; pos++){
-        let p2rNum = p2rFloorNum*1000 + 50 + (muro-202)*2 + pos;
+    for(let wall=1; wall<=20; wall++){
+      for(let face=1; face<=2; face++){
+        let p2rNum = p2rFloorNum*1000 + 50 + (wall-1)*2 + face;
         let p2rKey = floorId + '_' + p2rNum;
         let p2rData = stationData[p2rKey];
         if(!window._perfShowAll && !p2rData) continue;
@@ -7352,7 +7642,8 @@ document.addEventListener("click",(e)=>{
         var p2rSt = document.createElement('div');
         p2rSt.className = 'sm-station sm-p2r-station ' + p2rCls;
         var p2rBadge = p2rData ? modeBadge(p2rData) : '';
-        var muroShort = muro % 100;  // 216 -> 16, 220 -> 20 (drop the floor digit)
+        var muroShort = wall;
+        var pos = face;
         p2rSt.innerHTML = p2rBadge + '<span class="sm-type">P2R</span><span class="sm-num">' + muroShort + '-' + pos + '</span>';
         if(p2rData){
           var lbl = 'P2R ' + muroShort + '-' + pos;
@@ -7374,7 +7665,7 @@ document.addEventListener("click",(e)=>{
         }
         p2rDiv.appendChild(p2rSt);
       }
-    });
+    }
 
     var midDiv = document.createElement('div');
     midDiv.className = 'sm-middle';
@@ -8416,9 +8707,9 @@ document.addEventListener("click",(e)=>{
     _updateGcaFabVisibility();
   }
   function _updateGcaFabVisibility(){
-    var onGca = document.getElementById("panel-gca") && document.getElementById("panel-gca").classList.contains("active");
-    if(_gcaFab) _gcaFab.style.display = (onGca && !floorMapVisible) ? "inline-flex" : "none";
-    if(_gcaPopup && !onGca) _gcaPopup.classList.remove("open");  // ocultar popup fuera de GCA
+    // GCA station-map popup/FAB retired (visual bug): never surface it.
+    if(_gcaFab) _gcaFab.style.display = "none";
+    if(_gcaPopup) _gcaPopup.classList.remove("open");
   }
   window._updateGcaFabVisibility = _updateGcaFabVisibility;
   if(_gcaFab) _gcaFab.addEventListener("click", _openGcaMap);
@@ -9438,6 +9729,195 @@ document.addEventListener("click",(e)=>{
     return out;
   }
 
+  // ── Real-metric ring geometry ──────────────────────────────────────────
+  // The layout JSON has no x/y coordinates, only per-side station lists. We
+  // model each side as a straight run of known length (meters); the first and
+  // last station sit _PATH_END_INSET metres from the ends, the rest are evenly
+  // interpolated (owner's rule). This turns a station number into a real
+  // position along the floor perimeter, so walking distance is honest instead
+  // of the old fake index*3 (which also blew up to ~3000 m whenever a station
+  // wasn't on the ring — the 999 sentinel). Side lengths seed from the BCN4 P1
+  // plan (footprint ≈330×175 m); any site/floor can override via
+  // side_meters:{top,right,bottom,left} in map_layouts.json.
+  var _PATH_END_INSET = 20; // m from each side end to the first/last station
+  var _PATH_WALK_MPS  = 1.2; // walking speed m/s used for the time estimate
+  function _sideMeters(floor){
+    var fl = (window._getFloors?window._getFloors():[]).find(function(f){return f.id===floor;}) || {};
+    var ml = (window._getMapLayout && window._getMapLayout()) || null;
+    var sm = fl.side_meters || (ml && ml.side_meters) || {};
+    return {top:+sm.top||330, right:+sm.right||175, bottom:+sm.bottom||330, left:+sm.left||175};
+  }
+  // Position (m) of a station within its side, from the side's start. null if
+  // the station isn't in that side's list.
+  function _posInSide(list, stNum, sideLen){
+    var i = list.indexOf(stNum);
+    if(i < 0) return null;
+    if(list.length <= 1) return sideLen/2;
+    var usable = Math.max(0, sideLen - 2*_PATH_END_INSET);
+    return _PATH_END_INSET + usable * (i/(list.length-1));
+  }
+  // Estimate a perimeter position for a station NOT in the layout arrays, in a
+  // way CONSISTENT with the array-index positions of its real neighbours (the
+  // layout array order is the physical source of truth — same as the perf map).
+  // Naive number-range interpolation broke ordering (e.g. 3322 landed between
+  // 3360 and 3393): the array has gaps so number != index. Fix: locate the side
+  // by number, find the two array entries the number falls between, and
+  // interpolate its position from THEIR real _posInSide positions.
+  function _estSideMeters(stNum, floor){
+    var base = stNum >= 3000 ? stNum - 1000 : stNum;
+    var arr = _getPathArrays()[floor], L = _sideMeters(floor);
+    // side, its perimeter offset, length, and whether metres run opposite to num
+    var list, offset, sideLen, invert;
+    if(base <= 2199){       list = arr && arr.top;    offset = 0;                        sideLen = L.top;    invert = false; }
+    else if(base <= 2299){  list = arr && arr.left;   offset = L.top+L.right+L.bottom;   sideLen = L.left;   invert = true; }
+    else if(base <= 2399){  list = arr && arr.bottom; offset = L.top+L.right;            sideLen = L.bottom; invert = true; }
+    else {                  list = arr && arr.right;  offset = L.top;                    sideLen = L.right;  invert = false; }
+    function atIndex(idx, len){
+      var within = (len<=1) ? sideLen/2 : _PATH_END_INSET + Math.max(0,sideLen-2*_PATH_END_INSET)*(idx/(len-1));
+      return offset + (invert ? (sideLen - within) : within);
+    }
+    if(list && list.length){
+      var n = list.length, below=-1, above=-1, bv=null, av=null;
+      for(var i=0;i<n;i++){
+        var v = list[i] >= 3000 ? list[i]-1000 : list[i];
+        if(v <= base && (bv===null || v>bv)){ bv=v; below=i; }
+        if(v >= base && (av===null || v<av)){ av=v; above=i; }
+      }
+      if(below>=0 && above>=0){
+        if(below===above) return atIndex(below, n);
+        var frac = (av===bv) ? 0 : (base-bv)/(av-bv);
+        return atIndex(below, n) + (atIndex(above, n)-atIndex(below, n))*frac;
+      }
+      if(below>=0) return atIndex(below, n);
+      if(above>=0) return atIndex(above, n);
+    }
+    // no array → linear-by-number fallback (rare: floors without a layout)
+    var f = Math.max(0, Math.min(1, (base-(offset===0?2104:base))/1)); // degenerate
+    return offset + sideLen*0.5;
+  }
+  // ── Canonical perimeter position (SAME source of truth as the tab-Map) ──────
+  // The layout arrays (top/right/bottom/left) list stations in physical order;
+  // the perf map just renders them in that order. So a station's position on the
+  // ring = its index walking the perimeter clockwise: top → right → bottom →
+  // left. We build that ordered sequence once per floor and index into it. This
+  // replaces the metre-interpolation guesswork that mis-placed off-array stops.
+  var _perimSeqCache = {};
+  function _perimSeq(floor){
+    if(_perimSeqCache[floor]) return _perimSeqCache[floor];
+    var arr = _getPathArrays()[floor];
+    if(!arr){ _perimSeqCache[floor] = null; return null; }
+    // Clockwise walk. left is stored top→bottom in the layout, so reverse it to
+    // continue the clockwise loop (…bottom → up the left side).
+    var seq = [].concat(arr.top, arr.right, arr.bottom, arr.left.slice().reverse());
+    var idx = {};
+    seq.forEach(function(n, i){ idx[String(n)] = i; });
+    var out = {seq:seq, idx:idx, len:seq.length,
+               sideStart:{N:0, E:arr.top.length, S:arr.top.length+arr.right.length,
+                          O:arr.top.length+arr.right.length+arr.bottom.length}};
+    _perimSeqCache[floor] = out;
+    return out;
+  }
+  // Is this parsed station something we can actually place on the map + route?
+  // Accepts: P1 pack stations (known type), P2R packers, and AR ring stations
+  // whose number falls inside a real cardinal range for their floor. Rejects the
+  // junk the 4-digit fallback invents from location-ids (4300035018 → "4300",
+  // wsPOPS_P2R2W01 → "2201") by requiring the number to be a plausible ring
+  // station (x1xx..x4xx band) on floors p2..p9.
+  function _isRoutableStation(parsed){
+    if(!parsed) return false;
+    if(parsed.floor === "p1"){ return !!parsed.type; }        // P1 by zone type
+    if(parsed.p2r) return true;                               // P2R packer
+    if(!parsed.num) return false;
+    var fl = parsed.floor || "";
+    if(!/^p[2-9]$/.test(fl)) return false;                    // p4300 etc → reject
+    var base = parsed.num >= 3000 ? (parsed.num % 1000) + 2000 : parsed.num;
+    // real ring bands: N 2104-2197, O 2200-2295, S 2306-2395, E 2422-2494,
+    // plus the P2R synthetic band 2051-2090 (num-encoded packers).
+    return (base>=2051 && base<=2094) || (base>=2104 && base<=2197) ||
+           (base>=2200 && base<=2295) || (base>=2306 && base<=2395) ||
+           (base>=2422 && base<=2494);
+  }
+  // Position of a station along the perimeter as a fractional index (0..len).
+  // Uses the array index directly when listed; otherwise slots it BETWEEN its
+  // numeric neighbours on the correct side (consistent with the array order).
+  function _stationMeters(stNum, floor){
+    var ps = _perimSeq(floor);
+    if(!ps) return null;
+    var key = String(stNum);
+    if(ps.idx[key] != null) return ps.idx[key];
+    // Not listed → find the side, then bracket by number within that side's seq.
+    var side = _arSide(stNum, floor);
+    var arr = _getPathArrays()[floor];
+    var sideList = {N:arr.top, E:arr.right, S:arr.bottom, O:arr.left.slice().reverse()}[side] || arr.top;
+    var base = stNum >= 3000 ? stNum - 1000 : stNum;
+    var below=-1, above=-1, bv=null, av=null;
+    for(var i=0;i<sideList.length;i++){
+      var v = sideList[i] >= 3000 ? sideList[i]-1000 : sideList[i];
+      var gi = ps.idx[String(sideList[i])];
+      if(v<=base && (bv===null||v>bv)){ bv=v; below=gi; }
+      if(v>=base && (av===null||v<av)){ av=v; above=gi; }
+    }
+    if(below>=0 && above>=0){
+      if(below===above) return below;
+      var frac = (av===bv)?0:(base-bv)/(av-bv);
+      return below + (above-below)*frac;
+    }
+    if(below>=0) return below;
+    if(above>=0) return above;
+    return ps.sideStart[side] || 0;
+  }
+  // Perimeter length = number of stations in the clockwise sequence (the ring
+  // closes on itself, so distance is measured in "stations apart").
+  function _perimeterMeters(floor){ var ps=_perimSeq(floor); return ps? ps.len : 0; }
+  // Shorter walk between two perimeter positions (the ring closes on itself).
+  function _ringDist(a, b, perim){ var d=Math.abs(a-b); return Math.min(d, perim-d); }
+
+  // Order station-groups into a walking route. With an origin (m along the
+  // perimeter) it's nearest-neighbour greedy from where the trainer stands;
+  // without one it falls back to a plain clockwise sweep. Off-ring groups
+  // (station we couldn't place) go last and never inflate the distance.
+  function _orderPathGroups(groups, floor, originM){
+    // Use the precomputed group position (handles P2R aisle + off-ring estimate);
+    // fall back to a fresh station-metre lookup if pos wasn't stamped.
+    groups.forEach(function(g){ g.mPos = (g.pos!=null ? g.pos : (g.num ? _stationMeters(g.num, floor) : null)); });
+    var onRing  = groups.filter(function(g){ return g.mPos!==null; });
+    var offRing = groups.filter(function(g){ return g.mPos===null; });
+    if(onRing.length <= 1) return onRing.concat(offRing);
+
+    var perim = _perimeterMeters(floor);
+    onRing.sort(function(a,b){ return a.mPos - b.mPos; });
+
+    // SINGLE-DIRECTION SWEEP around the ring (minimise walking, no zig-zag). The
+    // ring is a closed loop, so the shortest tour that hits every stop is the
+    // whole perimeter MINUS its largest empty gap: you enter the arc at one end
+    // of that gap and sweep straight to the other. Find the biggest gap between
+    // consecutive stops (incl. the wrap-around) and start right after it.
+    var biggestGap = -1, cutIdx = 0;
+    for(var i=0;i<onRing.length;i++){
+      var next = (i+1) % onRing.length;
+      var gap = (i === onRing.length-1)
+        ? (perim - onRing[i].mPos) + onRing[0].mPos   // wrap gap
+        : onRing[next].mPos - onRing[i].mPos;
+      if(gap > biggestGap){ biggestGap = gap; cutIdx = next; }
+    }
+    // Rotate so the sweep starts just after the biggest gap.
+    var swept = onRing.slice(cutIdx).concat(onRing.slice(0, cutIdx));
+
+    if(originM==null) return swept.concat(offRing);
+
+    // With an origin: keep the single-direction sweep but ROTATE it to start at
+    // the stop nearest the origin, then continue in whichever direction has the
+    // closer neighbour — still one clean pass, no back-and-forth.
+    var startI=0, bd=Infinity;
+    for(var k=0;k<swept.length;k++){ var d=_ringDist(originM, swept[k].mPos, perim); if(d<bd){bd=d;startI=k;} }
+    var fwd = swept.slice(startI).concat(swept.slice(0,startI));
+    // direction check: distance origin→first going forward vs the reverse order
+    var rev = swept.slice(0,startI+1).reverse().concat(swept.slice(startI+1).reverse());
+    function span(list){ var t=0; for(var j=1;j<list.length;j++) t+=_ringDist(list[j-1].mPos,list[j].mPos,perim); return t + _ringDist(originM,list[0].mPos,perim); }
+    var route = (span(fwd) <= span(rev)) ? fwd : rev;
+    return route.concat(offRing);
+  }
+
   function perimeterIndex(stNum, floor){
     var arrays = _getPathArrays()[floor];
     if(!arrays) return 999;
@@ -9477,123 +9957,885 @@ document.addEventListener("click",(e)=>{
     return "NU";
   }
 
+  // ── P1 (pack) helpers ────────────────────────────────────────────────────
+  // P1 stations have a `type` (afe/rebin/induct/singles/ws/decant) instead of a
+  // 4-digit AR number, so the ring geometry doesn't apply. We give each a
+  // synthetic linear order that follows a sensible pack walk by zone (owner's
+  // colour key: Receive=red, AFE=pink, Singles=blue, WS=black). Real metres/doors
+  // for P1 are pending the pack layout; this at least orders + labels them so
+  // they show up in the list and the origin picker instead of being dropped.
+  var _P1_ZONE_ORDER = {decant:0, induct:1, afe:2, rebin:3, singles:4, ws:5};
+  function _p1SortKey(p){
+    if(!p) return 9999;
+    var base = (_P1_ZONE_ORDER[p.type] != null ? _P1_ZONE_ORDER[p.type] : 9) * 1000;
+    var wall = p.wall || p.line || p.id || 0;
+    var pos  = (typeof p.pos === "number") ? p.pos : 0;
+    return base + (wall % 100) * 10 + pos;
+  }
+  function _p1Label(p){
+    if(!p) return "P1";
+    switch(p.type){
+      case "afe":     return "AFE"+(p.id||"")+" · muro "+(p.wall||"?")+"."+(p.pos||"?");
+      case "rebin":   return "Rebin "+(p.wall||"?")+" ("+("ABCD"[(p.pos||1)-1]||"?")+")";
+      case "induct":  return "Induct muro "+(p.wall||"?");
+      case "singles": return "Singles "+(p.id||"?")+"."+(p.pos||"?");
+      case "ws":      return "WS "+(p.line||"?")+"."+(p.pos||"?");
+      case "decant":  return "Receive/Decant "+(p.id||"?")+"."+(p.pos||"?");
+    }
+    return "P1";
+  }
+  function _p1TypeShort(t){
+    return ({afe:"AFE", rebin:"REB", induct:"IND", singles:"SGL", ws:"WS", decant:"REC"})[t] || "P1";
+  }
+  var _FLOOR_ORDER = {p1:1, p2:2, p3:3, p4:4, p5:5, p6:6, p7:7, p8:8, p9:9};
+  function _isARFloor(fl){ return /^p[2-9]$/.test(fl); }
+
+  // Linear position of a station-group within its floor (metres on AR ring, or
+  // synthetic key on P1) — drives ordering + the origin picker value.
+  function _groupPos(g){
+    if(_isARFloor(g.floor)){
+      // P2R (packer) is GLUED to the Norte by its muro's PTR picker → give it a
+      // perimeter index INSIDE the Norte (top) span, spread by muro (1..20), so
+      // the trainer does all of Norte (ring PTR + P2R) in one pass. Norte spans
+      // seq indices [0 .. top.length); place muros across it.
+      if(g.parsed && g.parsed.p2r){
+        var ps = _perimSeq(g.floor); if(!ps) return null;
+        var topLen = ps.sideStart.E; // Norte length = where East begins
+        var muro = g.parsed.wall || 1;
+        return (topLen>0 ? (topLen-1) * ((muro-1)/19) : 0);
+      }
+      return (g.num ? _stationMeters(g.num, g.floor) : null);
+    }
+    if(g.floor === "p1") return _p1SortKey(g.parsed);
+    return null;
+  }
+  // Human label for a station-group, AR or P1.
+  function _groupLabel(g){
+    if(_isARFloor(g.floor)) return "Est. "+g.num+" ("+pathSectionLabel(g.num)+")";
+    if(g.floor === "p1") return _p1Label(g.parsed);
+    return String(g.num||g.key||"?");
+  }
+  function _groupTypeShort(g){
+    if(_isARFloor(g.floor)) return pathTypeLabel(g.num);
+    return _p1TypeShort(g.parsed && g.parsed.type);
+  }
+
+  // ── CALM code catalog (official, from the L&D 'Map of standards' wiki) ──────
+  // Loaded once from /api/coaching/calm-codes: a flat list of valid trainee CALM
+  // codes + a course-name→code map. The Path 'Logar' picker uses it so the coach
+  // logs the associate under the correct standard code (legal requirement) and
+  // can override if the course→code guess is wrong.
+  var _calmCatalog = {codes:[], by_course:{}};
+  var _calmCatalogLoaded = false;
+  function _loadCalmCatalog(){
+    if(_calmCatalogLoaded) return Promise.resolve(_calmCatalog);
+    return fetch(API+"/api/coaching/calm-codes").then(function(r){return r.json();}).then(function(j){
+      if(j && j.ok){ _calmCatalog = {codes:j.codes||[], by_course:j.by_course||{}}; _calmCatalogLoaded = true; }
+      return _calmCatalog;
+    }).catch(function(){ return _calmCatalog; });
+  }
+  // Best CALM code for a course name from the official wiki map: exact match,
+  // else case-insensitive, else a loose contains match (course strings vary a
+  // bit between GCA and the wiki). Returns "" if the wiki has no entry.
+  function _calmCodeForCourse(course){
+    var c = String(course||"").trim();
+    if(!c || !_calmCatalog.by_course) return "";
+    var bc = _calmCatalog.by_course;
+    if(bc[c]) return bc[c];
+    var lc = c.toLowerCase();
+    var keys = Object.keys(bc);
+    for(var i=0;i<keys.length;i++){ if(keys[i].toLowerCase()===lc) return bc[keys[i]]; }
+    for(var j=0;j<keys.length;j++){ var k=keys[j].toLowerCase(); if(k && (lc.indexOf(k)>=0 || k.indexOf(lc)>=0)) return bc[keys[j]]; }
+    return "";
+  }
+  // Process → CALM feed code fallback, mirroring the backend PROCESS_TO_CALM so
+  // the card can show the code the server WOULD resolve when the wiki has no
+  // course entry. Kept in sync with domains/calm_tracking.py.
+  var _PROCESS_TO_CALM = [["STOW","STWFEED"],["PICK","PIKFEED"],["PACK","PAKFEED"],
+    ["RECEIVE","RCVFEED"],["RCV","RCVFEED"],["DECANT","RCVFEED"],["ICQA","ICQATR"],
+    ["SBC","ICQATR"],["BIN FILTER","ICQATR"],["BIN_FILTER","ICQATR"],["PEI","PIKFEED"],
+    ["PICK ERROR","PIKFEED"],["QUALITY","ICQATR"],["DEFECT","ICQATR"]];
+  function _calmCodeForProcess(proc){
+    var s = String(proc||"").toUpperCase();
+    for(var i=0;i<_PROCESS_TO_CALM.length;i++){ if(s.indexOf(_PROCESS_TO_CALM[i][0])>=0) return _PROCESS_TO_CALM[i][1]; }
+    return "";
+  }
+  // Resolve the CALM code to log a coaching under: official wiki course map
+  // first, then the process→feed fallback. Returns "" only if neither knows it.
+  function _resolveCalmCode(courseName, proc){
+    return _calmCodeForCourse(courseName) || _calmCodeForProcess(proc) || "";
+  }
+
+  // Path's own owner-scope filter (L&D / Team Lead / …) — independent of the GCA
+  // table filter so it doesn't disturb the main view.
+  var _pathOwnerFilter = "";
+  // Build the owner filter pills in the path header from the present pending set.
+  function _buildPathOwnerFilters(pending){
+    var box = $g("pathOwnerFilters");
+    if(!box) return;
+    var counts = {}; pending.forEach(function(i){ var o=i.owner||"—"; counts[o]=(counts[o]||0)+1; });
+    var owners = Object.keys(counts).sort();
+    var html = '<span class="path-owner-pill'+(!_pathOwnerFilter?" active":"")+'" data-owner="">Todos ('+pending.length+')</span>';
+    owners.forEach(function(o){
+      html += '<span class="path-owner-pill'+(_pathOwnerFilter===o?" active":"")+'" data-owner="'+esc(o)+'">'+esc(o)+' ('+counts[o]+')</span>';
+    });
+    box.innerHTML = html;
+    box.querySelectorAll(".path-owner-pill").forEach(function(p){
+      p.addEventListener("click", function(){
+        _pathOwnerFilter = p.getAttribute("data-owner") || "";
+        _showCoachingPathInner();   // re-run with the new scope
+      });
+    });
+  }
+
+  // Full-screen toggle for the path modal — more room for the list; Escape exits.
+  var _pathFull = false;
+  function _setPathFull(on){
+    _pathFull = !!on;
+    var card = $g("gcaPathCard"), body = $g("gcaPathBody"), mapWrap = $g("gcaPathMapWrap"), btn = $g("pathFullBtn");
+    if(!card) return;
+    if(_pathFull){
+      card.style.maxWidth = "none"; card.style.minHeight = "calc(100vh - 40px)";
+      // More room for pathing: hide the map, list goes full width (owner asked
+      // for the station map to be optional in full mode).
+      if(mapWrap) mapWrap.style.display = "none";
+      if(body) body.style.gridTemplateColumns = "1fr";
+      var list = $g("gcaPathList"); if(list) list.style.maxHeight = "calc(100vh - 140px)";
+      if(btn){ btn.textContent = "🗗"; btn.title = "Salir de pantalla completa (Esc)"; }
+    }else{
+      card.style.maxWidth = "1100px"; card.style.minHeight = "";
+      if(mapWrap) mapWrap.style.display = "";
+      if(body) body.style.gridTemplateColumns = "420px 1fr";
+      var list2 = $g("gcaPathList"); if(list2) list2.style.maxHeight = "600px";
+      if(btn){ btn.textContent = "⛶"; btn.title = "Pantalla completa (Esc para salir)"; }
+    }
+  }
+  function _closePathModal(){ var m=$g("gcaPathModal"); if(m) m.style.display="none"; if(_pathFull) _setPathFull(false); }
+
+  // Wire path modal chrome once (close, full-screen, Escape).
+  (function _wirePathChrome(){
+    var closeB = $g("pathCloseBtn"), fullB = $g("pathFullBtn");
+    if(closeB) closeB.addEventListener("click", _closePathModal);
+    if(fullB) fullB.addEventListener("click", function(){ _setPathFull(!_pathFull); });
+    document.addEventListener("keydown", function(e){
+      if(e.key!=="Escape") return;
+      var m = $g("gcaPathModal");
+      if(!m || m.style.display==="none") return;
+      // If the close/comment modal is open ON TOP of the path, let it handle Esc
+      // — don't close the path underneath it.
+      var cc = $g("modalCloseCoaching");
+      if(cc && cc.classList.contains("show")) return;
+      if(_pathFull) _setPathFull(false); else _closePathModal();
+    });
+  })();
+
   window._showCoachingPath = function(){
-    if(!gcaData || !gcaData.items) return;
+    try{ return _showCoachingPathInner(); }
+    catch(e){
+      console.error("Coaching Path failed:", e);
+      try{ showToast({title:"🧭 Path — error", body:String((e&&e.message)||e), type:"err", ms:6000}); }
+      catch(_){ alert("Path error: "+((e&&e.message)||e)); }
+    }
+  };
+  function _showCoachingPathInner(){
+    // No GCA data loaded yet → tell the user instead of silently doing nothing
+    // (the old behaviour looked like a dead button).
+    if(!gcaData || !gcaData.items){
+      showToast({title:"🧭 Path", body:"Abre la pestaña GCA y espera a que cargue antes de trazar el path.", type:"warn", ms:5000});
+      return;
+    }
     var items = gcaData.items.filter(function(i){return i.status==="PENDING";});
     var presenceOn = gcaPresentOnly;
     if(presenceOn) items = items.filter(function(i){return i.presence==="ACTIVE"||i.presence==="ON_SITE";});
-    if(gcaOwnerFilter) items = items.filter(function(i){return i.owner===gcaOwnerFilter;});
+    // The path has its OWN owner filter (L&D / Team Lead / …), independent of the
+    // GCA table's, so switching scope here doesn't disturb the main view.
+    if(_pathOwnerFilter) items = items.filter(function(i){return i.owner===_pathOwnerFilter;});
+    _buildPathOwnerFilters(gcaData.items.filter(function(i){return i.status==="PENDING" && (!presenceOn || i.presence==="ACTIVE" || i.presence==="ON_SITE");}));
 
-    // Group by whatever floor the parser resolved (p2..p9 for AR, p1 for pack),
-    // so robotic sites with P4+ are handled instead of being forced into p2/p3.
-    var byFloor = {};
+    // L&D covers EVERYTHING, so the path spans ALL present floors (P1 + P2..P9),
+    // not just the floor with the most coachings. ONLY coachings at a REAL,
+    // routable station are kept — associates who are On-site but not at a mapped
+    // station (raw GCA location-ids like 4300035018, pmP-1-B, wsPOPS…) have no
+    // place on the walk, so we drop them (you can't plan a route to "somewhere").
+    var entries = [], noStation = [];
     items.forEach(function(it){
       var parsed = parseStation(it.station);
-      if(!parsed) return;
+      if(!parsed || !_isRoutableStation(parsed)){ noStation.push(it); return; }
       var floor = parsed.floor || (parsed.num ? _arFloorOf2(parsed.num) : "p1");
-      if(!byFloor[floor]) byFloor[floor] = [];
-      byFloor[floor].push({item:it, parsed:parsed, num:parsed.num||0, floor:floor});
+      entries.push({item:it, parsed:parsed, num:parsed.num||0, floor:floor});
     });
-
-    var bestFloor = "p2"; var bestCount = 0;
-    for(var fl in byFloor){ if(byFloor[fl].length > bestCount){ bestCount = byFloor[fl].length; bestFloor = fl; } }
-
-    var pathItems = byFloor[bestFloor] || [];
-    if(!pathItems.length){ alert(tf("empty_no_coachings_floor", {floor: bestFloor.toUpperCase()})); return; }
-
-    // Perimeter ordering applies to any AR ring floor (p2..p9), not just p2/p3.
-    if(/^p[2-9]$/.test(bestFloor)){
-      pathItems.forEach(function(e){ e.pIdx = perimeterIndex(e.num, bestFloor); });
-      pathItems.sort(function(a,b){ return a.pIdx - b.pIdx; });
+    if(!entries.length){
+      // If the modal is already open (e.g. the owner filter emptied it), show an
+      // empty state in-place instead of only a toast + stale list.
+      var modalOpen = $g("gcaPathModal") && $g("gcaPathModal").style.display!=="none";
+      if(modalOpen){
+        var le = $g("gcaPathList"); if(le) le.innerHTML = '<div class="path-map-empty">Sin coachings ubicables'+(_pathOwnerFilter?' para «'+esc(_pathOwnerFilter)+'»':'')+'.</div>';
+        var me = $g("gcaPathMap"); if(me) me.innerHTML = "";
+      } else {
+        showToast({title:"🧭 Path", body:"No hay coachings con estación ubicable ahora mismo.", type:"warn", ms:5000});
+      }
+      return;
     }
 
-    var stationGroups = []; var seen = {};
-    pathItems.forEach(function(e){
-      var key = String(e.num||e.parsed.type+"_"+e.parsed.id);
-      if(!seen[key]){ seen[key]={entries:[e],num:e.num,pIdx:e.pIdx,key:key}; stationGroups.push(seen[key]); }
+    // One group per physical station (coachings at the same station stack).
+    var seen = {}, stationGroups = [];
+    entries.forEach(function(e){
+      var key = e.floor+"|"+String(e.num || (e.parsed.type+"_"+(e.parsed.wall||e.parsed.id||e.parsed.line||0)+"_"+(e.parsed.pos||0)));
+      if(!seen[key]){ seen[key]={entries:[e], num:e.num, floor:e.floor, parsed:e.parsed, key:key}; stationGroups.push(seen[key]); }
       else { seen[key].entries.push(e); }
     });
 
-    renderPathModal(stationGroups, bestFloor);
+    // Order: by floor (P1 first, then P2..P9), and within each floor by position
+    // (AR perimeter metres / P1 synthetic zone order). The origin dropdown can
+    // re-sort within-floor by nearest-neighbour later.
+    stationGroups.forEach(function(g){ g.pos = _groupPos(g); });
+    stationGroups.sort(function(a,b){
+      var fa=_FLOOR_ORDER[a.floor]||99, fb=_FLOOR_ORDER[b.floor]||99;
+      if(fa!==fb) return fa-fb;
+      return (a.pos==null?1e9:a.pos) - (b.pos==null?1e9:b.pos);
+    });
+
+    // Keep context so the origin dropdown can re-order without a full recompute.
+    window._pathCtx = {groups: stationGroups, skipped: noStation.length, noStation: noStation};
+    _buildPathOriginSelect(stationGroups);
+    renderPathModal(stationGroups, _pathOriginVal());
     document.getElementById("gcaPathModal").style.display = "flex";
+    // Load the official CALM catalog (once) and re-render so the code chips fill
+    // in. First open may show "CALM ?" for a blink until the catalog arrives.
+    _loadCalmCatalog().then(function(){
+      if(window._pathCtx) renderPathModal(window._pathCtx.groups, _pathOriginVal());
+    });
   };
 
-  function renderPathModal(groups, floor){
+  // Read the origin dropdown → {floor, side, pos} (null = not chosen). Value is
+  // "floor|side" (P1 has no side). pos = the perimeter index where that side
+  // begins, so the sweep can start from there.
+  function _pathOriginVal(){
+    var sel = $g("pathOrigin");
+    if(!sel || sel.value==="") return null;
+    var parts = String(sel.value).split("|");
+    var floor = parts[0], side = parts[1] || null;
+    var pos = null;
+    if(side && _isARFloor(floor)){
+      var ps = _perimSeq(floor);
+      if(ps && ps.sideStart[side]!=null) pos = ps.sideStart[side];
+    }
+    return {floor: floor, side: side, pos: pos};
+  }
+  // Fixed origin choices (owner request): P1, and P2/P3 by the 4 sides
+  // (N/S/E/O). The coach just says which floor + side they're standing on; the
+  // sweep starts there. Only floors/sides that actually have coachings are shown.
+  function _buildPathOriginSelect(groups){
+    var sel = $g("pathOrigin");
+    if(!sel) return;
+    var present = {};   // floor → set of sides with a stop (P1 → true)
+    groups.forEach(function(g){
+      if(g.floor==="p1"){ (present.p1=present.p1||{}).any=true; return; }
+      if(_isARFloor(g.floor)){
+        var side = g.parsed && g.parsed.p2r ? "N" : (g.num ? _arSide(g.num, g.floor) : "N");
+        (present[g.floor]=present[g.floor]||{})[side]=true;
+      }
+    });
+    var sideName = {N:"Norte", S:"Sur", E:"Este", O:"Oeste"};
+    var floors = Object.keys(present).sort(function(a,b){ return (_FLOOR_ORDER[a]||99)-(_FLOOR_ORDER[b]||99); });
+    var html = '<option value="">📍 ¿Dónde estás? (elige planta y lado)</option>';
+    floors.forEach(function(fl){
+      if(fl==="p1"){ html += '<option value="p1|">P1 (Pack)</option>'; return; }
+      html += '<optgroup label="'+fl.toUpperCase()+'">';
+      ["N","E","S","O"].forEach(function(sd){
+        if(present[fl][sd]) html += '<option value="'+fl+'|'+sd+'">'+fl.toUpperCase()+' · '+sideName[sd]+'</option>';
+      });
+      html += '</optgroup>';
+    });
+    sel.innerHTML = html;
+    sel.onchange = function(){
+      if(window._pathCtx) renderPathModal(window._pathCtx.groups, _pathOriginVal());
+    };
+  }
+
+  // Order all groups into a multi-floor walk. Floors are visited in order
+  // (starting on the origin's floor if given), and within each floor the stops
+  // are ordered by position — nearest-neighbour from the origin on that floor,
+  // else a straight sweep. Returns the flat ordered list.
+  function _orderMultiFloor(groups, origin){
+    var byFloor = {};
+    groups.forEach(function(g){ (byFloor[g.floor]=byFloor[g.floor]||[]).push(g); });
+    var floors = Object.keys(byFloor).sort(function(a,b){ return (_FLOOR_ORDER[a]||99)-(_FLOOR_ORDER[b]||99); });
+    // Start on the origin's floor, keep the rest in natural floor order.
+    if(origin && origin.floor && floors.indexOf(origin.floor)>0){
+      floors = [origin.floor].concat(floors.filter(function(f){ return f!==origin.floor; }));
+    }
+    // CONTINUITY between floors: where you FINISH one floor is where you START
+    // the next (you change floor via stairs near that spot). So the first floor
+    // starts at the origin; each subsequent floor starts near the previous
+    // floor's LAST stop position — no walking back across a floor after a change.
+    var out = [];
+    var carryPos = (origin && origin.pos!=null) ? origin.pos : null;
+    floors.forEach(function(fl, fi){
+      var gs = byFloor[fl];
+      var startPos = (fi===0 && origin && origin.floor===fl) ? origin.pos : carryPos;
+      if(_isARFloor(fl)){
+        var ordered = _orderPathGroups(gs, fl, startPos==null?undefined:startPos);
+        out = out.concat(ordered);
+        var lastAr = null;
+        for(var i=ordered.length-1;i>=0;i--){ if(ordered[i].mPos!=null){ lastAr=ordered[i].mPos; break; } }
+        carryPos = lastAr;   // hand the finish position to the next floor
+      } else {
+        // P1: no ring geometry yet — order by synthetic zone key.
+        gs.sort(function(a,b){ return (a.pos==null?1e9:a.pos)-(b.pos==null?1e9:b.pos); });
+        gs.forEach(function(g){ g.mPos = g.pos; });
+        out = out.concat(gs);
+        carryPos = gs.length ? gs[gs.length-1].pos : carryPos;
+      }
+    });
+    return out;
+  }
+
+  function renderPathModal(groups, origin){
+    groups = _orderMultiFloor(groups, origin);
+
+    // Which floors are covered, and how many stops each.
+    var floorsSeen = [];
+    groups.forEach(function(g){ if(floorsSeen.indexOf(g.floor)<0) floorsSeen.push(g.floor); });
+
     var subtitle = $g("pathSubtitle");
-    if(subtitle) subtitle.textContent = floor.toUpperCase()+" · "+(gcaOwnerFilter||"All")+" · "+groups.length+" paradas";
+    if(subtitle) subtitle.textContent = floorsSeen.map(function(f){return f.toUpperCase();}).join(" → ")+" · "+(gcaOwnerFilter||"All")+" · "+groups.length+" paradas";
 
     var listEl = $g("gcaPathList");
-    var totalDist = 0;
-    var h = '<div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px">Ruta Sugerida (Clockwise)</div>';
+    var totalDist = 0, totalCoachings = 0, floorChanges = 0;
+    groups.forEach(function(g){totalCoachings+=g.entries.length;});
+    // Distance is summed per-floor along the AR ring (P1 has no metres yet, so it
+    // contributes stops but no metres). Each floor change adds a fixed penalty.
+    var prev = null, prevFloor = (origin && origin.floor) ? origin.floor : null;
     for(var i=0;i<groups.length;i++){
       var g = groups[i];
-      var logins = g.entries.map(function(e){return e.item.login||"?";}).join(", ");
-      var insights = g.entries.map(function(e){return e.item.insight||"";}).filter(function(x){return x;});
-      var insightStr = insights.length?insights[0]:"";
-      if(insights.length>1) insightStr+=" +"+(insights.length-1);
-      var dist = "";
-      if(i>0 && g.pIdx!==undefined && groups[i-1].pIdx!==undefined){
-        var d = Math.abs(g.pIdx - groups[i-1].pIdx)*3;
-        totalDist += d;
-        dist = "~"+d+"m";
+      if(prevFloor && g.floor!==prevFloor){ floorChanges++; prev = null; }  // stairs/lift: reset within-floor walk
+      if(_isARFloor(g.floor) && g.mPos!=null){
+        if(prev!=null) totalDist += _ringDist(prev, g.mPos, _perimeterMeters(g.floor));
+        prev = g.mPos;
       }
-      h += '<div class="path-step"><span class="path-num">'+(i+1)+'</span><div><div class="path-station">Est. '+g.num+' ('+pathSectionLabel(g.num)+' · '+pathTypeLabel(g.num)+')</div><div class="path-login">'+logins+(insightStr?" - "+insightStr:"")+'</div></div>';
-      if(dist) h += '<span class="path-dist">'+dist+' </span>';
-      h += '</div>';
+      prevFloor = g.floor;
     }
-    var totalCoachings = 0;
-    groups.forEach(function(g){totalCoachings+=g.entries.length;});
-    var walkMin = Math.round(totalDist/1.2/60);
+    totalDist = Math.round(totalDist);
+    var walkMin = Math.round(totalDist/_PATH_WALK_MPS/60) + floorChanges*2;  // ~2 min per floor change (placeholder until doors)
     var coachMin = totalCoachings*2;
-    h += '<div class="path-summary">'+t("map_estimated")+' <b>~'+(walkMin+coachMin)+' min</b> ('+walkMin+t("map_walking")+' + '+coachMin+t("map_coaching_min")+')<br>'+t("map_distance")+' ~'+totalDist+'m · '+totalCoachings+' '+t("map_coachings_in")+' '+groups.length+' '+t("map_stations")+'</div>';
-    listEl.innerHTML = h;
 
+    // KPI cards at the top: total time (walk + coaching), plus stops and floors.
+    var totalMin = walkMin + coachMin;
+    var h = '<div class="path-kpis">'
+      +   '<div class="path-kpi path-kpi-hero"><span class="pk-num">~'+totalMin+'<span class="pk-u">min</span></span><span class="pk-lbl">⏱ Tiempo total</span></div>'
+      +   '<div class="path-kpi"><span class="pk-num">'+walkMin+'<span class="pk-u">min</span></span><span class="pk-lbl">🚶 Caminata</span></div>'
+      +   '<div class="path-kpi"><span class="pk-num">'+coachMin+'<span class="pk-u">min</span></span><span class="pk-lbl">🎓 Coaching</span></div>'
+      +   '<div class="path-kpi"><span class="pk-num">'+totalCoachings+'</span><span class="pk-lbl">'+groups.length+' paradas · '+floorsSeen.length+' planta'+(floorsSeen.length!==1?'s':'')+'</span></div>'
+      + '</div>';
+    if(floorChanges>0) h += '<div class="path-subnote">↕ '+floorChanges+' cambio'+(floorChanges!==1?'s':'')+' de planta incluidos</div>';
+    if(!origin) h += '<div class="path-subnote">📍 Elige dónde estás (arriba) para optimizar la ruta.</div>';
+    // One CARD per coaching (not per station) — the coach works down the list and
+    // acts inline. Cards are grouped by floor with a clear divider; on a floor
+    // CHANGE we insert a transition banner telling the coach how to move (the
+    // side where they finished the previous floor = where they enter the next).
+    var lastFloor = null, lastSideName = null;
+    var _sideName = {N:"Norte", S:"Sur", E:"Este", O:"Oeste"};
+    for(var i=0;i<groups.length;i++){
+      var g = groups[i];
+      if(g.floor!==lastFloor){
+        // Side this floor's first stop sits on (where you arrive/enter).
+        var firstSide = _isARFloor(g.floor) && g.num ? _arSide(g.num, g.floor) : null;
+        if(lastFloor===null){
+          h += '<div class="path-floor-hd">🏢 '+g.floor.toUpperCase()+(firstSide?' · empieza en '+_sideName[firstSide]:'')+'</div>';
+        } else {
+          // Transition: finished lastFloor, now move to this floor.
+          var arrow = (_FLOOR_ORDER[g.floor]||9) > (_FLOOR_ORDER[lastFloor]||0) ? "⬆ Sube" : "⬇ Baja";
+          h += '<div class="path-floor-move">'+arrow+' a <b>'+g.floor.toUpperCase()+'</b>'
+             + (firstSide? ' por el <b>'+_sideName[firstSide]+'</b>' : '')
+             + '</div>';
+          h += '<div class="path-floor-hd">🏢 '+g.floor.toUpperCase()+'</div>';
+        }
+        lastFloor = g.floor;
+      }
+      for(var j=0;j<g.entries.length;j++){
+        var it = g.entries[j].item;
+        var login = it.login || "?";
+        var insight = it.insight || it.course_title || it.reason || "Coaching";
+        var iid = it.id || "";
+        var stLbl = _groupLabel(g)+" · "+_groupTypeShort(g);
+        var photo = badgePhotoUrl ? badgePhotoUrl(login) : ("https://badgephotos.amazon.com/?fallback=no&login="+encodeURIComponent(login));
+        // CALM code resolved AUTOMATICALLY from the official wiki (course→code),
+        // with the process→feed fallback. No manual pick — the coach just sees
+        // where the associate will be logged (e.g. STWFEED) and hits Logar.
+        var courseName = it.course_title || it.course || insight;
+        var calmCode = _resolveCalmCode(courseName, it.process);
+        // Chip shows the resolved code and is clickable to override ("Other") in
+        // case the coach needs a variation the wiki map didn't cover.
+        var calmChip = calmCode
+          ? '<span class="path-calm-chip" role="button" tabindex="0" title="Se logará aquí. Click para cambiar (Other).">🎓 <span class="pcc-code">'+esc(calmCode)+'</span> ▾</span>'
+          : '<span class="path-calm-chip path-calm-unk" role="button" tabindex="0" title="Sin código oficial — click para elegir uno">CALM ? ▾</span>';
+        h += '<div class="path-card" data-iid="'+esc(iid)+'" id="pcard_'+esc(iid)+'">'
+          +   '<div class="path-card-hd">'
+          +     '<span class="path-num">'+(i+1)+'</span>'
+          +     '<img class="path-photo" src="'+esc(photo)+'" onerror="this.style.visibility=\'hidden\'">'
+          +     '<div class="path-who"><b>'+esc(login)+'</b><span class="path-st">'+esc(stLbl)+'</span></div>'
+          +     calmChip
+          +   '</div>'
+          +   '<div class="path-insight">'+esc(insight)+'</div>'
+          +   '<div class="path-acts">'
+          +     '<button class="path-btn pb-log"   data-login="'+esc(login)+'" data-eid="'+esc(it.employee_id||"")+'" data-proc="'+esc(it.process||"")+'" data-calm="'+esc(calmCode)+'" title="Loguear en '+esc(calmCode||"CALM")+'">🎓 Logar</button>'
+          +     '<button class="path-btn pb-stop"  data-login="'+esc(login)+'" data-eid="'+esc(it.employee_id||"")+'" title="Deslogar (STOP)">⏹ Stop</button>'
+          +     '<button class="path-btn pb-cmt"   data-iid="'+esc(iid)+'" data-login="'+esc(login)+'" data-eid="'+esc(it.employee_id||"")+'" title="Comentar / cerrar con nota">💬</button>'
+          +     '<button class="path-btn pb-close" data-iid="'+esc(iid)+'" data-login="'+esc(login)+'" data-eid="'+esc(it.employee_id||"")+'" title="Completar coaching">✓ Cerrar</button>'
+          +   '</div>'
+          + '</div>';
+      }
+    }
+
+    // ── On-site WITHOUT a mapped station ────────────────────────────────────
+    // Can't route to them (no location), but the trainer shouldn't forget them.
+    // Listed at the bottom as lightweight cards with the SAME actions.
+    var _ns = (window._pathCtx && window._pathCtx.noStation) || [];
+    if(_ns.length){
+      h += '<div class="path-floor-hd path-ns-hd">📍 Sin estación ubicada · '+_ns.length+' (no ruteable)</div>';
+      h += '<div class="path-ns-note">Estos coachings están On-site pero sin estación física en el mapa — hazlos cuando los cruces.</div>';
+      _ns.forEach(function(it){
+        var login=it.login||"?", insight=it.insight||it.course_title||it.reason||"Coaching", iid=it.id||"";
+        var photo = badgePhotoUrl ? badgePhotoUrl(login) : ("https://badgephotos.amazon.com/?fallback=no&login="+encodeURIComponent(login));
+        var calmCode = _resolveCalmCode(it.course_title||it.course||insight, it.process);
+        var calmChip = calmCode
+          ? '<span class="path-calm-chip" role="button" tabindex="0" title="Se logará aquí. Click para cambiar (Other).">🎓 <span class="pcc-code">'+esc(calmCode)+'</span> ▾</span>'
+          : '<span class="path-calm-chip path-calm-unk" role="button" tabindex="0" title="Sin código oficial — click para elegir uno">CALM ? ▾</span>';
+        h += '<div class="path-card path-card-ns" data-iid="'+esc(iid)+'" id="pcard_'+esc(iid)+'">'
+          +   '<div class="path-card-hd">'
+          +     '<span class="path-num path-num-ns">•</span>'
+          +     '<img class="path-photo" src="'+esc(photo)+'" onerror="this.style.visibility=\'hidden\'">'
+          +     '<div class="path-who"><b>'+esc(login)+'</b><span class="path-st">'+esc(it.presence||"On-site")+' · sin estación</span></div>'
+          +     calmChip
+          +   '</div>'
+          +   '<div class="path-insight">'+esc(insight)+'</div>'
+          +   '<div class="path-acts">'
+          +     '<button class="path-btn pb-log"   data-login="'+esc(login)+'" data-eid="'+esc(it.employee_id||"")+'" data-proc="'+esc(it.process||"")+'" data-calm="'+esc(calmCode)+'" title="Loguear en '+esc(calmCode||"CALM")+'">🎓 Logar</button>'
+          +     '<button class="path-btn pb-stop"  data-login="'+esc(login)+'" data-eid="'+esc(it.employee_id||"")+'" title="Deslogar (STOP)">⏹ Stop</button>'
+          +     '<button class="path-btn pb-cmt"   data-iid="'+esc(iid)+'" data-login="'+esc(login)+'" data-eid="'+esc(it.employee_id||"")+'" title="Comentar / cerrar con nota">💬</button>'
+          +     '<button class="path-btn pb-close" data-iid="'+esc(iid)+'" data-login="'+esc(login)+'" data-eid="'+esc(it.employee_id||"")+'" title="Completar coaching">✓ Cerrar</button>'
+          +   '</div>'
+          + '</div>';
+      });
+    }
+    listEl.innerHTML = h;
+    _wirePathCardActions(listEl);
+
+    // Map panel: ONE CONTINUOUS route, not floor tabs. Every present floor is
+    // stacked vertically in ROUTE order (the floor you visit first on top), with
+    // a transition connector between them ("⬆ Sube a P2 por el Este"). This reads
+    // as a single walk P1→P2→P3, not a filter you flip between.
     var mapEl = $g("gcaPathMap");
     if(!mapEl) return;
     mapEl.innerHTML = "";
-    var arrays = PATH_ARRAYS[floor];
-    if(!arrays) return;
+    // Floors in the order the ROUTE visits them (first occurrence in `groups`).
+    var routeFloors = [];
+    groups.forEach(function(g){ if(routeFloors.indexOf(g.floor)<0) routeFloors.push(g.floor); });
+    var _sideNameM = {N:"Norte", S:"Sur", E:"Este", O:"Oeste"};
 
-    var pathNums = {};
-    groups.forEach(function(g,i){ pathNums[String(g.num)]=i+1; });
+    routeFloors.forEach(function(fl, fi){
+      if(fi>0){
+        // Connector between floors — where you finish the previous = where you
+        // enter this one (first stop's side).
+        var firstG = null;
+        for(var q=0;q<groups.length;q++){ if(groups[q].floor===fl){ firstG=groups[q]; break; } }
+        var entrySide = (firstG && _isARFloor(fl) && firstG.num) ? _arSide(firstG.num, fl) : null;
+        var prevFl = routeFloors[fi-1];
+        var arrow = (_FLOOR_ORDER[fl]||9) > (_FLOOR_ORDER[prevFl]||0) ? "⬆ Sube" : "⬇ Baja";
+        var conn = document.createElement("div");
+        conn.className = "path-map-connector";
+        conn.innerHTML = arrow+' a <b>'+fl.toUpperCase()+'</b>'+(entrySide?' por el <b>'+_sideNameM[entrySide]+'</b>':'');
+        mapEl.appendChild(conn);
+      }
+      var hd = document.createElement("div");
+      hd.className = "path-map-floor-title";
+      var nStops = groups.filter(function(g){return g.floor===fl;}).length;
+      hd.innerHTML = '🏢 <b>'+fl.toUpperCase()+'</b> · '+nStops+' parada'+(nStops!==1?'s':'');
+      mapEl.appendChild(hd);
+      var canvas = document.createElement("div"); canvas.className = "path-map-canvas";
+      mapEl.appendChild(canvas);
+      _drawFloorMap(canvas, groups, fl);
+    });
+  }
 
-    function buildSt(stNum){
-      var div = document.createElement("div");
-      var onPath = pathNums[String(stNum)];
-      div.className = "sm-station "+(onPath?"on-path":"sm-empty");
-      var marker = onPath?'<span style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:var(--accent);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center">'+onPath+'</span>':"";
-      div.innerHTML = marker+'<span class="sm-type">'+pathTypeLabel(stNum)+'</span><span class="sm-num">'+String(stNum)+'</span>';
-      return div;
+  // Cardinal side of an AR station: top=Norte, bottom=Sur, right=Este, left=Oeste
+  // (owner's convention). The layout ARRAYS are the source of truth (owner-
+  // confirmed 2026-07-30: N=2197→2104, S=2306→2395, E=2494→2422, O=2295→2211),
+  // so we check which side-list contains the station FIRST; only fall back to
+  // number ranges for stations the layout doesn't list.
+  function _arSide(stNum, floor){
+    var arr = floor ? _getPathArrays()[floor] : null;
+    if(arr){
+      if(arr.top.indexOf(stNum)>=0)    return "N";
+      if(arr.right.indexOf(stNum)>=0)  return "E";
+      if(arr.bottom.indexOf(stNum)>=0) return "S";
+      if(arr.left.indexOf(stNum)>=0)   return "O";
     }
+    var base = stNum >= 3000 ? stNum - 1000 : stNum;
+    if(base >= 2104 && base <= 2197) return "N";
+    if(base >= 2200 && base <= 2295) return "O";
+    if(base >= 2306 && base <= 2395) return "S";
+    if(base >= 2422 && base <= 2494) return "E";
+    return "N";
+  }
 
-    var grid = document.createElement("div"); grid.className = "sm-grid";
-    var topDiv = document.createElement("div"); topDiv.className = "sm-row sm-top";
-    arrays.top.forEach(function(n){ topDiv.appendChild(buildSt(n)); });
-    var midDiv = document.createElement("div"); midDiv.className = "sm-middle";
-    var leftDiv = document.createElement("div"); leftDiv.className = "sm-col sm-left";
-    arrays.left.forEach(function(n){ leftDiv.appendChild(buildSt(n)); });
-    var centerDiv = document.createElement("div"); centerDiv.className = "sm-center";
-    centerDiv.innerHTML = '<div style="text-align:center;opacity:0.3"><div style="font-size:32px;font-weight:800;color:var(--text-muted)">'+floor.toUpperCase()+'</div><div style="font-size:10px;color:var(--text-muted)">1 → '+groups.length+'</div></div>';
-    var rightDiv = document.createElement("div"); rightDiv.className = "sm-col sm-right";
-    arrays.right.forEach(function(n){ rightDiv.appendChild(buildSt(n)); });
-    midDiv.appendChild(leftDiv); midDiv.appendChild(centerDiv); midDiv.appendChild(rightDiv);
-    var bottomDiv = document.createElement("div"); bottomDiv.className = "sm-row sm-bottom";
-    arrays.bottom.forEach(function(n){ bottomDiv.appendChild(buildSt(n)); });
-    grid.appendChild(topDiv); grid.appendChild(midDiv); grid.appendChild(bottomDiv);
-    mapEl.appendChild(grid);
+  // Draw ONE floor: the real ring frame (N top / P2R band / O·center·E / S bottom)
+  // but ONLY the coaching stops — empty stations are dropped (they add nothing).
+  // Stops keep their true cardinal side + order, and a clean perimeter line
+  // connects them 1→🏁 riding the frame (no crossing through the centre).
+  function _drawFloorMap(canvas, groups, floor){
+    canvas.innerHTML = "";
+    if(!_isARFloor(floor)){ _renderP1Map(canvas, groups, floor); return; }
+
+    // Collect this floor's coaching stops (global route seq), split ring vs P2R.
+    var sides = {N:[], E:[], S:[], O:[]}, p2rSeq = [], lastSeq=0, firstSeq=1e9; var _s=0;
+    groups.forEach(function(g){
+      _s++;
+      if(g.floor!==floor) return;
+      lastSeq=Math.max(lastSeq,_s); firstSeq=Math.min(firstSeq,_s);
+      if(g.parsed && g.parsed.p2r){ p2rSeq.push({seq:_s, parsed:g.parsed}); }
+      else if(g.num){ var sd=_arSide(g.num, floor); (sides[sd]||sides.N).push({seq:_s, num:g.num, pos:_stationMeters(g.num,floor)}); }
+    });
+    if(!lastSeq){ canvas.innerHTML = '<div class="path-map-empty">Sin paradas en '+floor.toUpperCase()+'.</div>'; return; }
+    // order each side by real perimeter position
+    ["N","E","S","O"].forEach(function(sd){ sides[sd].sort(function(a,b){return a.pos-b.pos;}); });
+
+    function cell(s, extraCls){
+      var isLast = s.seq===lastSeq, isFirst = s.seq===firstSeq;
+      var cls = "pm-stop "+(extraCls||"")+(isFirst?" pc-first":"")+(isLast?" pc-last":"");
+      var badge = isLast ? "🏁" : String(s.seq);
+      var typeLbl = s.parsed ? "P2R" : pathTypeLabel(s.num);
+      var numLbl  = s.parsed ? ("m"+(s.parsed.wall||"?")+"·"+(s.parsed.face||s.parsed.pos||"?")) : String(s.num);
+      return '<div class="'+cls+'" data-seq="'+s.seq+'"><span class="pc-badge">'+badge+'</span>'
+        + '<span class="sm-type">'+typeLbl+'</span><span class="sm-num">'+numLbl+'</span></div>';
+    }
+    function row(list, cl){ return list.map(function(s){return cell(s,cl);}).join("") || '<span class="pc-none">—</span>'; }
+
+    p2rSeq.sort(function(a,b){ return (a.parsed.wall||0)-(b.parsed.wall||0); });
+    var p2rBand = p2rSeq.length
+      ? '<div class="pm-row pm-p2r"><span class="pc-dir">P2R</span><div class="pm-stops">'+row(p2rSeq,"sm-p2r")+'</div></div>'
+      : '';
+
+    canvas.innerHTML =
+        '<div class="path-frame">'
+      +   '<div class="pm-row pm-n"><span class="pc-dir">N · Norte</span><div class="pm-stops">'+row(sides.N)+'</div></div>'
+      +   p2rBand
+      +   '<div class="pm-mid">'
+      +     '<div class="pm-col pm-w"><span class="pc-dir">O</span><div class="pm-stops pm-vert">'+row(sides.O)+'</div></div>'
+      +     '<div class="pm-center"><div class="pc-floor">'+floor.toUpperCase()+'</div><div class="pc-legend"><span class="pc-lg-start">● inicio</span><span class="pc-lg-end">🏁 fin</span></div></div>'
+      +     '<div class="pm-col pm-e"><span class="pc-dir">E</span><div class="pm-stops pm-vert">'+row(sides.E)+'</div></div>'
+      +   '</div>'
+      +   '<div class="pm-row pm-s"><div class="pm-stops">'+row(sides.S)+'</div><span class="pc-dir">S · Sur</span></div>'
+      + '</div>';
+    // No connecting line — on a schematic (not-to-scale) frame a literal line
+    // reads as a huge detour. The numbered badges (● 1 → 2 → 🏁) convey the order
+    // cleanly, like real pick-path maps.
+  }
+
+  // Clean connecting line that rides the perimeter frame (never crosses centre).
+  // Instead of straight point-to-point, it routes each hop through frame corner
+  // waypoints so the line hugs the ring like a real walk. Redrawn after layout.
+  function _drawPerimeterLine(canvas){
+    var NS="http://www.w3.org/2000/svg";
+    function draw(){
+      var old=canvas.querySelector("svg.pm-line"); if(old) old.remove();
+      var frame=canvas.querySelector(".path-frame"); if(!frame) return;
+      var box=frame.getBoundingClientRect();
+      var cells=Array.prototype.slice.call(canvas.querySelectorAll(".pm-stop[data-seq]"));
+      if(cells.length<2) return;
+      cells.sort(function(a,b){return (+a.getAttribute("data-seq"))-(+b.getAttribute("data-seq"));});
+      var pts=cells.map(function(c){var r=c.getBoundingClientRect();return {x:(r.left+r.width/2)-box.left, y:(r.top+r.height/2)-box.top};});
+      // corner ring just inside the frame edges
+      var pad=14, TL={x:pad,y:pad}, TR={x:box.width-pad,y:pad}, BR={x:box.width-pad,y:box.height-pad}, BL={x:pad,y:box.height-pad};
+      var ring=[TL,TR,BR,BL];
+      function near(p){var bi=0,bd=1e9;for(var i=0;i<4;i++){var d=Math.hypot(ring[i].x-p.x,ring[i].y-p.y);if(d<bd){bd=d;bi=i;}}return bi;}
+      // does a straight seg pass near the centre? (centre box ~ inner 40%)
+      var cx1=box.width*0.28, cx2=box.width*0.72, cy1=box.height*0.30, cy2=box.height*0.70;
+      function crosses(a,b){for(var t=0.15;t<1;t+=0.15){var x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;if(x>cx1&&x<cx2&&y>cy1&&y<cy2)return true;}return false;}
+      function route(a,b){
+        if(!crosses(a,b)) return [a,b];
+        var ia=near(a), ib=near(b), out=[a];
+        var dir=1, i=ia, guard=0;
+        // walk corners the short way from ia to ib
+        var cw=(ib-ia+4)%4, ccw=(ia-ib+4)%4; dir=(cw<=ccw)?1:-1;
+        i=ia; while(guard++<5){ out.push(ring[i]); if(i===ib) break; i=(i+dir+4)%4; }
+        out.push(b); return out;
+      }
+      var wp=[pts[0]];
+      for(var i=1;i<pts.length;i++){ var seg=route(pts[i-1],pts[i]); for(var k=1;k<seg.length;k++) wp.push(seg[k]); }
+      var svg=document.createElementNS(NS,"svg");
+      svg.setAttribute("class","pm-line");
+      svg.setAttribute("style","position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible");
+      var d="M "+wp.map(function(p){return p.x.toFixed(1)+" "+p.y.toFixed(1);}).join(" L ");
+      var halo=document.createElementNS(NS,"path");
+      halo.setAttribute("d",d);halo.setAttribute("fill","none");halo.setAttribute("stroke","var(--accent)");
+      halo.setAttribute("stroke-width","8");halo.setAttribute("stroke-linejoin","round");halo.setAttribute("stroke-linecap","round");halo.setAttribute("opacity","0.14");
+      svg.appendChild(halo);
+      var p=document.createElementNS(NS,"path");
+      p.setAttribute("d",d);p.setAttribute("fill","none");p.setAttribute("stroke","var(--accent)");
+      p.setAttribute("stroke-width","2.5");p.setAttribute("stroke-linejoin","round");p.setAttribute("stroke-linecap","round");p.setAttribute("stroke-dasharray","1 6");
+      svg.appendChild(p);
+      var fr=canvas.querySelector(".path-frame"); fr.insertBefore(svg, fr.firstChild);
+    }
+    if(window.requestAnimationFrame) requestAnimationFrame(draw); else setTimeout(draw,30);
+    setTimeout(draw,130);
+  }
+
+  // Schematic P1 (pack) map — orientative, not to scale. Lays the pack zones out
+  // left→right in physical flow order (Receive → Induct → AFE → Rebin → Singles
+  // → WS) using the owner's colour key (Receive=red, AFE=pink, Singles=blue,
+  // WS=black). Only the coaching stops on P1 are shown, numbered in route order,
+  // and the same walking line is drawn over them.
+  var _P1_ZONES = [
+    {type:"decant",  label:"Receive",  color:"#dc2626"},
+    {type:"induct",  label:"Induct",   color:"#f59e0b"},
+    {type:"afe",     label:"AFE",      color:"#ec4899"},
+    {type:"rebin",   label:"Rebin",    color:"#a855f7"},
+    {type:"singles", label:"Singles",  color:"#3b82f6"},
+    {type:"ws",      label:"WS",       color:"#334155"}
+  ];
+  function _renderP1Map(mapEl, groups, floor){
+    // stops on this floor, in route order → sequential number
+    var stops = []; var _seq=0;
+    groups.forEach(function(g){ _seq++; if(g.floor===floor){ stops.push({g:g, seq:_seq}); } });
+    var byZone = {};
+    stops.forEach(function(s){ var ty=(s.g.parsed&&s.g.parsed.type)||"?"; (byZone[ty]=byZone[ty]||[]).push(s); });
+
+    var wrap = document.createElement("div");
+    wrap.style.cssText = "display:flex;gap:8px;align-items:stretch;min-height:360px;padding:6px 2px;position:relative";
+    _P1_ZONES.forEach(function(z){
+      var col = document.createElement("div");
+      col.style.cssText = "flex:1;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:8px;padding:6px 5px;background:var(--bg-input);min-width:0";
+      var hd = document.createElement("div");
+      hd.style.cssText = "font-size:10px;font-weight:800;text-align:center;margin-bottom:6px;padding-bottom:4px;border-bottom:2px solid "+z.color+";color:"+z.color;
+      hd.textContent = z.label;
+      col.appendChild(hd);
+      var list = byZone[z.type] || [];
+      if(!list.length){
+        var empty = document.createElement("div");
+        empty.style.cssText = "flex:1;display:flex;align-items:center;justify-content:center;opacity:.25;font-size:9px;color:var(--text-muted)";
+        empty.textContent = "—";
+        col.appendChild(empty);
+      } else {
+        list.forEach(function(s){
+          var cell = document.createElement("div");
+          cell.className = "p1-stop"; cell.setAttribute("data-seq", s.seq);
+          cell.style.cssText = "position:relative;margin:3px 0;padding:6px 4px;border-radius:6px;border:1px solid "+z.color+";background:"+z.color+"1a;font-size:9.5px;text-align:center;color:var(--text)";
+          cell.innerHTML = '<span style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:var(--accent);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;z-index:2">'+s.seq+'</span>'
+            + esc(_groupLabel(s.g).replace(/^(AFE\d*|Rebin|Induct muro|Singles|WS|Receive\/Decant)\s*/,""));
+          col.appendChild(cell);
+        });
+      }
+      wrap.appendChild(col);
+    });
+    mapEl.appendChild(wrap);
+    // No line on P1 either — numbered badges convey the zone order.
+  }
+
+  // Overlay an SVG polyline connecting the on-path stations in route order. The
+  // walking line must RIDE THE PERIMETER, never cross the AR ring interior (you
+  // can't walk through the racking — only around it). We route each hop around
+  // the forbidden centre rectangle (the .pc-center / dashed void) by inserting
+  // corner waypoints, so the line hugs the outer aisle.
+  function _drawPathLine(mapEl, selector){
+    var sel = selector || ".sm-station.on-path[data-seq]";
+    var NS = "http://www.w3.org/2000/svg";
+    function draw(){
+      var old = mapEl.querySelector("svg.path-line-svg"); if(old) old.remove();
+      var box = mapEl.getBoundingClientRect();
+      var cells = Array.prototype.slice.call(mapEl.querySelectorAll(sel));
+      if(cells.length < 2) return;
+      cells.sort(function(a,b){ return (+a.getAttribute("data-seq")) - (+b.getAttribute("data-seq")); });
+      var pts = cells.map(function(c){
+        var r = c.getBoundingClientRect();
+        return {x:(r.left+r.width/2)-box.left, y:(r.top+r.height/2)-box.top};
+      });
+
+      // Forbidden interior = the .pc-center void (AR ring core). If present, we
+      // route hops around it along its 4 corners instead of straight through.
+      var voidEl = mapEl.querySelector(".pc-center");
+      var vr = null;
+      if(voidEl){
+        var b = voidEl.getBoundingClientRect();
+        vr = {x1:b.left-box.left, y1:b.top-box.top, x2:b.right-box.left, y2:b.bottom-box.top};
+      }
+      function segCrossesVoid(a, b){
+        if(!vr) return false;
+        // quick reject
+        if(Math.max(a.x,b.x) < vr.x1 || Math.min(a.x,b.x) > vr.x2 ||
+           Math.max(a.y,b.y) < vr.y1 || Math.min(a.y,b.y) > vr.y2) return false;
+        // sample the segment; if any midpoint lands inside the void → crosses
+        for(var t=0.1;t<1;t+=0.1){
+          var x=a.x+(b.x-a.x)*t, y=a.y+(b.y-a.y)*t;
+          if(x>vr.x1 && x<vr.x2 && y>vr.y1 && y<vr.y2) return true;
+        }
+        return false;
+      }
+      // Corners of the outer aisle (just outside the void rectangle).
+      function corners(){
+        var pad=6;
+        return {
+          TL:{x:vr.x1-pad,y:vr.y1-pad}, TR:{x:vr.x2+pad,y:vr.y1-pad},
+          BR:{x:vr.x2+pad,y:vr.y2+pad}, BL:{x:vr.x1-pad,y:vr.y2+pad}
+        };
+      }
+      // Route a→b around the void: go to the nearest corner on a's side, then
+      // follow corners to the one nearest b, then to b. Both directions checked;
+      // pick the shorter corner chain.
+      function routeAround(a, b){
+        if(!segCrossesVoid(a,b)) return [a,b];
+        var C=corners(), order=[C.TL,C.TR,C.BR,C.BL];
+        function nearest(p){ var bi=0,bd=1e9; for(var i=0;i<4;i++){var d=Math.hypot(order[i].x-p.x,order[i].y-p.y); if(d<bd){bd=d;bi=i;}} return bi; }
+        var ia=nearest(a), ib=nearest(b);
+        function chain(dir){
+          var out=[], i=ia;
+          for(var g=0; g<5; g++){ out.push(order[i]); if(i===ib) break; i=(i+dir+4)%4; }
+          return out;
+        }
+        var cw=chain(1), ccw=chain(-1);
+        var pick = (cw.length<=ccw.length)?cw:ccw;
+        return [a].concat(pick, [b]);
+      }
+
+      // Build the full waypoint list, routing each hop around the void.
+      var wp=[pts[0]];
+      for(var i=1;i<pts.length;i++){
+        var seg=routeAround(pts[i-1], pts[i]);
+        for(var k=1;k<seg.length;k++) wp.push(seg[k]);
+      }
+
+      var svg = document.createElementNS(NS,"svg");
+      svg.setAttribute("class","path-line-svg");
+      svg.setAttribute("style","position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible");
+      var defs = document.createElementNS(NS,"defs");
+      defs.innerHTML = '<marker id="pathArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker>';
+      svg.appendChild(defs);
+      var d = "M "+wp.map(function(p){return p.x.toFixed(1)+" "+p.y.toFixed(1);}).join(" L ");
+      var halo = document.createElementNS(NS,"path");
+      halo.setAttribute("d", d); halo.setAttribute("fill","none");
+      halo.setAttribute("stroke","var(--accent)"); halo.setAttribute("stroke-width","7");
+      halo.setAttribute("stroke-linejoin","round"); halo.setAttribute("stroke-linecap","round");
+      halo.setAttribute("opacity","0.15");
+      svg.appendChild(halo);
+      var path = document.createElementNS(NS,"path");
+      path.setAttribute("d", d); path.setAttribute("fill","none");
+      path.setAttribute("stroke","var(--accent)"); path.setAttribute("stroke-width","3");
+      path.setAttribute("stroke-linejoin","round"); path.setAttribute("stroke-linecap","round");
+      path.setAttribute("stroke-dasharray","2 7");
+      path.setAttribute("marker-end","url(#pathArrow)");
+      svg.appendChild(path);
+      // Direction arrowheads at each ORIGINAL stop hop midpoint.
+      for(var j=1;j<pts.length;j++){
+        var a=pts[j-1], b=pts[j], mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+        var seg2 = document.createElementNS(NS,"path");
+        seg2.setAttribute("d","M "+a.x.toFixed(1)+" "+a.y.toFixed(1)+" L "+mx.toFixed(1)+" "+my.toFixed(1));
+        seg2.setAttribute("fill","none"); seg2.setAttribute("stroke","transparent"); seg2.setAttribute("stroke-width","1");
+        seg2.setAttribute("marker-end","url(#pathArrow)");
+        // only show the straight direction hint when it doesn't cut the void
+        if(!segCrossesVoid(a,b)) svg.appendChild(seg2);
+      }
+      mapEl.insertBefore(svg, mapEl.firstChild);
+    }
+    if(window.requestAnimationFrame){ requestAnimationFrame(draw); }
+    else { setTimeout(draw, 30); }
+    setTimeout(draw, 120);
+  }
+
+  // Wire the 4 inline actions on each path card. Log/Stop hit the CALM endpoints
+  // directly (no modal needed — the card already carries login+badge+process).
+  // Comment/Close reuse the existing openCloseCoaching modal (comment = same modal,
+  // the coach types a note before completing). Feedback is shown inline per card.
+  function _wirePathCardActions(root){
+    if(!root) return;
+    function _flash(btn, txt, ok){
+      var prev = btn.textContent; btn.disabled = true; btn.style.opacity = ".6"; btn.textContent = "…";
+      return function(){ btn.disabled=false; btn.style.opacity="1"; btn.textContent = txt!=null?txt:prev;
+        if(ok!=null) btn.style.color = ok ? "var(--green,#16a34a)" : "var(--red,#dc2626)"; };
+    }
+    async function _calm(kind, btn){
+      var login = btn.getAttribute("data-login")||"";
+      var badge = String(btn.getAttribute("data-eid")||"").replace(/\D/g,"");
+      var proc  = btn.getAttribute("data-proc")||"";
+      var calm  = btn.getAttribute("data-calm")||"";   // official code resolved from the wiki
+      var done = _flash(btn);
+      try{
+        var url = kind==="stop" ? (API+"/api/coaching/calm-stop") : (API+"/api/coaching/calm-log");
+        // Send the resolved wiki code as calm_code; the server uses it verbatim
+        // and only falls back to its process map if it's empty.
+        var body = kind==="stop" ? {fc:currentFC, login:login, badge:badge}
+                                 : {fc:currentFC, login:login, badge:badge, process:proc, calm_code:calm};
+        var r = await fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+        var j = await r.json().catch(function(){return {};});
+        if(!r.ok || !j.ok) throw new Error((j&&j.detail)||("HTTP "+r.status));
+        var loggedCode = (j && j.calm_code) ? j.calm_code : calm;
+        done(kind==="stop" ? "⏹ Stop ✓" : ("🎓 "+(loggedCode||"Log")+" ✓"), true);
+      }catch(e){ done(kind==="stop"?"⏹ Stop":"🎓 Logar", false); showToast({title:"CALM "+kind, body:String(e.message||e), type:"err", ms:4000}); }
+    }
+    root.querySelectorAll(".pb-log").forEach(function(b){ b.addEventListener("click", function(){ _calm("log", b); }); });
+    root.querySelectorAll(".pb-stop").forEach(function(b){ b.addEventListener("click", function(){ _calm("stop", b); }); });
+    // CALM chip → override the code ("Other"). Prompts with the valid codes; the
+    // chosen code updates both the chip and the Logar button's data-calm.
+    function _overrideCalm(chip){
+      var card = chip.closest(".path-card");
+      var logBtn = card ? card.querySelector(".pb-log") : null;
+      var cur = logBtn ? (logBtn.getAttribute("data-calm")||"") : "";
+      var codes = (_calmCatalog.codes||[]);
+      var msg = "Código CALM a usar"+(codes.length? " (válidos: "+codes.slice(0,40).join(", ")+(codes.length>40?"…":"")+")":"")+":";
+      var next = window.prompt(msg, cur);
+      if(next==null) return;
+      next = String(next).trim().toUpperCase();
+      if(!next) return;
+      if(logBtn) logBtn.setAttribute("data-calm", next);
+      var codeEl = chip.querySelector(".pcc-code");
+      if(codeEl) codeEl.textContent = next;
+      else { chip.classList.remove("path-calm-unk"); chip.innerHTML = '🎓 <span class="pcc-code">'+esc(next)+'</span> ▾'; }
+      if(logBtn) logBtn.setAttribute("title", "Loguear en "+next);
+    }
+    root.querySelectorAll(".path-calm-chip").forEach(function(chip){
+      chip.addEventListener("click", function(){ _overrideCalm(chip); });
+      chip.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); _overrideCalm(chip); } });
+    });
+    // Comment + Close both open the close modal (comment = write a note; the coach
+    // can complete from there). Instance id + login come from the card.
+    function _openClose(b, action){
+      var iid = b.getAttribute("data-iid")||"";
+      if(!iid){ showToast({title:"Sin instance_id", body:"Refresca GCA para poder cerrar.", type:"warn"}); return; }
+      // The resolved CALM code lives on the card's Logar button — surface it in
+      // the modal read-only (path mode hides the process picker).
+      var card = $g("pcard_"+iid);
+      var logBtn = card ? card.querySelector(".pb-log") : null;
+      var pathCalm = logBtn ? (logBtn.getAttribute("data-calm")||"") : "";
+      // The close/comment modal (.modal-overlay, z-index 1000) sits BELOW the path
+      // modal (z-index 9000), so opened from a path card it appears behind and
+      // can't be typed in. Lift it above the path while open; a MutationObserver
+      // restores the z-index the moment it loses the `show` class (any close
+      // path — success, cancel, or backdrop click), no callback wiring needed.
+      var cm = $g("modalCloseCoaching");
+      if(cm){
+        var prevZ = cm.style.zIndex;
+        cm.style.zIndex = "9500";
+        var obs = new MutationObserver(function(){
+          if(!cm.classList.contains("show")){ cm.style.zIndex = prevZ; obs.disconnect(); }
+        });
+        obs.observe(cm, {attributes:true, attributeFilter:["class"]});
+      }
+      openCloseCoaching({ fc:currentFC, login:b.getAttribute("data-login")||"", employee_id:b.getAttribute("data-eid")||"",
+        badge:b.getAttribute("data-eid")||"", instanceId:iid, action:action,
+        hideCalm:true, pathCalm:pathCalm,
+        onDone:function(){ var c=$g("pcard_"+iid); if(c){ c.style.opacity=".5"; c.querySelector(".path-acts").innerHTML='<span style="font-size:11px;color:var(--green,#16a34a)">✓ hecho</span>'; } } });
+    }
+    root.querySelectorAll(".pb-close").forEach(function(b){ b.addEventListener("click", function(){ _openClose(b, "complete"); }); });
+    root.querySelectorAll(".pb-cmt").forEach(function(b){ b.addEventListener("click", function(){ _openClose(b, "complete"); }); });
   }
 
 
 })();
 
-  // ── Adoption dashboard (super admin, DDD) ──────────────────────────────
-  let _adoptFC = "BCN4", _adoptLD = false, _adoptWk = false;
-  if($("btnAdoption")) $("btnAdoption").addEventListener("click", ()=>{ $("adoptionModal").style.display="flex"; loadAdoption(); });
-  $("adoptFC")?.addEventListener("change", e=>{ _adoptFC = e.target.value; loadAdoption(); });
-  $("adoptLD")?.addEventListener("change", e=>{ _adoptLD = e.target.checked; loadAdoption(); });
-  $("adoptWk")?.addEventListener("change", e=>{ _adoptWk = e.target.checked; loadAdoption(); });
-  $("adoptionModal")?.addEventListener("click", e=>{ if(e.target.id==="adoptionModal") closeAdoption(); });
-  window.closeAdoption = ()=>{ const m=$("adoptionModal"); if(m) m.style.display="none"; };
+  // ── Adoption dashboard REMOVED from the UI (2026-07-29) ─────────────────────
+  // Button retired 2026-07-24, modal removed 2026-07-29. Usage is now recorded
+  // by /api/usage/ping on first human interaction (see _maybePingUsage). The
+  // /api/adoption endpoint + argos_usage.csv remain for out-of-band analysis.
 
   // ── Exempt zone (admin) — exclude associates from coaching ──────────────────
   // Two scopes: "process" (Performance + Quality for a process/ALL) and "topic"
@@ -10176,99 +11418,8 @@ document.addEventListener("click",(e)=>{
     b.classList.add("on"); _stMetric=b.dataset.metric; _stRenderAll();
   }));
 
-  async function loadAdoption(){
-    const body=$("adoptionBody");
-    body.innerHTML=`<div class="adopt-empty">Loading…</div>`;
-    try{
-      const r=await fetch(`${API}/api/adoption?fc=${encodeURIComponent(_adoptFC)}&include_ld=${_adoptLD}&week_only=${_adoptWk}`);
-      if(!r.ok) throw new Error((await r.json().catch(()=>({}))).detail || `HTTP ${r.status}`);
-      const d=await r.json();
-      const sel=$("adoptFC");
-      if(sel && !sel.dataset.filled){
-        const fcs=["BCN4","ALL",...(d.fcs||[]).filter(x=>x!=="BCN4")];
-        sel.innerHTML=[...new Set(fcs)].map(x=>`<option value="${x}">${x}</option>`).join("");
-        sel.value=_adoptFC; sel.dataset.filled="1";
-      }
-      const ldCb=$("adoptLD"); if(ldCb) ldCb.checked=_adoptLD;
-      const wkCb=$("adoptWk"); if(wkCb) wkCb.checked=_adoptWk;
-
-      const wow=d.wow||{};
-      const dlt=(c,p)=>{ if(p==null) return ""; const x=(c||0)-(p||0); if(!x) return `<span class="ad-d">—</span>`; const up=x>0; return `<span class="ad-d ${up?"up":"dn"}">${up?"▲":"▼"} ${Math.abs(x)}</span>`; };
-      const ldNote = (!_adoptLD && d.ld_excluded) ? `<span class="ad-ldnote">${d.ld_excluded} L&D excluded</span>` : "";
-
-      const rate = d.adoption_rate!=null ? `${d.adoption_rate}%` : "—";
-      const rateW = d.adoption_rate_week!=null ? `${d.adoption_rate_week}%` : "—";
-      const cov  = d.cohort_coverage!=null ? `${d.cohort_coverage}%` : "—";
-      const kpis=`<div class="ad-kpis">
-        <div class="ad-kpi ad-kpi-hero"><span class="ad-num">${rateW}</span><span class="ad-lbl">Adoption THIS WEEK (${d.active_target_week||0}/${d.hc_total||0})</span></div>
-        <div class="ad-kpi"><span class="ad-num">${rate}</span><span class="ad-lbl">Adoption all-time (${d.active_target||0}/${d.hc_total||0})</span></div>
-        <div class="ad-kpi"><span class="ad-num">${cov}</span><span class="ad-lbl">Cohort coverage (${d.cohorts_active||0}/${d.cohorts_total||0})</span></div>
-        <div class="ad-kpi"><span class="ad-num">${wow.users??"—"} ${dlt(wow.users,wow.users_prev)}</span><span class="ad-lbl">Users this week</span></div>
-      </div>`;
-
-      // Area breakdown: this-week bar (solid) + all-time (ghost), per IB/OB/ICQA.
-      const area = (d.by_area||[]).map(a=>{
-        const pctW=Math.min(100,a.rate_week||0), pct=Math.min(100,a.rate||0);
-        return `<div class="ad-area"><div class="ad-area-top"><span>${esc(a.area)}</span><b>${a.rate_week}% <span class="ad-area-all">(${a.rate}% all-time)</span></b></div>
-          <div class="ad-area-bar"><div class="ad-area-ghost" style="width:${pct}%"></div><div class="ad-area-fill" style="width:${pctW}%"></div></div>
-          <div class="ad-area-sub">${a.active_week}/${a.target} this week · ${a.active}/${a.target} all-time</div></div>`;
-      }).join("") || `<div class="adopt-empty">No area data</div>`;
-
-      // Podium (top 3 by executions)
-      const medals=["🥇","🥈","🥉"];
-      const podium=(d.podium||[]).map((p,i)=>
-        `<div class="ad-pod ad-pod-${i+1}"><div class="ad-pod-m">${medals[i]||""}</div><div class="ad-pod-u">${esc(p.user)}</div><div class="ad-pod-meta">${esc(p.cohort||"")} · ${esc(p.title||"")}</div><div class="ad-pod-ev">${p.events} exec</div></div>`
-      ).join("") || `<div class="adopt-empty">—</div>`;
-
-      const chart=adoptChart(d.by_week||[]);
-
-      const coh=(d.by_cohort||[]).map(c=>`<tr><td>${esc(c._cohort||"—")}</td><td>${c.users}</td><td>${c.events}</td></tr>`).join("")||`<tr><td colspan=3>—</td></tr>`;
-      const usr=(d.top_users||[]).map(u=>`<tr><td>${esc(u.user)}</td><td>${u.events}</td><td>${esc(u.cohort||"")}</td><td>${esc(u.title||"")}</td></tr>`).join("")||`<tr><td colspan=4>—</td></tr>`;
-      const inact=(d.inactive_cohorts||[]).map(c=>`<span class="ad-chip">${esc(c)}</span>`).join("")||`<span class="ad-ok">All target cohorts active 🎉</span>`;
-      const fb=(d.feedback||[]).map(f=>`<div class="ad-fb"><div class="ad-fb-meta">${esc(f.ts||"")} · <b>${esc(f.login||"?")}</b>${f.title?` · ${esc(f.title)}`:""}${f.version?`<span class="ad-fb-ver">v${esc(f.version)}</span>`:""}</div><div class="ad-fb-txt">${esc(f.feedback||"")}</div></div>`).join("")||`<div class="adopt-empty">No feedback for this FC</div>`;
-
-      body.innerHTML=`
-        <div class="ad-meta">FC: <b>${esc(d.fc||"ALL")}</b> · Target: <b>Leads + Area Managers</b> · L&D: <b>${_adoptLD?"included":"excluded"}</b>${d.week_only?` · <b style="color:var(--accent,#7c3aed)">Detail = ${esc(d.current_week||"this week")} only</b>`:""} ${ldNote}</div>
-        ${kpis}
-        <div class="ad-sec"><div class="ad-h">Adoption by area</div><div class="ad-areas">${area}</div></div>
-        <div class="ad-grid2">
-          <div class="ad-sec"><div class="ad-h">Weekly adoption (users + executions)</div>${chart}</div>
-          <div class="ad-sec"><div class="ad-h">🏆 Podium — most executions</div><div class="ad-podium">${podium}</div></div>
-        </div>
-        <div class="ad-sec"><div class="ad-h">Inactive cohorts (opportunity)</div><div class="ad-chips">${inact}</div></div>
-        <div class="ad-grid">
-          <div class="ad-sec"><div class="ad-h">By cohort</div>
-            <table class="ad-tbl"><thead><tr><th>Cohort</th><th>Users</th><th>Events</th></tr></thead><tbody>${coh}</tbody></table></div>
-          <div class="ad-sec"><div class="ad-h">Top users</div>
-            <table class="ad-tbl"><thead><tr><th>User</th><th>Ev.</th><th>Cohort</th><th>Title</th></tr></thead><tbody>${usr}</tbody></table></div>
-        </div>
-        <div class="ad-sec"><div class="ad-h">Feedback</div>${fb}</div>`;
-    }catch(e){ body.innerHTML=`<div class="adopt-empty" style="color:#dc2626">✗ ${esc(e.message)}</div>`; }
-  }
-
-  // Weekly chart: unique users + executions (events), grouped bars per week.
-  // Heights in PIXELS (not %) so the webview can't collapse them. Only the last
-  // ~8 weeks WITH activity are shown (drops old one-off noise), so the bars fill
-  // the width and the trend reads cleanly for DDD.
-  function adoptChart(rows){
-    if(!rows.length) return `<div class="adopt-empty">No data</div>`;
-    const recent = rows.slice(-8);                       // last 8 active weeks
-    const MAXH=120;
-    const maxU=Math.max(1,...recent.map(r=>r.users||0));
-    const maxE=Math.max(1,...recent.map(r=>r.events||0));
-    const cols=recent.map(r=>{
-      const hu=Math.max(4, Math.round((r.users||0)/maxU*MAXH));
-      const he=Math.max(4, Math.round((r.events||0)/maxE*MAXH));
-      const wk=String(r._wk||"").replace(/^\d{4}-/,"");
-      return `<div class="ac-col" title="${esc(r._wk)}: ${r.users} users · ${r.events} executions">
-        <div class="ac-pair">
-          <div class="ac-stk"><div class="ad-v">${r.users||0}</div><div class="ad-bar ad-bar-u" style="height:${hu}px"></div></div>
-          <div class="ac-stk"><div class="ad-v ad-v-e">${r.events||0}</div><div class="ad-bar ad-bar-e" style="height:${he}px"></div></div>
-        </div>
-        <div class="ad-l">${esc(wk)}</div></div>`;
-    }).join("");
-    return `<div class="ad-legend"><span class="lg-u">▮ Unique users</span><span class="lg-e">▮ Executions</span></div><div class="ad-chart">${cols}</div>`;
-  }
+  // loadAdoption() + adoptChart() removed 2026-07-29 — the Adoption modal is gone
+  // from the UI. The /api/adoption endpoint stays for out-of-band analysis.
 
 
 }); // end DOMContentLoaded

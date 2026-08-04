@@ -1,4 +1,4 @@
-{
+﻿{
   "BCN1": {
     "roboscout_checks": [
       {
@@ -124,8 +124,8 @@
       "DEFAULT": 10.0
     },
     "feature_flags": {
-      "idle_comment_enabled": false,
-      "idle_comment_threshold": 10.0
+      "idle_comment_enabled": true,
+      "idle_comment_threshold": 30
     },
     "decant": {
       "location_pattern": "ws-rcv|dz-"
@@ -256,7 +256,7 @@
     },
     "feature_flags": {
       "idle_comment_enabled": true,
-      "idle_comment_threshold": 10.0
+      "idle_comment_threshold": 30
     },
     "decant": {
       "location_pattern": "ws-rcv|dz-"
@@ -396,8 +396,8 @@
       "DEFAULT": 10.0
     },
     "feature_flags": {
-      "idle_comment_enabled": false,
-      "idle_comment_threshold": 10.0
+      "idle_comment_enabled": true,
+      "idle_comment_threshold": 30
     },
     "decant": {
       "location_pattern": "ws-rcv|dz-"
@@ -528,8 +528,8 @@
       "DEFAULT": 10.0
     },
     "feature_flags": {
-      "idle_comment_enabled": false,
-      "idle_comment_threshold": 10.0
+      "idle_comment_enabled": true,
+      "idle_comment_threshold": 30
     },
     "decant": {
       "location_pattern": "ws-rcv|dz-"
@@ -660,8 +660,8 @@
       "DEFAULT": 10.0
     },
     "feature_flags": {
-      "idle_comment_enabled": false,
-      "idle_comment_threshold": 10.0
+      "idle_comment_enabled": true,
+      "idle_comment_threshold": 30
     },
     "decant": {
       "location_pattern": "ws-rcv|dz-"
@@ -792,8 +792,8 @@
       "DEFAULT": 10.0
     },
     "feature_flags": {
-      "idle_comment_enabled": false,
-      "idle_comment_threshold": 10.0
+      "idle_comment_enabled": true,
+      "idle_comment_threshold": 30
     },
     "decant": {
       "location_pattern": "ws-rcv|dz-"

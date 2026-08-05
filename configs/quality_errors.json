@@ -68,11 +68,11 @@
       "course_uuid": ""
     },
     "SHORT": {
-      "enabled": false,
+      "enabled": true,
       "mode": "urgent",
       "sigma_threshold": 1,
       "min_errors": 3,
-      "course_uuid": ""
+      "course_uuid": "03d01b07-5f1c-5057-bdfb-3b1932cae3eb"
     },
     "SINGLE_ITEM_MISSING": {
       "enabled": false,

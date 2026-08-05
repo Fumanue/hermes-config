@@ -1,4 +1,4 @@
-﻿{
+{
   "BCN1": {
     "roboscout_checks": [
       {
@@ -44,12 +44,12 @@
         "metrics": [
           {
             "column": "Perc_1_Level_Upsorted_Units  Sortable-14",
-            "min_target": 40.0,
+            "min_target": 40,
             "label": "Upsort 11->14%"
           },
           {
             "column": "Perc_1_Level_Upsorted_Units  Sortable-18.5",
-            "min_target": 60.0,
+            "min_target": 60,
             "label": "Upsort 14->18.5%"
           }
         ]
@@ -116,12 +116,12 @@
       }
     ],
     "gap_thresholds": {
-      "STOW": 2.0,
-      "QUANTITY_STOW": 2.0,
-      "PICK_AR": 5.0,
-      "P2R_PICK": 5.0,
-      "ICQA_SIMPLE_BIN_COUNT": 5.0,
-      "DEFAULT": 10.0
+      "STOW": 2,
+      "QUANTITY_STOW": 2,
+      "PICK_AR": 5,
+      "P2R_PICK": 5,
+      "ICQA_SIMPLE_BIN_COUNT": 5,
+      "DEFAULT": 10
     },
     "feature_flags": {
       "idle_comment_enabled": true,
@@ -175,12 +175,12 @@
         "metrics": [
           {
             "column": "Perc_1_Level_Upsorted_Units  Sortable-14",
-            "min_target": 40.0,
+            "min_target": 40,
             "label": "Upsort 11->14%"
           },
           {
             "column": "Perc_1_Level_Upsorted_Units  Sortable-18.5",
-            "min_target": 60.0,
+            "min_target": 60,
             "label": "Upsort 14->18.5%"
           }
         ]
@@ -229,7 +229,7 @@
       },
       {
         "key": "INDUCT",
-        "target_uph": 1000,
+        "target_uph": 1200,
         "applies_to_role": "INDUCT"
       },
       {
@@ -247,12 +247,12 @@
       }
     ],
     "gap_thresholds": {
-      "STOW": 2.0,
-      "QUANTITY_STOW": 2.0,
-      "PICK_AR": 5.0,
-      "P2R_PICK": 5.0,
-      "ICQA_SIMPLE_BIN_COUNT": 5.0,
-      "DEFAULT": 10.0
+      "STOW": 2,
+      "QUANTITY_STOW": 2,
+      "PICK_AR": 5,
+      "P2R_PICK": 5,
+      "ICQA_SIMPLE_BIN_COUNT": 5,
+      "DEFAULT": 10
     },
     "feature_flags": {
       "idle_comment_enabled": true,
@@ -306,12 +306,12 @@
         "metrics": [
           {
             "column": "Perc_1_Level_Upsorted_Units  Sortable-14",
-            "min_target": 40.0,
+            "min_target": 40,
             "label": "Upsort 11->14%"
           },
           {
             "column": "Perc_1_Level_Upsorted_Units  Sortable-18.5",
-            "min_target": 60.0,
+            "min_target": 60,
             "label": "Upsort 14->18.5%"
           }
         ]
@@ -388,12 +388,12 @@
       }
     ],
     "gap_thresholds": {
-      "STOW": 2.0,
-      "QUANTITY_STOW": 2.0,
-      "PICK_AR": 5.0,
-      "P2R_PICK": 5.0,
-      "ICQA_SIMPLE_BIN_COUNT": 5.0,
-      "DEFAULT": 10.0
+      "STOW": 2,
+      "QUANTITY_STOW": 2,
+      "PICK_AR": 5,
+      "P2R_PICK": 5,
+      "ICQA_SIMPLE_BIN_COUNT": 5,
+      "DEFAULT": 10
     },
     "feature_flags": {
       "idle_comment_enabled": true,
@@ -448,12 +448,12 @@
         "metrics": [
           {
             "column": "Perc_1_Level_Upsorted_Units  Sortable-14",
-            "min_target": 40.0,
+            "min_target": 40,
             "label": "Upsort 11->14%"
           },
           {
             "column": "Perc_1_Level_Upsorted_Units  Sortable-18.5",
-            "min_target": 60.0,
+            "min_target": 60,
             "label": "Upsort 14->18.5%"
           }
         ]
@@ -520,12 +520,12 @@
       }
     ],
     "gap_thresholds": {
-      "STOW": 2.0,
-      "QUANTITY_STOW": 2.0,
-      "PICK_AR": 5.0,
-      "P2R_PICK": 5.0,
-      "ICQA_SIMPLE_BIN_COUNT": 5.0,
-      "DEFAULT": 10.0
+      "STOW": 2,
+      "QUANTITY_STOW": 2,
+      "PICK_AR": 5,
+      "P2R_PICK": 5,
+      "ICQA_SIMPLE_BIN_COUNT": 5,
+      "DEFAULT": 10
     },
     "feature_flags": {
       "idle_comment_enabled": true,
@@ -580,12 +580,12 @@
         "metrics": [
           {
             "column": "Perc_1_Level_Upsorted_Units  Sortable-14",
-            "min_target": 40.0,
+            "min_target": 40,
             "label": "Upsort 11->14%"
           },
           {
             "column": "Perc_1_Level_Upsorted_Units  Sortable-18.5",
-            "min_target": 60.0,
+            "min_target": 60,
             "label": "Upsort 14->18.5%"
           }
         ]
@@ -652,12 +652,12 @@
       }
     ],
     "gap_thresholds": {
-      "STOW": 2.0,
-      "QUANTITY_STOW": 2.0,
-      "PICK_AR": 5.0,
-      "P2R_PICK": 5.0,
-      "ICQA_SIMPLE_BIN_COUNT": 5.0,
-      "DEFAULT": 10.0
+      "STOW": 2,
+      "QUANTITY_STOW": 2,
+      "PICK_AR": 5,
+      "P2R_PICK": 5,
+      "ICQA_SIMPLE_BIN_COUNT": 5,
+      "DEFAULT": 10
     },
     "feature_flags": {
       "idle_comment_enabled": true,
@@ -712,12 +712,12 @@
         "metrics": [
           {
             "column": "Perc_1_Level_Upsorted_Units  Sortable-14",
-            "min_target": 40.0,
+            "min_target": 40,
             "label": "Upsort 11->14%"
           },
           {
             "column": "Perc_1_Level_Upsorted_Units  Sortable-18.5",
-            "min_target": 60.0,
+            "min_target": 60,
             "label": "Upsort 14->18.5%"
           }
         ]
@@ -784,12 +784,12 @@
       }
     ],
     "gap_thresholds": {
-      "STOW": 2.0,
-      "QUANTITY_STOW": 2.0,
-      "PICK_AR": 5.0,
-      "P2R_PICK": 5.0,
-      "ICQA_SIMPLE_BIN_COUNT": 5.0,
-      "DEFAULT": 10.0
+      "STOW": 2,
+      "QUANTITY_STOW": 2,
+      "PICK_AR": 5,
+      "P2R_PICK": 5,
+      "ICQA_SIMPLE_BIN_COUNT": 5,
+      "DEFAULT": 10
     },
     "feature_flags": {
       "idle_comment_enabled": true,

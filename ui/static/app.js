@@ -1657,16 +1657,24 @@ function _applyAlertsAccess(canAlerts){
 // Flip one alert on/off from the Settings toggle and (re)apply immediately.
 function _toggleAlert(kind, on){
   _setAlertPref(kind, on);
+  // Alerts REQUIRE auto-data (owner: "no puedes tener alertas sin el auto update
+  // de datos"). Turning an alert ON force-enables auto-data if it wasn't already.
+  let forcedData = false;
+  if(on && localStorage.getItem("argos_auto_data") !== "1"){
+    _applyPerfAuto(true);   // turns on auto-data + arms the 15-min loop
+    forcedData = true;
+  }
   _applyAlertsAccess(window._canAlerts);
   const label = kind === "gca" ? "GCA" : "Quality";
   showToast({
     title: on ? `🔔 Alertas ${label} activadas` : `🔕 Alertas ${label} desactivadas`,
     body: on
-      ? (kind === "gca"
+      ? ((kind === "gca"
           ? "Recibirás aviso cuando aparezca un GCA reactivo (HIGH_DEFECTS) pendiente en tu FC."
           : "Recibirás aviso cuando un asociado cruce el umbral de Quality (≥2σ y presente en site).")
-      : "No se ejecutará auto-generación para esta alerta.",
-    type: on ? "info" : "info", ms: 6000,
+          + (forcedData ? " · Se activó también la Auto-actualización de datos (las alertas la necesitan)." : ""))
+      : "Dejarás de recibir esta alerta.",
+    type: "info", ms: 6000,
   });
 }
 window._toggleAlert = _toggleAlert;
@@ -1910,7 +1918,7 @@ function _applySiteBL(){
     if($("tabMap")) $("tabMap").style.display = "";       // FC site: map tab back
     if(window._isAdmin){
       // Restore the AMZL-hidden admin controls when switching back to an FC site.
-      if($("btnExempt")) $("btnExempt").style.display = "inline-flex";
+      if($("btnExempt")) $("btnExempt").style.display = "none";   // moved into Settings tab (owner 2026-08-05)
       // Shift Tracker retired — intentionally NOT restored (btn/tab stay hidden).
     }
   }
@@ -1948,19 +1956,21 @@ async function loadUserInfo(){
       _applySiteBL();
     }catch(blErr){ console.error("BL apply (cached) failed:", blErr); }
     if(d.permissions) _applyPermissions(d.permissions);
-    // Quality + GCA + Map tabs: visible to everyone (member or admin). Map is
-    // hidden only for AMZL/Delivery sites (no station map there) via
-    // _applySiteBL. Config, multi-site and Adoption stay admin-only.
+    // Quality + GCA + Map + Settings tabs: visible to everyone (member or admin).
+    // Everyone now SEES the same tabs incl. Settings (config) in read-only; only
+    // EDITING config is admin (owner 2026-08-05). Map hidden for AMZL via
+    // _applySiteBL. multi-site push/exempt-write stay admin-only.
     if($("tabQuality")) $("tabQuality").style.display = "";
       if($("tabCaptain")) $("tabCaptain").style.display = "";
     if($("tabGca")) $("tabGca").style.display = "";
     if($("tabMap")) $("tabMap").style.display = "";   // _applySiteBL hides it for DS
+    if($("tabConfig")) $("tabConfig").style.display = "";   // Settings tab: all users (read-only unless admin)
     // Restore admin state from cache
     if(d.admin && d.admin.is_admin){
       window._isAdmin = true;
       window._isSuperAdmin = d.admin.is_super_admin || false;
       document.body.classList.add("is-admin");
-      if($("btnExempt")) $("btnExempt").style.display = "inline-flex";
+      if($("btnExempt")) $("btnExempt").style.display = "none";   // moved into Settings tab (owner 2026-08-05)
       // Shift Tracker retired — button + tab stay hidden (code left inert).
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "inline-flex";
       if($("tabConfig")) $("tabConfig").style.display = "";
@@ -2027,13 +2037,15 @@ async function loadUserInfo(){
       if($("tabGca")) $("tabGca").style.display = "";
       if($("tabMap")) $("tabMap").style.display = "";   // _applySiteBL hides it for DS
     } else {
-      // Non-admin: Quality + GCA + Map are open to any Coaching team member
-      // (single-site only — the multi-site button stays admin-only). Map is
-      // hidden only for AMZL/Delivery sites via _applySiteBL, not by role.
+      // Non-admin: Quality + GCA + Map + Settings are open to any Coaching team
+      // member (single-site only — multi-site stays admin). Settings shows in
+      // READ-ONLY for non-admins (only admins can edit config). Map hidden for
+      // AMZL via _applySiteBL, not by role.
       if($("tabQuality")) $("tabQuality").style.display = "";
       if($("tabCaptain")) $("tabCaptain").style.display = "";
       if($("tabGca")) $("tabGca").style.display = "";
       if($("tabMap")) $("tabMap").style.display = "";   // _applySiteBL hides it for DS
+      if($("tabConfig")) $("tabConfig").style.display = "";   // Settings: read-only for non-admin
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "none";
     }
     // Non-AMZL sites: make sure Map isn't left hidden from a prior DS session.
@@ -3541,6 +3553,10 @@ const QUALITY_LABEL_OVERRIDES = {
   "nike quantity multiple events": "Quantity Multiple Event",
   "nike each": "Each Multiple Event",
   "nike quantity": "Quantity Multiple Event",
+  // Atlas sends PICK short as topic "Short" — show "Pick Short" so trainers can
+  // tell it apart from "Pick Error Indicator" at a glance.
+  "short": "Pick Short",
+  "error indicator": "Pick Error Indicator",
 };
 function qualityErrorLabel(row){
   // Prefer text error fields. If the pipeline/CSV sends a numeric support column,
@@ -3555,7 +3571,10 @@ function qualityErrorLabel(row){
     if(!/^\d+(\.\d+)?$/.test(val)){
       const override = QUALITY_LABEL_OVERRIDES[val.toLowerCase().replace(/_/g," ")];
       if(override) return override;
-      return val.replace(/_/g," ").replace(/\b\w/g, c=>c.toUpperCase());
+      // toLowerCase FIRST so an ALL-CAPS key (BIN_FILTER_VIOLATIONS) becomes
+      // Title Case ("Bin Filter Violations"), not left shouting. \b\w only
+      // upcases the first letter, so without this the rest stays uppercase.
+      return val.replace(/_/g," ").toLowerCase().replace(/\b\w/g, c=>c.toUpperCase());
     }
   }
   return "Quality Error";
@@ -3581,7 +3600,9 @@ function renderQuality(){
     if(existingKeys !== newKeys){
       errorList.innerHTML = `<label class="q-dd-all"><input type="checkbox" value="__ALL__"> <b>All</b></label>` +
       errors.map(e => {
-        const label = e.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase());
+        // Same label the table shows (qualityErrorLabel + overrides) so the
+        // filter reads "Pick Short" / "Each Multiple Event", not the raw key.
+        const label = qualityErrorLabel({error_key: e});
         return `<label><input type="checkbox" value="${esc(e)}" ${qFilterError.has(e)?'checked':''}> ${esc(label)}</label>`;
       }).join("");
     }
@@ -4866,6 +4887,13 @@ function renderPipelineStages(pct, finished){
 
 $("btnPipeline").addEventListener("click", async ()=>{
   const btn = $("btnPipeline");
+  // Block manual Start while the auto-update sequence is running (owner: avoid
+  // collisions). The auto queue sets _freshBusy; the server also holds a lock,
+  // but we stop it here so the user gets a clear message instead of a 429.
+  if(typeof _freshBusy !== "undefined" && _freshBusy){
+    showToast({title:"Auto-actualización en curso", body:"Espera a que termine el ciclo automático (GCA → Performance → Quality) antes de lanzar el pipeline manual.", type:"info", ms:4000});
+    return;
+  }
   const sb = document.querySelector("#panel-dashboard .statusbar .sb-l");
   const origSb = sb ? sb.innerHTML : "";
 
@@ -5047,7 +5075,9 @@ function _stopPerfAuto(){
 }
 function _applyPerfAuto(on){
   _setPerfAutoUI(on);
-  try{ localStorage.setItem("argos_perf_auto", on ? "1" : "0"); }catch(_){}
+  // Master auto-DATA switch. Persists across sessions; drives the 15-min
+  // GCA→Perf→Quality loop. (renamed from argos_perf_auto → argos_auto_data)
+  try{ localStorage.setItem("argos_auto_data", on ? "1" : "0"); }catch(_){}
   if(on) _startPerfAuto(); else _stopPerfAuto();
 }
 // Settings toggle: set once, persists across sessions (localStorage). calvenpj 2026-07-24.
@@ -5063,7 +5093,15 @@ $("spAutoRefresh") && $("spAutoRefresh").addEventListener("change",(e)=>{
 });
 // Restore the saved preference on load (default OFF) — reflects in the Settings
 // checkbox AND starts the timer, so the user only ever enables it once.
-(()=>{ try{ if(localStorage.getItem("argos_perf_auto")==="1") _applyPerfAuto(true); }catch(_){} })();
+(()=>{ try{
+  // Migrate the old key name if present, then restore. Default OFF → the app
+  // does its ONE first-run load but never repeats until the user opts in.
+  const legacy = localStorage.getItem("argos_perf_auto");
+  if(legacy != null && localStorage.getItem("argos_auto_data") == null){
+    localStorage.setItem("argos_auto_data", legacy); localStorage.removeItem("argos_perf_auto");
+  }
+  if(localStorage.getItem("argos_auto_data")==="1") _applyPerfAuto(true);
+}catch(_){} })();
 
 // ── Data-freshness widget + "Actualizar todo" queue ──────────────────────────
 // Shows how long ago each source (Performance / GCA / Quality) was refreshed, so
@@ -5171,20 +5209,30 @@ async function _refreshAllQueue(opts){
   const fc = (localStorage.getItem("argos-default-fc") || currentFC || "BCN4");
   const _step = (label)=>{ if(firstRun && btn) btn.textContent = `⏳ ${label}…`; };
   try{
+    // Sequence: GCA → Performance → Quality (owner's order). Each pipeline is
+    // multi-threaded internally on the server; they run one-after-another here so
+    // they never collide on the server's pipeline lock.
+    // Alerts depend on the data refresh (owner: "no alertas sin auto-update de
+    // datos"): when the user has a source's alert ON, we use its *alerting* poll
+    // (_gcaPollOnce/_qualityPollOnce) which refreshes AND notifies on new items.
+    // Otherwise we use the mute poll (_pollWithRetry) — data only, no notify.
+    const alGca = !!only._alertGca, alQual = !!only._alertQuality;
+    if(only.gca){
+      _step("GCA"); _setFreshLoading("freshGca", "GCA");
+      if(alGca && typeof _gcaPollOnce === "function") await _gcaPollOnce();
+      else await _pollWithRetry(`${API}/api/gca/poll?fc=${encodeURIComponent(fc)}`);
+      _clearFreshLoading("freshGca"); _refreshFreshness();
+    }
     if(only.perf){
       _step("Performance"); _setFreshLoading("freshPerf", "Perf");
       await _runPerformanceOnce();
       _clearFreshLoading("freshPerf"); _refreshFreshness();
       try{ if(typeof loadDashboard === "function") loadDashboard(); }catch(_){}
     }
-    if(only.gca){
-      _step("GCA"); _setFreshLoading("freshGca", "GCA");
-      await _pollWithRetry(`${API}/api/gca/poll?fc=${encodeURIComponent(fc)}`);
-      _clearFreshLoading("freshGca"); _refreshFreshness();
-    }
     if(only.quality){
       _step("Quality"); _setFreshLoading("freshQual", "Q");
-      await _pollWithRetry(`${API}/api/quality/poll?fc=${encodeURIComponent(fc)}`);
+      if(alQual && typeof _qualityPollOnce === "function") await _qualityPollOnce();
+      else await _pollWithRetry(`${API}/api/quality/poll?fc=${encodeURIComponent(fc)}`);
       _clearFreshLoading("freshQual"); _refreshFreshness();
     }
     if(!silent) showToast({title:"✅ Todo actualizado", body:"Datos al día.", type:"ok", ms:3500});
@@ -5204,16 +5252,22 @@ $("btnRefreshAll") && $("btnRefreshAll").addEventListener("click", ()=>_refreshA
 // ONE 15-min timer runs the user-enabled sources IN SEQUENCE via the queue above,
 // so they never collide on the server lock (the "GCA/Quality skipped: pipeline
 // running" loop). Which sources run is driven by the SAME prefs the old per-source
-// timers used: Performance = argos_perf_auto; GCA/Quality = their alert toggles.
+// timers used: Auto-data = argos_auto_data (master); alerts layer on top per their toggles.
 const AUTO_EXEC_MS = 15 * 60 * 1000;
 let _autoExecTimer = null;
 function _autoExecTick(){
+  // Auto-DATA is the master switch (owner: "no alertas sin auto-update de datos").
+  // When ON, the full sequence GCA→Perf→Quality runs every 15 min. Alerts are a
+  // layer ON TOP: if the user also enabled an alert, that source's poll notifies.
+  if(localStorage.getItem("argos_auto_data") !== "1") return;   // auto-data OFF → nothing
   const only = {
-    perf:    (localStorage.getItem("argos_perf_auto") === "1"),
-    gca:     (window._canAlerts && _alertPref("gca")),
-    quality: (window._canAlerts && _alertPref("quality") && !_isAmzlContext()),
+    gca:     true,
+    perf:    true,
+    quality: !_isAmzlContext(),
+    // alert flags (only meaningful when the user is eligible + opted in)
+    _alertGca:     (window._canAlerts && _alertPref("gca")),
+    _alertQuality: (window._canAlerts && _alertPref("quality") && !_isAmzlContext()),
   };
-  if(!only.perf && !only.gca && !only.quality) return;   // nothing enabled
   _refreshAllQueue({only, silent:true});
 }
 function _armAutoExec(){
@@ -5221,10 +5275,10 @@ function _armAutoExec(){
   _autoExecTimer = setInterval(_autoExecTick, AUTO_EXEC_MS);
 }
 function _maybeStopAutoExec(){
-  // Stop only when NOTHING is enabled (perf off + no alert access/prefs).
-  const anyOn = (localStorage.getItem("argos_perf_auto") === "1")
-             || (window._canAlerts && (_alertPref("gca") || _alertPref("quality")));
-  if(!anyOn && _autoExecTimer){ clearInterval(_autoExecTimer); _autoExecTimer = null; }
+  // Auto-DATA is the single master switch now. Alerts can't run without it, so
+  // if auto-data is OFF we tear down the timer regardless of alert prefs.
+  const on = (localStorage.getItem("argos_auto_data") === "1");
+  if(!on && _autoExecTimer){ clearInterval(_autoExecTimer); _autoExecTimer = null; }
 }
 window._armAutoExec = _armAutoExec;
 window._maybeStopAutoExec = _maybeStopAutoExec;
@@ -5240,7 +5294,17 @@ setInterval(_refreshFreshness, 60 * 1000);
 // user sees data loading instead of pulling "Actualizar todo" themselves.
 // After this, the per-source background polls take over based on what the user
 // enabled in Settings. Runs at most once per app load.
-setTimeout(()=>{ try{ _refreshAllQueue({firstRun:true}); }catch(_){} }, 8000);
+// One initial load at open (always — so the user sees data), running the full
+// GCA→Perf→Quality sequence once. AFTER that, the 15-min repeat only happens if
+// the user turned auto-data ON (armed in the restore block below). Alerts fire
+// on this first run too only if the user opted in AND is eligible.
+setTimeout(()=>{ try{
+  _refreshAllQueue({firstRun:true, only:{
+    gca:true, perf:true, quality:!_isAmzlContext(),
+    _alertGca:     (window._canAlerts && _alertPref("gca")),
+    _alertQuality: (window._canAlerts && _alertPref("quality") && !_isAmzlContext()),
+  }});
+}catch(_){} }, 8000);
 
 // ── Usage ping (adoption) — human-presence gated ─────────────────────────────
 // Adoption used to be inferred from pipeline runs, but the auto-exec timer now
@@ -5700,9 +5764,9 @@ if(_spBtn && _spPanel){
     // context may have changed since login).
     if(_spPanel.style.display !== "none"){
       if(window._syncAlertToggleUI) window._syncAlertToggleUI();
-      // Reflect the persisted auto-refresh state in its checkbox.
+      // Reflect the persisted auto-data state in its checkbox.
       const _ar = $("spAutoRefresh");
-      if(_ar){ try{ _ar.checked = localStorage.getItem("argos_perf_auto")==="1"; }catch(_){} }
+      if(_ar){ try{ _ar.checked = localStorage.getItem("argos_auto_data")==="1"; }catch(_){} }
     }
   });
   document.addEventListener("click", (e) => {
@@ -10900,6 +10964,13 @@ document.addEventListener("click",(e)=>{
   $("ex-scope") && $("ex-scope").addEventListener("change", _exToggleScope);
 
   if($("btnExempt")) $("btnExempt").addEventListener("click", ()=>{
+    openModal("modalExempt");
+    $("ex-result") && ($("ex-result").innerHTML = "");
+    _exToggleScope();
+    _loadExemptList();
+  });
+  // Exempt zone now lives inside the Settings tab (owner 2026-08-05). Same modal.
+  if($("cfgOpenExempt")) $("cfgOpenExempt").addEventListener("click", ()=>{
     openModal("modalExempt");
     $("ex-result") && ($("ex-result").innerHTML = "");
     _exToggleScope();

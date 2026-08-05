@@ -1176,6 +1176,17 @@ table.cap-table tr:hover td{background:var(--row-hover,rgba(0,0,0,.03))}
 .multi-site-checks input{width:16px;height:16px;accent-color:#7c3aed}
 
 /* Admin Config panel */
+/* Read-only for non-admins: everyone SEES Settings, only admins edit. Hide all
+   edit controls (save / add / delete rows) unless <body> has .is-admin. The
+   server also enforces this (config_write is admin-only) — this is UX. */
+.cfg-save, .cfg-add-btn, .cfg-del-btn, .cfg-add-row{display:none}
+body.is-admin .cfg-save{display:inline-block}
+body.is-admin .cfg-add-btn{display:inline-block}
+body.is-admin .cfg-del-btn{display:inline-block}
+body.is-admin .cfg-add-row{display:flex}
+/* Read-only banner: shown to non-admins only */
+#cfgReadonlyBanner{display:flex;align-items:center;gap:8px;margin:0;padding:9px 16px;background:#eef2fb;border-bottom:1px solid #c9d6f0;color:#2a4b8d;font-size:12px;font-weight:600}
+body.is-admin #cfgReadonlyBanner{display:none}
 .cfg-scroll{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;padding:20px;align-items:start;overflow-y:auto;flex:1}
 @media(max-width:1200px){.cfg-scroll{grid-template-columns:1fr}}
 /* Admin layout: sidebar tabs on left, content on right */
@@ -2002,7 +2013,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <div class="t-tab" data-tab="faq" data-i18n="tab_faq">FAQ</div>
     <div class="t-tab" data-tab="gca" id="tabGca" style="display:none">GCA</div>
     <div class="t-tab" data-tab="shifttracker" id="tabShiftTracker" style="display:none">📈 Shift Tracker</div>
-    <div class="t-tab" data-tab="config" id="tabConfig" style="display:none">⚙️ Config</div>
+    <div class="t-tab" data-tab="config" id="tabConfig" style="display:none">⚙️ Settings</div>
 
   </div>
   <div style="flex:1"></div>
@@ -2062,7 +2073,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <button id="btnCaptainMode" class="settings-btn bl-fc-only" title="Captain Mode — report de Day-1/Day-2 con errores de calidad">🧭</button>
     <button id="btnDeliveryMode" class="settings-btn" title="Modo Delivery (AMZL)">🚚</button>
     <button id="btnManualTime" class="settings-btn" title="Modo manual de hora">🕐</button>
-    <button class="settings-btn" id="btnSettings" title="Settings">⚙️</button>
+    <button class="settings-btn" id="btnSettings" title="Preferences">⚙️</button>
   </div>
   </div>
   <div class="t-infobar">
@@ -2090,7 +2101,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 
 <!-- ═══ SETTINGS POPOVER ═══ -->
 <div class="settings-popover" id="settingsPopover" style="display:none">
-  <div class="sp-title">⚙️ Settings</div>
+  <div class="sp-title">⚙️ Preferences</div>
   <div class="sp-row">
     <span class="sp-label" data-i18n="lbl_theme">Tema</span>
     <div class="theme-swatches" id="themeSwatches">
@@ -2154,10 +2165,27 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <button class="sp-opt" id="spDensityCompact" data-val="compact">Compacta</button>
     </div>
   </div>
+  <!-- 1) AUTO-DATA (master). Opt-in, persists. When ON: GCA→Performance→Quality
+       every 15 min. When OFF: the app still does ONE load at open, then stops. -->
+  <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
+    <div class="sp-label" style="margin-bottom:8px">🔄 Auto-actualización de datos</div>
+    <div style="font-size:10.5px;color:var(--text-muted);line-height:1.5;margin-bottom:10px">
+      Opt-in. Al activarlo, Argos refresca <b>GCA → Performance → Quality</b> cada 15 min (se recuerda entre sesiones). Mientras corre, el botón Start Pipeline manual se bloquea para evitar choques.
+    </div>
+    <label class="sp-alert-toggle" for="spAutoRefresh">
+      <span>
+        <b>Auto-actualización cada 15 min</b>
+        <span class="sp-alert-desc">Secuencia GCA → Performance → Quality · Sequence, every 15 min. Remembered across sessions.</span>
+      </span>
+      <input type="checkbox" id="spAutoRefresh">
+    </label>
+  </div>
+  <!-- 2) ALERTS (any team member). Depend on auto-data: enabling one forces
+       auto-data ON. They notify after each data cycle; no separate fetch. -->
   <div id="spAlertsRow" style="display:none;border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
-    <div class="sp-label" style="margin-bottom:8px" data-i18n="alerts_settings_title">🔔 Alertas automáticas</div>
-    <div style="font-size:10.5px;color:var(--text-muted);line-height:1.5;margin-bottom:10px" data-i18n="alerts_settings_hint">
-      Opt-in. Cuando las activas, Argos revisa tu FC en segundo plano y te avisa. Detalles en la pestaña FAQ.
+    <div class="sp-label" style="margin-bottom:8px" data-i18n="alerts_settings_title">🔔 Alertas</div>
+    <div style="font-size:10.5px;color:var(--text-muted);line-height:1.5;margin-bottom:10px">
+      Avisan tras cada ciclo de auto-actualización. <b>Requieren la Auto-actualización de datos</b> — al activar una, se activa también arriba. Detalles en FAQ.
     </div>
     <label class="sp-alert-toggle" for="spAlertGca">
       <span>
@@ -2172,16 +2200,6 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
         <span class="sp-alert-desc">Aviso cuando alguien cruza ≥2σ y está en site</span>
       </span>
       <input type="checkbox" id="spAlertQuality" onchange="if(window._toggleAlert)window._toggleAlert('quality', this.checked)">
-    </label>
-  </div>
-  <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
-    <div class="sp-label" style="margin-bottom:8px">🔄 Actualización automática</div>
-    <label class="sp-alert-toggle" for="spAutoRefresh">
-      <span>
-        <b>Auto-refresh Performance (15 min)</b>
-        <span class="sp-alert-desc">Re-ejecuta el pipeline de Performance cada 15 min · Re-runs the Performance pipeline every 15 min. Se recuerda entre sesiones.</span>
-      </span>
-      <input type="checkbox" id="spAutoRefresh">
     </label>
   </div>
   <div class="sp-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
@@ -2653,11 +2671,10 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
               <li><b>↓ CSV</b> — Exporta la tabla visible a CSV.</li>
               <li><b>🗺️ Map</b> — Abre el mapa espacial del floor (estaciones, rates, gaps). Disponible en sitios FC (no en Delivery).</li>
               <li><b>🧭 Path</b> — Muestra la ruta de coaching recomendada.</li>
-              <li><b>⚙️ Settings</b> — Tema, idioma, densidad y <b>activar/desactivar tus alertas automáticas</b> (GCA y Quality).</li>
+              <li><b>⚙️ Preferences</b> — Tema, idioma, densidad, <b>auto-actualización de datos</b> y <b>activar/desactivar tus alertas</b> (GCA y Quality).</li>
               <li><b>🕐 Manual</b> — Fija un rango de fecha/hora manual en lugar del turno auto-detectado.</li>
-              <li><b>🚫 Exempt</b> <span style="color:var(--text-muted)">(admin)</span> — Excluye asociados del coaching (Performance + Quality).</li>
               <li><b>📊 Adoption</b> <span style="color:var(--text-muted)">(super admin)</span> — Métricas de adopción de Argos (DDD).</li>
-              <li><b>⚙️ Config</b> <span style="color:var(--text-muted)">(admin)</span> — Edición de configuración: targets, mapeos, umbrales, cursos, min-horas, etc. Los admins son <b>exclusivamente</b> para mover configuración.</li>
+              <li><b>⚙️ Settings</b> — Configuración (targets, mapeos, umbrales, cursos, min-horas, <b>exempt zone</b>). <b>Todos la ven</b>; <b>solo los admin editan</b> — para el resto es solo lectura.</li>
             </ul>
             <hr style="margin:12px 0;border-color:var(--border)">
             <p><b>English</b> — Top-bar buttons (some appear only based on your role/site):</p>
@@ -2669,11 +2686,10 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
               <li><b>↓ CSV</b> — Exports the visible table to CSV.</li>
               <li><b>🗺️ Map</b> — Opens the spatial floor map (stations, rates, gaps). Available on FC sites (not Delivery).</li>
               <li><b>🧭 Path</b> — Shows the recommended coaching path.</li>
-              <li><b>⚙️ Settings</b> — Theme, language, density and <b>enable/disable your automatic alerts</b> (GCA and Quality).</li>
+              <li><b>⚙️ Preferences</b> — Theme, language, density, <b>data auto-refresh</b> and <b>enable/disable your alerts</b> (GCA and Quality).</li>
               <li><b>🕐 Manual</b> — Sets a manual date/time range instead of the auto-detected shift.</li>
-              <li><b>🚫 Exempt</b> <span style="color:var(--text-muted)">(admin)</span> — Excludes associates from coaching (Performance + Quality).</li>
               <li><b>📊 Adoption</b> <span style="color:var(--text-muted)">(super admin)</span> — Argos adoption metrics (DDD).</li>
-              <li><b>⚙️ Config</b> <span style="color:var(--text-muted)">(admin)</span> — Configuration editing: targets, mappings, thresholds, courses, min-hours, etc. Admins are <b>exclusively</b> for moving configuration.</li>
+              <li><b>⚙️ Settings</b> — Configuration (targets, mappings, thresholds, courses, min-hours, <b>exempt zone</b>). <b>Everyone sees it</b>; <b>only admins edit</b> — read-only for the rest.</li>
             </ul>
           </div>
         </div>
@@ -2766,7 +2782,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
               <li><b>Quality</b> — Defectos de calidad de los últimos 7 días por asociado y tipo de error, con su curso asociado. Muestra a todos (incluso por debajo de sigma 1) para poder hacer dive-deep.</li>
               <li><b>GCA</b> — Compliance de Guided Coaching: completados, pendientes y cancelados, con cards de %, barra apilada y una pestaña de Cancelled con su reason/nota. Incluye cancelación masiva por modal.</li>
               <li><b>🗺️ Map</b> — Mapa espacial del floor por planta (P1 con muros/induct/rebin/packers/líneas; P2/P3/P4 por anillos), con rates, gaps, idle y GCA pendientes. Solo en sitios FC (no Delivery).</li>
-              <li><b>⚙️ Config</b> <span style="color:var(--text-muted)">(admin)</span> — Solo para administradores.</li>
+              <li><b>⚙️ Settings</b> — Configuración; todos la ven, solo admin edita.</li>
             </ul>
             <hr style="margin:12px 0;border-color:var(--border)">
             <p><b>English</b> — Argos has several tabs, available to the whole team:</p>
@@ -2775,7 +2791,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
               <li><b>Quality</b> — Last-7-days quality defects per associate and error type, with the associated course. Shows everyone (even below sigma 1) so you can dive-deep.</li>
               <li><b>GCA</b> — Guided Coaching compliance: completed, pending and cancelled, with % cards, a stacked bar, and a Cancelled tab with its reason/note. Includes bulk cancel via modal.</li>
               <li><b>🗺️ Map</b> — Spatial floor map per level (P1 with walls/induct/rebin/packers/lines; P2/P3/P4 by rings), with rates, gaps, idle and GCA pendings. FC sites only (not Delivery).</li>
-              <li><b>⚙️ Config</b> <span style="color:var(--text-muted)">(admin)</span> — Administrators only.</li>
+              <li><b>⚙️ Settings</b> — Configuration; everyone sees it, only admins edit.</li>
             </ul>
           </div>
         </div>
@@ -2967,7 +2983,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
 <div class="tab-panel" id="panel-config" style="flex-direction:column">
   <!-- Topbar -->
   <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0">
-    <span style="font-size:14px;font-weight:800;color:var(--text)">⚙️ Admin Config</span>
+    <span style="font-size:14px;font-weight:800;color:var(--text)">⚙️ Settings</span>
     <div style="flex:1"></div>
     <span class="tb-label">FC</span>
     <select id="cfgFcFilter" class="tselect" style="height:28px;min-width:90px;font-size:11px">
@@ -2979,9 +2995,10 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <option value="RMU1">RMU1</option>
       <option value="SVQ1">SVQ1</option>
     </select>
-    <button class="act-btn act-multi" id="cfgPushBtn" style="font-size:11px;padding:4px 12px">🔄 Sync</button>
+    <button class="act-btn act-multi cfg-save" id="cfgPushBtn" style="font-size:11px;padding:4px 12px">🔄 Sync</button>
     <span id="cfgStatus" style="font-size:11px;color:var(--text-muted)"></span>
   </div>
+  <div id="cfgReadonlyBanner">👁️ Vista de solo lectura · Read-only — la configuración la editan los administradores. Puedes ver todos los valores pero no cambiarlos.</div>
 
   <!-- Sidebar + Content -->
   <div class="cfg-layout">
@@ -2993,6 +3010,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <button class="cfg-sidebar-tab" data-cfg-tab="shifts"><span class="cfg-tab-icon">🕐</span>Shifts</button>
       <button class="cfg-sidebar-tab" data-cfg-tab="stations"><span class="cfg-tab-icon">📍</span>Stations</button>
       <button class="cfg-sidebar-tab" data-cfg-tab="gcamap"><span class="cfg-tab-icon">🗺️</span>GCA Mapping</button>
+      <button class="cfg-sidebar-tab" data-cfg-tab="exempt"><span class="cfg-tab-icon">🚫</span>Exempt Zone</button>
     </div>
 
     <!-- Content area -->
@@ -3115,6 +3133,17 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
             <button class="act-btn act-primary cfg-save" id="cfgSaveGcaMap" style="font-size:11px;padding:4px 12px">💾 Save</button>
           </div>
           <div class="cfg-card-body" id="cfgGcaLegendBody"><div class="cfg-loading">Loading…</div></div>
+        </div>
+      </div>
+
+      <div class="cfg-section" id="cfg-section-exempt">
+        <div class="cfg-section-title">Exempt Zone</div>
+        <div class="cfg-section-sub">Excluir asociados del coaching (Performance + Quality). Solo admins pueden añadir o quitar exenciones · Only admins can add/remove.</div>
+        <div class="cfg-card">
+          <div class="cfg-card-body">
+            <button class="act-btn act-primary cfg-save" id="cfgOpenExempt" style="font-size:12px;padding:8px 16px">🚫 Abrir Exempt Zone</button>
+            <p style="font-size:11.5px;color:var(--text-muted);margin-top:10px">Gestiona la lista de asociados excluidos del coaching, por proceso o por topic de calidad.</p>
+          </div>
         </div>
       </div>
 
@@ -3573,7 +3602,7 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
      2026-07-24 and adoption is no longer a user-facing view. The /api/adoption
      endpoint and argos_usage.csv are kept for out-of-band analysis. -->
 
-<script src="/static/app.js?v=v293_captain_tab_monitor_report_20260804" defer></script>
+<script src="/static/app.js?v=v297_settings_readonly_perms_20260805" defer></script>
 </body>
 </html>
 

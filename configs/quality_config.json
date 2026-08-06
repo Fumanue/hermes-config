@@ -208,5 +208,351 @@
         }
       }
     }
+  },
+  "processes_fc_overrides": {
+    "OVD1": {
+      "Pack": {
+        "enabled": true,
+        "subprocesses": {
+          "AFE 1": {
+            "enabled": true,
+            "topics": [
+              {
+                "name": "AFE1 Item Damaged",
+                "label": "AFE1 Item Damaged",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "AFE1 Item Missing",
+                "label": "AFE1 Item Missing",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "AFE1 Item Unscannable",
+                "label": "AFE1 Item Unscannable",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "AFE1 Shipment Exception",
+                "label": "AFE1 Shipment Exception",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "AFE1 Slam Kickout",
+                "label": "AFE1 Slam Kickout",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "AFE1 Slam Kickout Override",
+                "label": "AFE1 Slam Kickout Override",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "AFE1 Slam Wrong Box",
+                "label": "AFE1 Slam Wrong Box",
+                "applies_to_roles": [
+                  "*"
+                ]
+              }
+            ]
+          },
+          "Single": {
+            "enabled": true,
+            "topics": [
+              {
+                "name": "Single Item Damaged",
+                "label": "Single Item Damaged",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "Single Item Missing",
+                "label": "Single Item Missing",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "Single Item Unscannable",
+                "label": "Single Item Unscannable",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "Single Shipment Exception",
+                "label": "Single Shipment Exception",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "Single Slam Kickout",
+                "label": "Single Slam Kickout",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "Single Slam Kickout Override",
+                "label": "Single Slam Kickout Override",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "Single Slam Wrong Box",
+                "label": "Single Slam Wrong Box",
+                "applies_to_roles": [
+                  "*"
+                ]
+              }
+            ]
+          },
+          "VRET": {
+            "enabled": true,
+            "topics": [
+              {
+                "name": "VRET Item Missing",
+                "label": "VRET Item Missing",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "VRET Slam Kickout",
+                "label": "VRET Slam Kickout",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "VRET Slam Kickout Override",
+                "label": "VRET Slam Kickout Override",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "VRET Slam Wrong Box",
+                "label": "VRET Slam Wrong Box",
+                "applies_to_roles": [
+                  "*"
+                ]
+              }
+            ]
+          },
+          "Other": {
+            "enabled": true,
+            "topics": [
+              {
+                "name": "Other Item Damaged",
+                "label": "Other Item Damaged",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "Other Item Missing",
+                "label": "Other Item Missing",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "Other Item Unscannable",
+                "label": "Other Item Unscannable",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "Other Shipment Exception",
+                "label": "Other Shipment Exception",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "Other Slam Kickout",
+                "label": "Other Slam Kickout",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "Other Slam Kickout Override",
+                "label": "Other Slam Kickout Override",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "Other Slam Wrong Box",
+                "label": "Other Slam Wrong Box",
+                "applies_to_roles": [
+                  "*"
+                ]
+              }
+            ]
+          },
+          "Untraceable": {
+            "enabled": true,
+            "topics": [
+              {
+                "name": "Untraceable Slam Kickout",
+                "label": "Untraceable Slam Kickout",
+                "applies_to_roles": [
+                  "*"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "Sort": {
+        "enabled": true,
+        "subprocesses": {
+          "Induct": {
+            "enabled": true,
+            "topics": [
+              {
+                "name": "Induct Damage",
+                "label": "Induct Damage",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "Induct Shortage",
+                "label": "Induct Shortage",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "Induct Overage",
+                "label": "Induct Overage",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "Induct Unscannable",
+                "label": "Induct Unscannable",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "Induct Error Indicator",
+                "label": "Induct Error Indicator",
+                "applies_to_roles": [
+                  "*"
+                ]
+              }
+            ]
+          },
+          "AFE Rebin": {
+            "enabled": true,
+            "topics": [
+              {
+                "name": "AFE Rebin Shortage",
+                "label": "AFE Rebin Shortage",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "AFE Rebin Damage",
+                "label": "AFE Rebin Damage",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "AFE Rebin Error Indicator",
+                "label": "AFE Rebin Error Indicator",
+                "applies_to_roles": [
+                  "*"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "P2R": {
+        "enabled": true,
+        "subprocesses": {
+          "P2R Pack": {
+            "enabled": true,
+            "topics": [
+              {
+                "name": "P2R Item Damaged",
+                "label": "P2R Item Damaged",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "P2R Item Missing",
+                "label": "P2R Item Missing",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "P2R Item Unscannable",
+                "label": "P2R Item Unscannable",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "P2R Shipment Exception",
+                "label": "P2R Shipment Exception",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "P2R Slam Kickout",
+                "label": "P2R Slam Kickout",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "P2R Slam Kickout Override",
+                "label": "P2R Slam Kickout Override",
+                "applies_to_roles": [
+                  "*"
+                ]
+              },
+              {
+                "name": "P2R Slam Wrong Box",
+                "label": "P2R Slam Wrong Box",
+                "applies_to_roles": [
+                  "*"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    }
   }
 }

@@ -82,5 +82,215 @@
       "course_uuid": ""
     }
   },
-  "fc_overrides": {}
+  "fc_overrides": {
+    "OVD1": {
+      "errors": {
+        "AFE1_ITEM_DAMAGED": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "AFE1_ITEM_MISSING": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "AFE1_ITEM_UNSCANNABLE": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "AFE1_SHIPMENT_EXCEPTION": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "AFE1_SLAM_KICKOUT": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "AFE1_SLAM_KICKOUT_OVERRIDE": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "AFE1_SLAM_WRONG_BOX": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "SINGLE_ITEM_DAMAGED": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "SINGLE_ITEM_MISSING": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "SINGLE_ITEM_UNSCANNABLE": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "SINGLE_SHIPMENT_EXCEPTION": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "SINGLE_SLAM_KICKOUT": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "SINGLE_SLAM_KICKOUT_OVERRIDE": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "SINGLE_SLAM_WRONG_BOX": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "VRET_ITEM_MISSING": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "VRET_SLAM_KICKOUT": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "VRET_SLAM_KICKOUT_OVERRIDE": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "VRET_SLAM_WRONG_BOX": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "OTHER_ITEM_DAMAGED": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "OTHER_ITEM_MISSING": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "OTHER_ITEM_UNSCANNABLE": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "OTHER_SHIPMENT_EXCEPTION": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "OTHER_SLAM_KICKOUT": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "OTHER_SLAM_KICKOUT_OVERRIDE": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "OTHER_SLAM_WRONG_BOX": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "UNTRACEABLE_SLAM_KICKOUT": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "INDUCT_DAMAGE": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "INDUCT_SHORTAGE": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "INDUCT_OVERAGE": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "INDUCT_UNSCANNABLE": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "INDUCT_ERROR_INDICATOR": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "AFE_REBIN_SHORTAGE": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "AFE_REBIN_DAMAGE": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "AFE_REBIN_ERROR_INDICATOR": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "P2R_ITEM_DAMAGED": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "P2R_ITEM_MISSING": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "P2R_ITEM_UNSCANNABLE": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "P2R_SHIPMENT_EXCEPTION": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "P2R_SLAM_KICKOUT": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "P2R_SLAM_KICKOUT_OVERRIDE": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        },
+        "P2R_SLAM_WRONG_BOX": {
+          "enabled": true,
+          "min_errors": 3,
+          "course_uuid": ""
+        }
+      }
+    }
+  }
 }

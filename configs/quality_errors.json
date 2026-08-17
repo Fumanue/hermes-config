@@ -1,296 +1,75 @@
 {
-  "_comment": "Unified Quality error config. Merges former quality_mode.json + quality_courses.json. 'defaults' apply to every FC; 'fc_overrides' hold only per-FC exceptions (empty today: all FC identical after the 2026-07-15 urgent/1sigma alignment).",
+  "_comment": "Unified Quality error config. Defaults apply to every FC — all 47 error types active for España (owner 2026-08-13). fc_overrides is available if an FC needs to disable some in the future.",
   "defaults": {
     "mode": "urgent",
     "sigma_threshold": 1,
     "min_errors": 3,
-    "enabled": false
+    "enabled": true
   },
   "course_base": "https://dub.prod.cms.umbrella.amazon.dev/course/",
   "default_course_uuid": "",
   "errors": {
-    "AFE1_ITEM_MISSING": {
-      "enabled": false,
-      "mode": "urgent",
-      "sigma_threshold": 1,
-      "min_errors": 3,
-      "course_uuid": ""
-    },
-    "BIN_FILTER_VIOLATIONS": {
-      "enabled": true,
-      "mode": "urgent",
-      "sigma_threshold": 1,
-      "min_errors": 3,
-      "course_uuid": "a0eda47c-90ec-56e7-936c-166191a0d144"
-    },
-    "FALSE_PICK_SHORT": {
-      "enabled": true,
-      "mode": "urgent",
-      "sigma_threshold": 1,
-      "min_errors": 3,
-      "course_uuid": "1c245fcf-784c-56b6-9672-f27c287b8200"
-    },
-    "NIKE_EACH": {
-      "enabled": true,
-      "mode": "urgent",
-      "sigma_threshold": 1,
-      "min_errors": 4,
-      "course_uuid": "fb9ad2f5-6a87-507e-b80e-199459de007f",
-      "label": "Each Multiple Event"
-    },
-    "NIKE_QUANTITY": {
-      "enabled": true,
-      "mode": "urgent",
-      "sigma_threshold": 1,
-      "min_errors": 4,
-      "course_uuid": "fb9ad2f5-6a87-507e-b80e-199459de007f",
-      "label": "Quantity Multiple Event"
-    },
-    "OTHER_ITEM_MISSING": {
-      "enabled": false,
-      "mode": "urgent",
-      "sigma_threshold": 1,
-      "min_errors": 3,
-      "course_uuid": ""
-    },
-    "PICK_ERROR_INDICATOR": {
-      "enabled": true,
-      "mode": "urgent",
-      "sigma_threshold": 1,
-      "min_errors": 3,
-      "course_uuid": "ee58d67f-d14a-5d5c-8500-43cf682d5fa4"
-    },
-    "SCAN_OUT_OF_SEQUENCE": {
-      "enabled": false,
-      "mode": "urgent",
-      "sigma_threshold": 1,
-      "min_errors": 3,
-      "course_uuid": ""
-    },
-    "SHORT": {
-      "enabled": true,
-      "mode": "urgent",
-      "sigma_threshold": 1,
-      "min_errors": 3,
-      "course_uuid": "03d01b07-5f1c-5057-bdfb-3b1932cae3eb"
-    },
-    "SINGLE_ITEM_MISSING": {
-      "enabled": false,
-      "mode": "urgent",
-      "sigma_threshold": 1,
-      "min_errors": 3,
-      "course_uuid": ""
-    }
+    "BIN_FILTER_VIOLATIONS": { "enabled": true, "mode": "urgent", "sigma_threshold": 1, "min_errors": 3, "course_uuid": "a0eda47c-90ec-56e7-936c-166191a0d144" },
+    "SCAN_OUT_OF_SEQUENCE":  { "enabled": true, "mode": "urgent", "sigma_threshold": 1, "min_errors": 3, "course_uuid": "" },
+    "NIKE_EACH":             { "enabled": true, "mode": "urgent", "sigma_threshold": 1, "min_errors": 4, "course_uuid": "fb9ad2f5-6a87-507e-b80e-199459de007f", "label": "Each Multiple Event" },
+    "NIKE_QUANTITY":         { "enabled": true, "mode": "urgent", "sigma_threshold": 1, "min_errors": 4, "course_uuid": "fb9ad2f5-6a87-507e-b80e-199459de007f", "label": "Quantity Multiple Event" },
+
+    "PICK_ERROR_INDICATOR":  { "enabled": true, "mode": "urgent", "sigma_threshold": 1, "min_errors": 3, "course_uuid": "ee58d67f-d14a-5d5c-8500-43cf682d5fa4" },
+    "SHORT":                 { "enabled": true, "mode": "urgent", "sigma_threshold": 1, "min_errors": 3, "course_uuid": "03d01b07-5f1c-5057-bdfb-3b1932cae3eb" },
+    "FALSE_PICK_SHORT":      { "enabled": true, "mode": "urgent", "sigma_threshold": 1, "min_errors": 3, "course_uuid": "1c245fcf-784c-56b6-9672-f27c287b8200" },
+
+    "PACK_SLAM_KICKOUT":     { "enabled": true, "mode": "urgent", "sigma_threshold": 1, "min_errors": 3, "course_uuid": "" },
+    "PACK_SLAM_WRONG_BOX":   { "enabled": true, "mode": "urgent", "sigma_threshold": 1, "min_errors": 3, "course_uuid": "" },
+    "PACK_ITEM_MISSING":     { "enabled": true, "mode": "urgent", "sigma_threshold": 1, "min_errors": 3, "course_uuid": "" },
+
+    "AFE1_ITEM_DAMAGED":            { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "AFE1_ITEM_MISSING":            { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "AFE1_ITEM_UNSCANNABLE":        { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "AFE1_SHIPMENT_EXCEPTION":      { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "AFE1_SLAM_KICKOUT":            { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "AFE1_SLAM_KICKOUT_OVERRIDE":   { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "AFE1_SLAM_WRONG_BOX":          { "enabled": true, "min_errors": 3, "course_uuid": "" },
+
+    "SINGLE_ITEM_DAMAGED":          { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "SINGLE_ITEM_MISSING":          { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "SINGLE_ITEM_UNSCANNABLE":      { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "SINGLE_SHIPMENT_EXCEPTION":    { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "SINGLE_SLAM_KICKOUT":          { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "SINGLE_SLAM_KICKOUT_OVERRIDE": { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "SINGLE_SLAM_WRONG_BOX":        { "enabled": true, "min_errors": 3, "course_uuid": "" },
+
+    "OTHER_ITEM_DAMAGED":           { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "OTHER_ITEM_MISSING":           { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "OTHER_ITEM_UNSCANNABLE":       { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "OTHER_SHIPMENT_EXCEPTION":     { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "OTHER_SLAM_KICKOUT":           { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "OTHER_SLAM_KICKOUT_OVERRIDE":  { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "OTHER_SLAM_WRONG_BOX":         { "enabled": true, "min_errors": 3, "course_uuid": "" },
+
+    "VRET_ITEM_MISSING":            { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "VRET_SLAM_KICKOUT":            { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "VRET_SLAM_KICKOUT_OVERRIDE":   { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "VRET_SLAM_WRONG_BOX":          { "enabled": true, "min_errors": 3, "course_uuid": "" },
+
+    "UNTRACEABLE_SLAM_KICKOUT":     { "enabled": true, "min_errors": 3, "course_uuid": "" },
+
+    "INDUCT_DAMAGE":                { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "INDUCT_SHORTAGE":              { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "INDUCT_OVERAGE":               { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "INDUCT_UNSCANNABLE":           { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "INDUCT_ERROR_INDICATOR":       { "enabled": true, "min_errors": 3, "course_uuid": "" },
+
+    "AFE_REBIN_SHORTAGE":           { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "AFE_REBIN_DAMAGE":             { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "AFE_REBIN_ERROR_INDICATOR":    { "enabled": true, "min_errors": 3, "course_uuid": "" },
+
+    "P2R_ITEM_DAMAGED":             { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "P2R_ITEM_MISSING":             { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "P2R_ITEM_UNSCANNABLE":         { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "P2R_SHIPMENT_EXCEPTION":       { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "P2R_SLAM_KICKOUT":             { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "P2R_SLAM_KICKOUT_OVERRIDE":    { "enabled": true, "min_errors": 3, "course_uuid": "" },
+    "P2R_SLAM_WRONG_BOX":           { "enabled": true, "min_errors": 3, "course_uuid": "" }
   },
-  "fc_overrides": {
-    "OVD1": {
-      "errors": {
-        "AFE1_ITEM_DAMAGED": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "AFE1_ITEM_MISSING": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "AFE1_ITEM_UNSCANNABLE": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "AFE1_SHIPMENT_EXCEPTION": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "AFE1_SLAM_KICKOUT": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "AFE1_SLAM_KICKOUT_OVERRIDE": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "AFE1_SLAM_WRONG_BOX": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "SINGLE_ITEM_DAMAGED": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "SINGLE_ITEM_MISSING": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "SINGLE_ITEM_UNSCANNABLE": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "SINGLE_SHIPMENT_EXCEPTION": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "SINGLE_SLAM_KICKOUT": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "SINGLE_SLAM_KICKOUT_OVERRIDE": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "SINGLE_SLAM_WRONG_BOX": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "VRET_ITEM_MISSING": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "VRET_SLAM_KICKOUT": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "VRET_SLAM_KICKOUT_OVERRIDE": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "VRET_SLAM_WRONG_BOX": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "OTHER_ITEM_DAMAGED": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "OTHER_ITEM_MISSING": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "OTHER_ITEM_UNSCANNABLE": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "OTHER_SHIPMENT_EXCEPTION": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "OTHER_SLAM_KICKOUT": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "OTHER_SLAM_KICKOUT_OVERRIDE": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "OTHER_SLAM_WRONG_BOX": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "UNTRACEABLE_SLAM_KICKOUT": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "INDUCT_DAMAGE": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "INDUCT_SHORTAGE": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "INDUCT_OVERAGE": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "INDUCT_UNSCANNABLE": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "INDUCT_ERROR_INDICATOR": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "AFE_REBIN_SHORTAGE": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "AFE_REBIN_DAMAGE": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "AFE_REBIN_ERROR_INDICATOR": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "P2R_ITEM_DAMAGED": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "P2R_ITEM_MISSING": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "P2R_ITEM_UNSCANNABLE": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "P2R_SHIPMENT_EXCEPTION": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "P2R_SLAM_KICKOUT": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "P2R_SLAM_KICKOUT_OVERRIDE": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        },
-        "P2R_SLAM_WRONG_BOX": {
-          "enabled": true,
-          "min_errors": 3,
-          "course_uuid": ""
-        }
-      }
-    }
-  }
+  "fc_overrides": {}
 }

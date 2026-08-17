@@ -1,6 +1,6 @@
 {
   "default_fc": "BCN4",
-  "max_workers": 4,
+  "max_workers": 12,
   "min_hours_threshold": 1.0,
   "_amzl_comment": "AMZL (Delivery Station) sources. AMZL uses ONLY Process Inspector (PPA) + Roster. process_id is PER-SITE in delivery (some DS use 100541 'ADTA Stow', others 100021 'Stow'). amzl_process_by_site overrides amzl_default_process for a given DS code.",
   "amzl_default_process": "100021",

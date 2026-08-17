@@ -3657,22 +3657,19 @@ function renderQuality(){
   // use. Merged families (Pack Slam Kick Out / Wrong Box / Missing Item) therefore
   // appear as ONE option, not their per-process variants. owner 2026-08-15.
   if(qualityRows.length){
-    // ── Error dropdown: ErrorKey -> the row's own Error Type label (table-exact) ──
+    // ── Error dropdown: dedupe by the DISPLAYED label (qualityErrorLabel = the
+    // exact label the table's TIPO ERROR cell renders). Merged families (Pack Slam
+    // Kick Out / Wrong Box / Missing Item) share ONE label across their per-process
+    // ErrorKeys, so they collapse to a SINGLE condensed option and selecting it
+    // filters every underlying variant. owner 2026-08-17.
     const errorList = $("qFilterErrorList");
     if(errorList){
-      const labelByKey = new Map();
-      for(const r of qualityRows){
-        const k = qualityValue(r,["ErrorKey","error_key","errorKey"],"");
-        if(!k || labelByKey.has(k)) continue;
-        const lbl = String(qualityValue(r,["Error Type","error_type","ErrorType"],"")).trim()
-                    || qualityErrorLabel({error_key: k});
-        labelByKey.set(k, lbl);
-      }
-      const errors = [...labelByKey.keys()].sort((a,b)=>labelByKey.get(a).localeCompare(labelByKey.get(b)));
-      const existingKeys = [...errorList.querySelectorAll('input[type="checkbox"]:not([value="__ALL__"])')].map(c=>c.value).sort().join(",");
-      if(existingKeys !== [...errors].sort().join(",")){
+      const labels = [...new Set(qualityRows.map(r => qualityErrorLabel(r)).filter(Boolean))]
+                       .sort((a,b)=>a.localeCompare(b));
+      const existing = [...errorList.querySelectorAll('input[type="checkbox"]:not([value="__ALL__"])')].map(c=>c.value).sort().join("|");
+      if(existing !== [...labels].sort().join("|")){
         errorList.innerHTML = `<label class="q-dd-all"><input type="checkbox" value="__ALL__"> <b>All</b></label>` +
-          errors.map(e => `<label><input type="checkbox" value="${esc(e)}" ${qFilterError.has(e)?'checked':''}> ${esc(labelByKey.get(e))}</label>`).join("");
+          labels.map(l => `<label><input type="checkbox" value="${esc(l)}" ${qFilterError.has(l)?'checked':''}> ${esc(l)}</label>`).join("");
       }
     }
     // ── Process dropdown: distinct process tokens present (merged rows carry a
@@ -3706,9 +3703,10 @@ function renderQuality(){
       return false;
     });
   }
-  // Filter by error type
+  // Filter by error type — match the SAME condensed label shown in the table + the
+  // dropdown (qualityErrorLabel), so a merged family filters all its variants.
   if(qFilterError.size){
-    rows = rows.filter(r => qFilterError.has(qualityValue(r,["ErrorKey","error_key","errorKey"],"")));
+    rows = rows.filter(r => qFilterError.has(qualityErrorLabel(r)));
   }
   // Filter by minimum sigma
   if(qFilterSigma > 0){

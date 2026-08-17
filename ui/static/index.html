@@ -615,6 +615,22 @@ html.theme-transitioning *::after{
 [data-density="compact"] .kpi-num{font-size:18px}
 [data-density="compact"] .qkpi{padding:8px 8px}
 [data-density="compact"] .qkpi-num{font-size:18px}
+/* Compact — extend to Captain + GCA tables and shrink row avatars / chrome so
+   compact really compacts EVERYTHING, not just the Performance/Quality table.
+   (owner 2026-08-17: "no compacta todo"). */
+[data-density="compact"] .cap-table td,[data-density="compact"] .cap-table th,
+[data-density="compact"] .cap-rtable td,[data-density="compact"] .cap-rtable th,
+[data-density="compact"] .cap-err-tbl td,[data-density="compact"] .cap-err-tbl th{padding:4px 8px !important;font-size:11px !important;line-height:1.2 !important}
+[data-density="compact"] .main-table td,[data-density="compact"] .main-table th{padding:4px 6px !important}
+/* Row avatars (inline width:34px on the img) — shrink in compact. */
+[data-density="compact"] .main-table td img,
+[data-density="compact"] .cap-table td img,
+[data-density="compact"] .cap-rtable td img{width:26px !important;height:26px !important}
+/* Tighten Captain KPI strip + section labels + summary tiles. */
+[data-density="compact"] .cap-kpi{padding:6px 10px !important}
+[data-density="compact"] .cap-kpi-num{font-size:16px !important}
+[data-density="compact"] .cap-sec-lbl{margin:8px 0 0 !important}
+[data-density="compact"] .cap-chip,[data-density="compact"] .q-dropdown-btn{padding:2px 8px !important;font-size:10px !important}
 .t-created{font-size:10px;color:var(--text-muted);margin-left:8px;white-space:nowrap}
 .t-created b{color:var(--accent)}
 

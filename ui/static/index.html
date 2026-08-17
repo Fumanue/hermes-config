@@ -1020,7 +1020,68 @@ body[data-bl="amzl"] .curve-label{font-size:13px}
 .cap-day.d2{background:#2a6ea5}
 .cap-def{display:inline-block;font-size:11px;padding:1px 7px;border-radius:8px;background:#fdecec;color:#c0392b;font-weight:700;margin:1px 2px}
 .cap-def.none{background:#eef8f3;color:#0a8a4f}
+.cap-def-hi{background:#fdecec;color:#c0392b}    /* >=8 defectos — prioridad */
+.cap-def-mid{background:#fff4e5;color:#c98500}   /* 3-7 — atención */
+.cap-def-lo{background:#eef2f7;color:#5b6b7f}    /* 1-2 — bajo */
 .cap-manual-badge{font-size:9.5px;font-weight:700;color:#8e44ad;background:#f3e9fa;border-radius:8px;padding:1px 6px;margin-left:4px}
+.cap-note-chip{display:inline-block;font-size:11px;padding:1px 7px;border-radius:8px;background:var(--bg-input);color:var(--text-secondary);font-weight:700;margin:1px 2px}
+.cap-note-chip.hot{background:#fff4e5;color:#c98500}
+.cap-proc-card{cursor:pointer;min-width:150px;flex:0 0 auto}
+/* Compact filter chips (Proceso / Planta) — one line each, replace the bulky card rows */
+.cap-chip-row{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;align-items:center;margin:8px 0;font-size:12.5px}
+.cap-filter-bar{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 2px}
+.cap-flt-lbl{color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:.05em;font-size:10.5px}
+.q-dd-list .q-dd-opt{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;color:var(--text-primary)}
+.q-dd-list .q-dd-opt:hover{background:var(--bg-hover)}
+.q-dd-list .q-dd-opt.on{background:var(--accent-light,rgba(124,58,237,.12));font-weight:800}
+.q-dd-list .q-dd-opt .cap-chip-n{color:var(--text-muted);font-weight:700}
+.cap-chip-row .cap-chip-lbl{color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-right:6px;font-size:11px}
+.cap-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);cursor:pointer;font-weight:600;transition:all .12s}
+.cap-chip:hover{border-color:var(--accent);color:var(--accent)}
+.cap-chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.cap-chip .cap-chip-n{font-size:11px;padding:0 6px;border-radius:999px;background:rgba(0,0,0,.12);font-variant-numeric:tabular-nums}
+.cap-chip.on .cap-chip-n{background:rgba(255,255,255,.25)}
+/* KPI strip (one line, Performance-style): First-days · Con defectos · Prioridad · errores... */
+.cap-kpi{flex:1 1 130px;min-width:130px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;text-align:center;position:relative;overflow:hidden;cursor:default;transition:all .12s}
+.cap-kpi::before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;background:var(--accent);opacity:.55}
+.cap-kpi-num{font-size:22px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.1}
+.cap-kpi-lbl{font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;font-weight:700}
+.cap-kpi-hint{font-size:10px;color:var(--text-muted);margin-top:2px}
+.cap-kpi.clickable{cursor:pointer}
+.cap-kpi.clickable:hover{transform:translateY(-1px);box-shadow:0 8px 18px -10px var(--shadow);border-color:var(--accent-border)}
+.cap-kpi.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-light) inset}
+.cap-kpi.on::before{opacity:1}
+.cap-kpi.on .cap-kpi-lbl{color:var(--accent)}
+.cap-kpi.hot::before{background:var(--red,#dc2626)}
+.cap-kpi.hot .cap-kpi-num{color:var(--red,#dc2626)}
+.cap-kpi.hot.on{border-color:var(--red,#dc2626);box-shadow:0 0 0 2px rgba(220,38,38,.18) inset}
+.cap-kpi.good::before{background:var(--green,#16a34a)}
+.cap-kpi.good .cap-kpi-num{color:var(--green,#16a34a)}
+.cap-sec-lbl{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary);margin:14px 0 0}
+.cap-err-tbl{border-collapse:collapse;font-size:12.5px;min-width:420px;max-width:680px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg-card)}
+.cap-err-tbl th{background:var(--bg-panel,#f3f4f6);text-align:left;padding:6px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--text-secondary)}
+.cap-err-tbl td{padding:6px 12px;border-top:1px solid var(--border)}
+.cap-err-tbl th:not(:first-child),.cap-err-tbl td:not(:first-child){text-align:center;font-variant-numeric:tabular-nums}
+.cap-err-trow{cursor:pointer}
+.cap-err-trow:hover td{background:var(--row-hover,rgba(59,130,246,.06))}
+.cap-err-trow.on td{background:var(--accent-light,rgba(124,58,237,.12))}
+.cap-err-hi{color:var(--red,#dc2626);font-weight:700}
+/* Rate coloring vs Vet TPH: good ≥95% · mid 80-95% · bad <80% of the veteran baseline */
+.cap-rate-good{color:#0a8a4f;font-weight:700}
+.cap-rate-mid{color:#c98500;font-weight:700}
+.cap-rate-bad{color:#c0392b;font-weight:700}
+.cap-worst-row td{box-shadow:inset 3px 0 0 var(--red,#dc2626)}
+.cap-status{margin-top:12px;padding:9px 4px 2px;border-top:1px solid var(--border);font-size:11.5px;color:var(--text-muted);display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+/* Table refinement: bordered rows, zebra stripes, tighter header underline */
+table.cap-rtable{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg-card)}
+table.cap-rtable thead th{background:var(--bg-panel,#f3f4f6);border-bottom:2px solid var(--border)}
+table.cap-rtable tbody tr{border-bottom:1px solid var(--border)}
+table.cap-rtable tbody tr:last-child{border-bottom:none}
+table.cap-rtable tbody tr:nth-child(even) td{background:rgba(0,0,0,.015)}
+table.cap-rtable tbody tr:hover td{background:var(--row-hover,rgba(59,130,246,.06))}
+[data-theme="dark"] table.cap-rtable tbody tr:nth-child(even) td,
+[data-theme="midnight"] table.cap-rtable tbody tr:nth-child(even) td,
+[data-theme="graphite-noir"] table.cap-rtable tbody tr:nth-child(even) td{background:rgba(255,255,255,.02)}
 /* Reporting table (Day1 vs Day2) */
 .cap-table-wrap{max-height:60vh;overflow-y:auto;border:1px solid var(--border);border-radius:10px}
 table.cap-table{width:100%;border-collapse:collapse;font-size:12.5px}
@@ -2492,14 +2553,9 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <div class="q-dropdown-wrap" style="position:relative">
       <button class="q-dropdown-btn" id="qFilterProcessBtn">All <span class="q-dd-arrow">▾</span></button>
       <div class="q-dropdown-panel" id="qFilterProcessPanel" style="display:none">
-        <div class="q-dd-list" id="qFilterProcessList">
-          <label class="q-dd-all"><input type="checkbox" value="__ALL__"> <b>All</b></label>
-          <label><input type="checkbox" value="Pick"> Pick</label>
-          <label><input type="checkbox" value="Pack"> Pack</label>
-          <label><input type="checkbox" value="Stow"> Stow</label>
-          <label><input type="checkbox" value="Receive"> Receive</label>
-          <label><input type="checkbox" value="ICQA"> ICQA</label>
-        </div>
+        <!-- Options populated from the table data in renderQuality() (shows only
+             processes actually present). owner 2026-08-15. -->
+        <div class="q-dd-list" id="qFilterProcessList"></div>
       </div>
     </div>
     <div class="sep"></div>
@@ -3174,10 +3230,8 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   <div class="cap-pane" id="capPaneMonitor">
     <div class="cap-controls">
       <div class="cap-dates">
-        <span class="cap-quick on" data-cap-day="0">Today</span>
-        <span class="cap-quick" data-cap-day="1">Yesterday</span>
-        <span class="cap-quick" data-cap-day="2">-2 days</span>
-        <input type="date" id="capDate" class="t-time-input" title="Date">
+        <div id="capDayPills" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        <input type="date" id="capDate" class="t-time-input" title="Fecha exacta">
         <button class="act-btn act-primary" id="capRun" style="padding:6px 16px">↻ Refresh</button>
       </div>
       <div class="cap-meta" id="capMeta"></div>
@@ -3186,9 +3240,40 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <input id="capAddLogin" class="tb-search" style="min-width:160px" placeholder="Add a login manually…">
       <button class="act-btn act-secondary" id="capAddBtn" style="padding:6px 12px">+ Add</button>
       <span class="note" style="font-size:11px;color:var(--text-muted)">Auto-detects Day-1/Day-2 on shift. Add any missed · ✕ to drop.</span>
-      <button class="act-btn act-secondary" id="capCsv" style="padding:6px 12px;margin-left:auto;display:none">↓ CSV</button>
+      <button class="act-btn act-secondary" id="capWorstBtn" style="padding:6px 12px;margin-left:auto" title="Solo los 5 de menor rate por proceso — a quién ir a ver">🎯 Top opportunities</button>
+      <button class="act-btn act-secondary" id="capCsv" style="padding:6px 12px;display:none">↓ CSV</button>
     </div>
+    <div class="cap-sec-lbl">KPIs principales</div>
+    <div id="capKpi" style="display:none;flex-wrap:wrap;gap:10px;margin:6px 0 14px"></div>
+    <!-- Filtros armoniosos: mismos dropdowns que Quality (Planta + Proceso). La
+         tabla "Rendimiento del turno" también filtra al hacer click (se sincroniza
+         con estos dropdowns). owner 2026-08-15. -->
+    <div class="cap-filter-bar">
+      <span class="cap-flt-lbl">Planta</span>
+      <div class="q-dropdown-wrap" style="position:relative">
+        <button class="q-dropdown-btn" id="capFloorBtn">Todas <span class="q-dd-arrow">▾</span></button>
+        <div class="q-dropdown-panel" id="capFloorPanel" style="display:none"><div class="q-dd-list" id="capFloorList"></div></div>
+      </div>
+      <span class="cap-flt-lbl">Proceso</span>
+      <div class="q-dropdown-wrap" style="position:relative">
+        <button class="q-dropdown-btn" id="capProcBtn">Todos <span class="q-dd-arrow">▾</span></button>
+        <div class="q-dropdown-panel" id="capProcPanel" style="display:none"><div class="q-dd-list" id="capProcList"></div></div>
+      </div>
+    </div>
+    <!-- Dos tablas resumen, lado a lado (mismo ancho). owner 2026-08-15. -->
+    <div class="cap-summary-row" style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;margin:8px 0 4px">
+      <div style="flex:1 1 340px;min-width:280px">
+        <div class="cap-sec-lbl">Rendimiento del turno <span style="font-weight:400;text-transform:none;color:var(--text-muted)">· click para filtrar</span></div>
+        <div id="capProcTiles" style="display:none;overflow-x:auto"></div>
+      </div>
+      <div style="flex:1 1 340px;min-width:280px">
+        <div class="cap-sec-lbl">Resumen de errores <span style="font-weight:400;text-transform:none;color:var(--text-muted)">· click para ordenar el detalle</span></div>
+        <div id="capErrSummary" style="overflow-x:auto"></div>
+      </div>
+    </div>
+    <div class="cap-sec-lbl">Detalle</div>
     <div id="capCards" class="cap-cards"><div class="cap-empty">Loading first-days on shift…</div></div>
+    <div id="capStatus" class="cap-status"></div>
   </div>
 
   <!-- REPORTING: same associate Day 1 → Day 2 with deltas -->
@@ -3207,6 +3292,9 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <span class="note" style="font-size:11px;color:var(--text-muted)">Compares the same associate's Day 1 vs Day 2: rate delta + defects.</span>
       <button class="act-btn act-secondary" id="capCompCsv" style="padding:6px 12px;margin-left:auto;display:none">↓ CSV</button>
     </div>
+    <div class="cap-sec-lbl" id="capCompProcLbl" style="display:none">Resumen por proceso <span style="font-weight:400;text-transform:none;color:var(--text-muted)">· TPH promedio y errores por asociado en D1 vs D2</span></div>
+    <div id="capCompProc" style="margin:6px 0 4px;overflow-x:auto"></div>
+    <div class="cap-sec-lbl" id="capCompDetLbl" style="display:none">Detalle <span style="font-weight:400;text-transform:none;color:var(--text-muted)">· estación es informativa (no filtra)</span></div>
     <div id="capCompWrap" class="cap-table-wrap"><div class="cap-empty">Pick a <b>Day 1</b> and <b>Day 2</b> date, then <b>Compare</b>.</div></div>
   </div>
 </div>

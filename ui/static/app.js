@@ -9826,11 +9826,13 @@ document.addEventListener("click",(e)=>{
         const isActive = it.presence === "ACTIVE";
         const isOnSite = it.presence === "ON_SITE";   // present per roster, ELS had no fix
         const isPresent = isActive || isOnSite;
-        // Only show the station when it's a LIVE ELS fix (ACTIVE). For ON_SITE the
-        // person is present per the roster punch but ELS had no recent fix, so
-        // it.station is a STALE last-known location (e.g. dz-P-A2127) that misleads
-        // — show just "On site", no location. (owner 2026-07-28)
-        const stationInfo = (isActive && it.station) ? (it.process_path ? `${it.station} · ${it.process_path}` : it.station) : "";
+        // Station now comes from Roster_SCC CurrentStationId (owner 2026-08-17), so
+        // it's the CURRENT station for anyone on-shift — no longer a stale ELS fix.
+        // Show it for ON_SITE too, not just ACTIVE. process_path is still ELS-only,
+        // so append it only when ACTIVE (a live fix); otherwise show station alone.
+        const stationInfo = it.station
+          ? ((isActive && it.process_path) ? `${it.station} · ${it.process_path}` : it.station)
+          : "";
         // Last-seen line (ELS arrivalTimestamp) — only meaningful when NOT present:
         // "last seen 5d ago" flags a stale pending the coach can likely cancel.
         const _ls = !isPresent ? lastSeen(it.last_seen_ms) : null;

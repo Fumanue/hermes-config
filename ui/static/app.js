@@ -3622,6 +3622,26 @@ function qualityErrorLabel(row){
   return "Quality Error";
 }
 
+// Map a Quality row's ErrorKey → the merged OpenSearch RC family key, or "" if
+// the error has no RC coverage. All SLAM process variants (SINGLE/OTHER/P2R/
+// AFE1/UNTRACEABLE) collapse to one family so the merged root-cause split (reason
+// / box move) + process dive shows on every one of those rows. Must mirror the
+// backend join in server.py. owner 2026-08-14.
+const RC_FAMILY_LABELS = {
+  "BIN_FILTER_VIOLATIONS": "Bin Filter Violations",
+  "PICK_ERROR_INDICATOR": "Pick Error Indicator",
+  "PACK_SLAM_KICKOUT": "Pack Slam Kick Out",
+  "PACK_SLAM_WRONG_BOX": "Pack Slam Wrong Box",
+};
+function qualityRcFamily(ek){
+  const k = String(ek||"").toUpperCase();
+  if(k.includes("BIN_FILTER")) return "BIN_FILTER_VIOLATIONS";
+  if(k.includes("PICK_ERROR") || k==="PEI") return "PICK_ERROR_INDICATOR";
+  if(k.includes("SLAM_KICKOUT")) return "PACK_SLAM_KICKOUT";
+  if(k.includes("SLAM_WRONG_BOX")) return "PACK_SLAM_WRONG_BOX";
+  return "";
+}
+
 function qualityPresentValue(row){
   const p = qualityValue(row,["present","Present"],"");
   const punch = String(qualityValue(row,["punch_type","PunchType","Punch Type"],"")).toUpperCase();
@@ -3632,21 +3652,46 @@ function renderQuality(){
   const body = $("qualityTbody");
   if(!body) return;
 
-  // Populate error type dropdown checkboxes from data
-  const errorList = $("qFilterErrorList");
-  if(errorList && qualityRows.length){
-    const errors = [...new Set(qualityRows.map(r => qualityValue(r,["ErrorKey","error_key","errorKey"],"")).filter(Boolean))].sort();
-    // Only rebuild if the error set actually changed (compare keys)
-    const existingKeys = [...errorList.querySelectorAll('input[type="checkbox"]:not([value="__ALL__"])')].map(c=>c.value).sort().join(",");
-    const newKeys = errors.join(",");
-    if(existingKeys !== newKeys){
-      errorList.innerHTML = `<label class="q-dd-all"><input type="checkbox" value="__ALL__"> <b>All</b></label>` +
-      errors.map(e => {
-        // Same label the table shows (qualityErrorLabel + overrides) so the
-        // filter reads "Pick Short" / "Each Multiple Event", not the raw key.
-        const label = qualityErrorLabel({error_key: e});
-        return `<label><input type="checkbox" value="${esc(e)}" ${qFilterError.has(e)?'checked':''}> ${esc(label)}</label>`;
-      }).join("");
+  // Populate the Error + Process filter dropdowns FROM THE DATA (post-merge), so
+  // each shows ONLY what's actually in the table — with the exact labels the rows
+  // use. Merged families (Pack Slam Kick Out / Wrong Box / Missing Item) therefore
+  // appear as ONE option, not their per-process variants. owner 2026-08-15.
+  if(qualityRows.length){
+    // ── Error dropdown: ErrorKey -> the row's own Error Type label (table-exact) ──
+    const errorList = $("qFilterErrorList");
+    if(errorList){
+      const labelByKey = new Map();
+      for(const r of qualityRows){
+        const k = qualityValue(r,["ErrorKey","error_key","errorKey"],"");
+        if(!k || labelByKey.has(k)) continue;
+        const lbl = String(qualityValue(r,["Error Type","error_type","ErrorType"],"")).trim()
+                    || qualityErrorLabel({error_key: k});
+        labelByKey.set(k, lbl);
+      }
+      const errors = [...labelByKey.keys()].sort((a,b)=>labelByKey.get(a).localeCompare(labelByKey.get(b)));
+      const existingKeys = [...errorList.querySelectorAll('input[type="checkbox"]:not([value="__ALL__"])')].map(c=>c.value).sort().join(",");
+      if(existingKeys !== [...errors].sort().join(",")){
+        errorList.innerHTML = `<label class="q-dd-all"><input type="checkbox" value="__ALL__"> <b>All</b></label>` +
+          errors.map(e => `<label><input type="checkbox" value="${esc(e)}" ${qFilterError.has(e)?'checked':''}> ${esc(labelByKey.get(e))}</label>`).join("");
+      }
+    }
+    // ── Process dropdown: distinct process tokens present (merged rows carry a
+    // comma-joined Process, so split them) — shows only processes in the table. ──
+    const procList = $("qFilterProcessList");
+    if(procList){
+      const procs = new Set();
+      for(const r of qualityRows){
+        for(const tok of String(qualityValue(r,["Process","process"],"")).split(",")){
+          const t = tok.trim();
+          if(t && !/^(nan|none)$/i.test(t)) procs.add(t);
+        }
+      }
+      const opts = [...procs].sort();
+      const existing = [...procList.querySelectorAll('input[type="checkbox"]:not([value="__ALL__"])')].map(c=>c.value).sort().join(",");
+      if(existing !== [...opts].sort().join(",")){
+        procList.innerHTML = `<label class="q-dd-all"><input type="checkbox" value="__ALL__"> <b>All</b></label>` +
+          opts.map(p => `<label><input type="checkbox" value="${esc(p)}" ${qFilterProcess.has(p)?'checked':''}> ${esc(p)}</label>`).join("");
+      }
     }
   }
 
@@ -3907,12 +3952,11 @@ function renderQuality(){
             return html;
           })()}
           ${(()=>{
-            // Root-cause Dive Deep on PEI/BFV (the error keys OpenSearch RC
-            // covers) — shown for ALL rows now, not only >=2 Sigma (we have the
-            // RC data per associate regardless of sigma).
+            // Root-cause Dive Deep on the error keys OpenSearch RC covers (PEI,
+            // BFV, Slam Kick Out, Slam Wrong Box) — shown for ALL rows now, not
+            // only >=2 Sigma (we have the RC data per associate regardless of sigma).
             const ek = String(qualityValue(r,["ErrorKey","error_key"],"")).toUpperCase();
-            const rcKey = ek.includes("BIN_FILTER") ? "BIN_FILTER_VIOLATIONS"
-                        : (ek.includes("PICK_ERROR")||ek==="PEI") ? "PICK_ERROR_INDICATOR" : "";
+            const rcKey = qualityRcFamily(ek);
             if(rcKey){
               return `<button class="row-btn q-rc-btn" data-login="${esc(login)}" data-fc="${esc(fc)}" data-ek="${rcKey}" title="Root cause + Dive Deep">🔎 RC</button>`;
             }
@@ -4245,7 +4289,7 @@ async function openRcModal(login, fc, errorKey){
   openModal("modalRc");
   const rcFc = fc || currentFC;   // used to build FC Research links per ASIN
   const titleEl = $("rc-title"), body = $("rc-body");
-  const ekLabel = errorKey === "BIN_FILTER_VIOLATIONS" ? "Bin Filter Violations" : "Pick Error Indicator";
+  const ekLabel = RC_FAMILY_LABELS[errorKey] || "Root Cause";
   titleEl.textContent = `Root Cause · ${login} · ${ekLabel}`;
   body.innerHTML = `<div style="color:var(--text-secondary);font-size:13px">Cargando…</div>`;
   try{
@@ -4308,7 +4352,7 @@ async function openRcModal(login, fc, errorKey){
         <summary style="cursor:pointer;font-weight:600;font-size:12px">${esc(s.name)} <span style="color:var(--text-muted)">(${s.count})</span></summary>
         <table style="width:100%;margin-top:6px;font-size:11px;border-collapse:collapse">
           <thead><tr style="text-align:left;color:var(--text-muted)">
-            ${df.map(f=>`<th style="padding:3px 6px">${esc(f)}</th>`).join("")}<th style="padding:3px 6px">Día</th><th style="padding:3px 6px;text-align:right">#</th>
+            ${df.map(f=>`<th style="padding:3px 6px">${esc(String(f).replace(/^packageDetails\./,"").replace(/_/g," "))}</th>`).join("")}<th style="padding:3px 6px">Día</th><th style="padding:3px 6px;text-align:right">#</th>
           </tr></thead>
           <tbody>
           ${rows.slice(0,50).map(rw=>`<tr style="border-top:1px solid var(--border)">
@@ -4381,7 +4425,7 @@ async function openCoachQueue(fc){
       const sig = Number(r.sigma||0).toFixed(1);
       const split = Array.isArray(r.rc_split)?r.rc_split:[];
       const courseId = String(r.course_id||r.course_uuid||"");
-      const rcKey = ek.toUpperCase().includes("BIN_FILTER")?"BIN_FILTER_VIOLATIONS":(ek.toUpperCase().includes("PICK_ERROR")||ek.toUpperCase()==="PEI")?"PICK_ERROR_INDICATOR":"";
+      const rcKey = qualityRcFamily(ek);
       const pend = Array.isArray(r.pending_coachings)?r.pending_coachings:[];
       const rowUuid = courseId.toLowerCase().replace(/^.*\/course\//,"").replace(/\/$/,"");
       const sameTopic = pend.filter(p=>{const pu=String(p.course_uuid||"").toLowerCase();return pu&&rowUuid&&pu===rowUuid;});
@@ -5286,6 +5330,9 @@ async function _refreshAllQueue(opts){
     if(pill) pill.classList.remove("firstrun");
     _refreshFreshness();
     try{ if(typeof loadDashboard === "function") loadDashboard(); }catch(_){}
+    // NOTE: Captain is deliberately NOT refreshed here. It's an on-demand tool for
+    // specific coaching moments (owner 2026-08-14) — it builds @0.5h only when the
+    // trainer opens the tab or hits Refresh, never as part of the normal pipeline.
   }
 }
 $("btnRefreshAll") && $("btnRefreshAll").addEventListener("click", ()=>_refreshAllQueue());
@@ -5679,8 +5726,240 @@ setInterval(_checkNecroPermission, 15 * 60 * 1000);
 // (same associate Day 1 vs Day 2: rate delta + defects). Add/drop logins.
 (function(){
   let _capData=null, _capComp=null;
+  let _capProc="", _capFloor="";        // Monitor filters (empty = All)
+  let _capSort={key:"", dir:-1};        // click-to-sort (numeric cols default desc)
   const _adds=new Set(), _drops=new Set(), _compAdds=new Set();
+  const _capFloorOf=r=>{ try{ return (typeof window._floorOfStation==="function") ? (window._floorOfStation(r.station||"")||"") : ""; }catch(_){ return ""; } };
+  // Station display identical to Performance/Quality: abbrevStation, but STOW/PICK
+  // show only the last-4 workstation digits (e.g. "k-A-02-2265" → "2265").
+  const _capStation=r=>{
+    const raw=String(r.station||"").trim();
+    let disp=abbrevStation(raw)||raw||"—";
+    const role=String(r.subprocess||r.process||"").toUpperCase();
+    if(role==="STOW"||role==="QUANTITY_STOW"||role.startsWith("PICK")||role==="P2R_PICK"){
+      const m=raw.match(/(\d{4})(?!.*\d)/);
+      if(m&&m[1]) disp=m[1];
+    }
+    return disp;
+  };
+  // Rate vs Vet TPH → color class (good ≥95% · mid 80-95% · bad <80% del veterano).
+  const _capRateCls=(rate,vet)=>{ const r=Number(rate),v=Number(vet); if(!isFinite(r)||!isFinite(v)||v<=0) return ""; const p=r/v; return p>=0.95?"cap-rate-good":(p>=0.8?"cap-rate-mid":"cap-rate-bad"); };
+  // Worst-rate filter: bottom-N by rate WITHIN each process (owner: "top 5 peores por proceso").
+  let _capWorst=false;
+  function _capWorstLogins(rows,n){ const bp={}; rows.forEach(r=>{ if(r.rate==null||!isFinite(Number(r.rate)))return; const p=String(r.process||r.subprocess||"").toUpperCase()||"?"; (bp[p]=bp[p]||[]).push(r); }); const s=new Set(); Object.values(bp).forEach(a=>{ a.sort((x,y)=>Number(x.rate)-Number(y.rate)); a.slice(0,n).forEach(r=>s.add(String(r.login).toLowerCase())); }); return s; }
+  const _TEXT_COLS=new Set(["login","cohort","process","station","manager"]);
+  const _capSortVal=(r,k)=>{
+    if(k.slice(0,4)==="err:"){ const lbl=k.slice(4); const x=(r.defects||[]).find(d=>d.error===lbl); return x?Number(x.defects||0):0; }
+    switch(k){
+      case "rate":    return r.rate==null?-1:Number(r.rate);
+      case "vet":     return r.vet_rate==null?-1:Number(r.vet_rate);
+      case "errores": return Number(r.total_defects||0);
+      case "idle":    return r.idle_min!=null?Number(r.idle_min):(r.idle_pct!=null?Number(r.idle_pct):-1);
+      case "day":     return Number(r.day||0);
+      case "process": return String(r.process||r.subprocess||"").toLowerCase();
+      case "station": return String(_capStation(r)).toLowerCase();
+      default:        return String(r[k]||"").toLowerCase();
+    }
+  };
+  // Harmonious single-select dropdowns (same component as Quality). One <div
+  // class="q-dd-opt"> per option; the selected one gets ".on". Empty value = "All".
+  function _capFillSelect(listEl, btnEl, attr, allLabel, cur, opts){
+    const opt=(v,lbl,n)=>`<div class="q-dd-opt${cur===v?' on':''}" data-${attr}="${esc(v)}"><span>${esc(lbl)}</span>${n!=null?`<span class="cap-chip-n">${n}</span>`:''}</div>`;
+    listEl.innerHTML=opt("", allLabel, opts.reduce((a,o)=>a+o.n,0))+opts.map(o=>opt(o.v,o.lbl,o.n)).join("");
+    const sel=opts.find(o=>o.v===cur);
+    btnEl.innerHTML=`${esc(sel?sel.lbl:allLabel)} <span class="q-dd-arrow">▾</span>`;
+    btnEl.classList.toggle("has-filter", !!cur);
+  }
+  function _renderCapFloorSelect(rows){
+    const list=$("capFloorList"), btn=$("capFloorBtn"); if(!list||!btn) return;
+    const cnt={}; rows.forEach(r=>{ const f=_capFloorOf(r); if(f) cnt[f]=(cnt[f]||0)+1; });
+    const floors=Object.keys(cnt).sort();
+    const wrap=btn.closest(".q-dropdown-wrap");
+    if(!floors.length){ if(wrap) wrap.style.display="none"; return; }
+    if(wrap) wrap.style.display="";
+    _capFillSelect(list, btn, "floor", "Todas", _capFloor, floors.map(f=>({v:f, lbl:f.toUpperCase(), n:cnt[f]})));
+  }
+  function _renderCapProcSelect(rows){
+    const list=$("capProcList"), btn=$("capProcBtn"); if(!list||!btn) return;
+    const cnt={}; rows.forEach(r=>{ const p=String(r.process||r.subprocess||"").toUpperCase(); if(p) cnt[p]=(cnt[p]||0)+1; });
+    const procs=Object.keys(cnt).sort();
+    const wrap=btn.closest(".q-dropdown-wrap");
+    if(!procs.length){ if(wrap) wrap.style.display="none"; return; }
+    if(wrap) wrap.style.display="";
+    _capFillSelect(list, btn, "proc", "Todos", _capProc, procs.map(p=>({v:p, lbl:p, n:cnt[p]})));
+  }
+  function _renderCapProcChips(rows){
+    const host=$("capProcChips"); if(!host) return;
+    const cnt={}, def={};
+    rows.forEach(r=>{ const p=String(r.process||r.subprocess||"").toUpperCase(); if(!p)return; cnt[p]=(cnt[p]||0)+1; def[p]=(def[p]||0)+Number(r.total_defects||0); });
+    const procs=Object.keys(cnt).sort();
+    if(!procs.length){ host.innerHTML=""; host.style.display="none"; return; }
+    const chip=(v,lbl,n,cls)=>`<button class="cap-chip${cls}" data-proc="${esc(v)}">${esc(lbl)} <span class="cap-chip-n">${n}</span></button>`;
+    host.innerHTML=`<span class="cap-chip-lbl">Proceso</span>`+chip("", "Todos", rows.length, _capProc===""?" on":"")+procs.map(p=>chip(p, p, cnt[p], _capProc===p?" on":"")).join("");
+    host.style.display="flex";
+  }
+  // Per-process people count + defect-spike detection for the clickable cards.
+  function _capProcStats(rows){
+    const m={}; let tp=0, td=0;
+    rows.forEach(r=>{
+      const p=String(r.process||r.subprocess||"").toUpperCase(); if(!p) return;
+      (m[p]=m[p]||{count:0,defects:0}); m[p].count++; m[p].defects+=Number(r.total_defects||0);
+      tp++; td+=Number(r.total_defects||0);
+    });
+    const avg=tp?td/tp:0;
+    Object.values(m).forEach(s=>{ const dpp=s.count?s.defects/s.count:0; s.dpp=dpp; s.spike=(s.defects>0 && dpp>=2 && dpp>=1.5*avg); });
+    return {m, tp, td};
+  }
+  // IDLE / OOWA / Station-Gap chips for the Notas column (key first-days notes).
+  function _capNotesChips(r){
+    const chips=[];
+    const iv=(r.idle_pct!=null && Number.isFinite(Number(r.idle_pct)))?Number(r.idle_pct):null;
+    const im=(r.idle_min!=null && Number.isFinite(Number(r.idle_min)))?Number(r.idle_min):null;
+    if(im!=null || iv!=null){
+      // Prefer minutes (owner 2026-08-13); fall back to % when idle_min is missing.
+      const label = im!=null ? `${im.toFixed(0)} min` : `${iv.toFixed(0)}%`;
+      const hot   = (im!=null && im>=30) || (im==null && iv!=null && iv>=10);   // 30 min = legal idle gate
+      chips.push(`<span class="cap-note-chip${hot?' hot':''}">IDLE ${label}</span>`);
+    }
+    const nt=String(r.notes||"");
+    const g=nt.match(/Gap:\s*([\d.]+)\s*%/i); if(g) chips.push(`<span class="cap-note-chip hot">Gap ${g[1]}%</span>`);
+    const o=nt.match(/OOWA:\s*([\d.]+)\s*min/i); if(o) chips.push(`<span class="cap-note-chip hot">OOWA ${o[1]}m</span>`);
+    return chips.length ? chips.join(" ") : '<span style="color:var(--text-muted)">—</span>';
+  }
+  // Compact acronym for per-error column headers (full name goes in the tooltip).
+  // Custom overrides per owner: Nike Each Multiple Events → ME, Pick Error Indicator
+  // → PEI, Pick Short → Short. Fallback = first letters of each word.
+  const _CAP_ERR_ABBR={
+    "nike each multiple events":"ME",
+    "pick error indicator":"PEI",
+    "pick short":"Short",
+    "bin filter violations":"BFV",
+    "bin filter violation":"BFV",
+    "pack slam kick out":"Slam KO",
+    "pack slam wrong box":"Slam WB",
+    "pack missing item":"Missing",
+    "pack damaged item":"Damaged",
+    "pack unscannable item":"Unsc",
+    "pack shipment exception":"Ship Exc",
+  };
+  const _shortErr=l=>{
+    const k=String(l||"").trim().toLowerCase();
+    if(_CAP_ERR_ABBR[k]) return _CAP_ERR_ABBR[k];
+    // Phrase-level abbreviation — covers every Pick/Pack family (AFE1/Single/Other/
+    // VRET/P2R/Induct/Rebin) without enumerating all 40. Full name stays in tooltip.
+    let s=String(l||"")
+      .replace(/Slam Kickout Override/i,"Slam KO Ovr")
+      .replace(/Slam Kickout/i,"Slam KO")
+      .replace(/Slam Wrong Box/i,"Slam WrBox")
+      .replace(/Shipment Exception/i,"Ship Exc")
+      .replace(/Error Indicator/i,"EI")
+      .replace(/Multiple Events?/i,"Mult")
+      .replace(/Unscannable/i,"Unsc")
+      .replace(/Shortage/i,"Short")
+      .replace(/Overage/i,"Over")
+      .replace(/Damaged?/i,"Dmg")
+      .replace(/Missing/i,"Miss")
+      .replace(/\bItem\b/i,"Itm")
+      .replace(/\bInduct\b/i,"Ind")
+      .replace(/\bRebin\b/i,"Reb")
+      .replace(/Untraceable/i,"Untr")
+      .replace(/Violations?/i,"Viol")
+      .trim();
+    return s;
+  };
+  // Per-error overview: total defects on shift + defects/associates-in-task ratio.
+  function _capErrStats(rows){
+    const procCount={}; rows.forEach(r=>{ const p=String(r.process||r.subprocess||"").toUpperCase(); if(p) procCount[p]=(procCount[p]||0)+1; });
+    const m={};
+    rows.forEach(r=>(r.defects||[]).forEach(x=>{ if(!Number(x.defects))return; const e=m[x.error]=m[x.error]||{total:0,people:0,proc:{},pri:false}; e.total+=Number(x.defects||0); e.people++; if(x.priority)e.pri=true; const p=String(r.process||r.subprocess||"").toUpperCase(); if(p)e.proc[p]=(e.proc[p]||0)+1; }));
+    Object.values(m).forEach(e=>{ const dom=Object.keys(e.proc).sort((a,b)=>e.proc[b]-e.proc[a])[0]; const den=dom?procCount[dom]:0; e.ratio=den?e.total/den:0; e.denom=den; });
+    return m;
+  }
+  // Single Performance-style KPI strip: First-days · Con defectos · En prioridad
+  // · top error tiles (clickable → sort by that error). One row, no floating cards.
+  // KPIs PRINCIPALES — 5 tiles. (Cumplimiento = % sin alerta; Tiempo = IDLE prom.
+  // Ajustables si el owner quiere otra definición.)
+  function _renderCapKpi(rows){
+    const host=$("capKpi"); if(!host) return;
+    const total=rows.length;
+    const activos=rows.filter(r=>r.rate!=null && isFinite(Number(r.rate))).length;
+    const alertas=rows.filter(r=>(r.defects||[]).some(x=>x.priority)).length;
+    const sinAlerta=total-alertas;
+    const cumpl=total?Math.round(sinAlerta*100/total):0;
+    const idv=rows.map(r=>r.idle_pct).filter(v=>v!=null && isFinite(Number(v))).map(Number);
+    const idle=idv.length?Math.round(idv.reduce((a,b)=>a+b,0)/idv.length):null;
+    const tile=(num,lbl,hint,cls)=>`<div class="cap-kpi${cls?' '+cls:''}"><div class="cap-kpi-num">${num}</div><div class="cap-kpi-lbl">${esc(lbl)}</div>${hint?`<div class="cap-kpi-hint">${esc(hint)}</div>`:''}</div>`;
+    host.innerHTML=
+       tile(total, "First-days", (_capData&&_capData.is_past)?"past day":"Day-1/2 en turno", "")
+      +tile(activos, "Activos", "con rate (≥0.5h)", "")
+      +tile(alertas, "Alertas", alertas?"sobre su umbral":"sin alertas", alertas?"hot":"")
+      +tile(cumpl+"%", "Cumplimiento", `${sinAlerta}/${total} sin alerta`, cumpl>=90?"good":(cumpl<70?"hot":""))
+      +tile(idle!=null?idle+"%":"—", "IDLE prom", idle!=null?"idle medio del grupo":"sin datos", (idle!=null&&idle>=10)?"hot":"");
+    host.style.display="flex";
+  }
+  // RENDIMIENTO DEL TURNO — un tile por proceso: headcount + rate medio + defectos.
+  // Clickable → filtra la tabla por ese proceso (reemplaza los chips de proceso).
+  function _renderCapProcTiles(rows){
+    const host=$("capProcTiles"); if(!host) return;
+    const agg={}; let T={n:0,rate:0,rn:0,def:0,vet:0,vn:0};
+    const add=(a,r)=>{ a.n++; a.def+=Number(r.total_defects||0);
+      if(r.rate!=null&&isFinite(Number(r.rate))){a.rate+=Number(r.rate);a.rn++;}
+      if(r.vet_rate!=null&&isFinite(Number(r.vet_rate))){a.vet+=Number(r.vet_rate);a.vn++;} };
+    rows.forEach(r=>{ const p=String(r.process||r.subprocess||"").toUpperCase(); if(!p)return; add(agg[p]=agg[p]||{n:0,rate:0,rn:0,def:0,vet:0,vn:0}, r); add(T, r); });
+    const procs=Object.keys(agg).sort();
+    const fmt=(s,c)=>c?Math.round(s/c):'—';
+    const trow=(v,proc,a,cls)=>`<tr class="cap-err-trow${cls}" data-proc="${esc(v)}"><td><b>${esc(proc)}</b></td><td>${a.n}</td><td>${fmt(a.rate,a.rn)}</td><td>${fmt(a.vet,a.vn)}</td><td>${(a.n?a.def/a.n:0).toFixed(2)}</td></tr>`;
+    let h=`<table class="cap-err-tbl"><thead><tr><th>Proceso</th><th>Asociados</th><th>TPH prom</th><th>Vet TPH</th><th>Err/asoc</th></tr></thead><tbody>`;
+    h+=trow("", "Todos", T, _capProc===""?" on":"");
+    h+=procs.map(p=>trow(p, p, agg[p], _capProc===p?" on":"")).join("");
+    host.innerHTML=h+`</tbody></table>`;
+    host.style.display="block";
+  }
+  // RESUMEN DE ERRORES — mini-tabla: error · total · /pers · asociados. Click en
+  // una fila ordena el Detalle por ese error (toggle).
+  function _renderCapErrSummary(rows){
+    const host=$("capErrSummary"); if(!host) return;
+    const m=_capErrStats(rows);
+    const labels=Object.keys(m).sort((a,b)=>m[b].total-m[a].total);
+    if(!labels.length){ host.innerHTML='<div class="cap-empty" style="padding:8px 2px">Sin errores en el turno 🎉</div>'; return; }
+    let h=`<table class="cap-err-tbl"><thead><tr><th>Error</th><th>Total</th><th>/pers</th><th title="Personas en ese proceso (no solo quien cometió el error)">Asociados</th></tr></thead><tbody>`;
+    for(const l of labels){
+      const e=m[l]; const on=_capSort.key==="err:"+l;
+      // "Asociados" = total de personas en el proceso dominante del error (el
+      // mismo denominador que usa /pers), no solo los que cometieron el error.
+      // Tooltip: cuántos de ellos lo cometieron. owner 2026-08-15.
+      const den=e.denom||e.people;
+      h+=`<tr class="cap-err-trow${on?' on':''}" data-err="${esc(l)}"><td>${esc(l)}</td><td class="${e.pri?'cap-err-hi':''}"><b>${e.total}</b>${e.pri?' ⚠':''}</td><td>${e.ratio.toFixed(2)}</td><td title="${e.people} con este error">${den}</td></tr>`;
+    }
+    host.innerHTML=h+`</tbody></table>`;
+  }
+  // STATUS BAR — recuento, prioridad y peor error del turno + hora.
+  function _renderCapStatus(rows){
+    const host=$("capStatus"); if(!host) return;
+    const m=_capErrStats(rows);
+    const worst=Object.keys(m).sort((a,b)=>m[b].total-m[a].total)[0];
+    const pri=rows.filter(r=>(r.defects||[]).some(x=>x.priority)).length;
+    const parts=[`<b>${rows.length}</b> operadores`];
+    if(pri) parts.push(`<span style="color:var(--red,#dc2626)">⚠ ${pri} en prioridad</span>`);
+    if(worst) parts.push(`peor error: <b>${esc(worst)}</b> (${m[worst].total})`);
+    parts.push(`actualizado ${new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`);
+    host.innerHTML=parts.join(" · ");
+  }
   function _ymd(daysAgo){ const d=new Date(); if(daysAgo!=null) d.setDate(d.getDate()-daysAgo); return d.toISOString().slice(0,10); }
+  // Week-at-a-glance day picker: last 7 days as pills (Hoy / Ayer / Wd DD).
+  function _renderCapDayPills(){
+    const host=$("capDayPills"); if(!host) return;
+    const sel=$("capDate").value||_ymd(0);
+    const WD=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    let h="";
+    for(let i=0;i<7;i++){
+      const d=new Date(); d.setDate(d.getDate()-i);
+      const ymd=d.toISOString().slice(0,10);
+      const lbl=i===0?'Hoy':(i===1?'Ayer':`${WD[d.getDay()]} ${d.getDate()}`);
+      h+=`<span class="cap-quick${ymd===sel?' on':''}" data-date="${ymd}" title="${ymd}">${lbl}</span>`;
+    }
+    host.innerHTML=h;
+  }
   function _capMode(m){
     document.querySelectorAll(".cap-mode").forEach(b=>b.classList.toggle("on",b.dataset.capMode===m));
     $("capPaneMonitor").style.display = m==="monitor"?"":"none";
@@ -5700,34 +5979,76 @@ setInterval(_checkNecroPermission, 15 * 60 * 1000);
   }
   function _monRender(){
     const d=_capData; if(!d) return;
-    $("capMeta").innerHTML=`<b>${d.count}</b> first-days · ${d.auto_detected} auto${d.is_past?' · <span style="color:#c98500">past day</span>':' · on shift'} · ${esc(d.date)}`;
-    const rows=d.rows||[]; const wrap=$("capCards");
-    if(!rows.length){ wrap.innerHTML='<div class="cap-empty">No Day-1/Day-2 associates. Add a login manually if needed.</div>'; $("capCsv").style.display="none"; return; }
-    wrap.innerHTML=rows.map(r=>{
-      const photo = r.photo_url?`<img class="cap-photo" src="${esc(r.photo_url)}" onerror="this.outerHTML='<div class=cap-nophoto>?</div>'">`:`<div class="cap-nophoto">?</div>`;
-      const defs=(r.defects&&r.defects.length)?r.defects.map(x=>`<span class="cap-def">${esc(x.error)}: ${x.defects}</span>`).join(""):`<span class="cap-def none">no defects</span>`;
-      const rate=(r.rate!=null)?Math.round(r.rate):'<span style="color:#c98500" title="No rate — needs FCLM">—</span>';
-      const vet=(r.vet_rate!=null)?Math.round(r.vet_rate):'—';
-      return `<div class="cap-card">
-        <button class="cap-drop" data-drop="${esc(r.login)}" title="Remove">✕</button>
-        ${photo}
-        <div class="cap-info">
-          <div><span class="cap-day ${r.day===2?'d2':''}">Day ${r.day||'?'}</span> <span class="cap-login">${esc(r.login)}</span>${r.manual?'<span class="cap-manual-badge">manual</span>':''}</div>
-          <div class="cap-name">${esc(r.name||'')} · ${esc(r.manager||'—')}</div>
-          <div class="cap-station">📍 ${esc(r.station||'—')} · ${esc(r.subprocess||r.process||'')}</div>
-          <div class="cap-metrics"><span><span class="m-lbl">Rate</span><b>${rate}</b></span><span><span class="m-lbl">Vet rate</span><b>${vet}</b></span></div>
-          <div class="cap-defs">${defs}</div>
-        </div></div>`;
-    }).join("");
+    const allRows=d.rows||[];
+    _renderCapProcTiles(allRows);
+    _renderCapFloorSelect(allRows);
+    _renderCapProcSelect(allRows);
+    const rows=allRows.filter(r=>{
+      if(_capProc && String(r.process||r.subprocess||"").toUpperCase()!==_capProc) return false;
+      if(_capFloor && _capFloorOf(r)!==_capFloor) return false;
+      return true;
+    });
+    _renderCapKpi(rows);
+    _renderCapErrSummary(rows);
+    _renderCapStatus(rows);
+    // Detail rows: optional "peores por proceso" filter (bottom-5 by rate / process).
+    let detailRows = rows.slice();
+    if(_capWorst){ const w=_capWorstLogins(rows,5); detailRows=detailRows.filter(r=>w.has(String(r.login).toLowerCase())); }
+    // Per-error columns (only errors present in the shown rows), worst first.
+    const _et={};
+    detailRows.forEach(r=>(r.defects||[]).forEach(x=>{ if(Number(x.defects)) _et[x.error]=(_et[x.error]||0)+Number(x.defects); }));
+    const errCols=Object.keys(_et).sort((a,b)=>_et[b]-_et[a]);
+    if(_capSort.key){
+      const k=_capSort.key, dir=_capSort.dir;
+      detailRows.sort((a,b)=>{ const va=_capSortVal(a,k), vb=_capSortVal(b,k); if(va<vb)return -dir; if(va>vb)return dir; return 0; });
+    }
+    const _fp=[];
+    if(_capProc) _fp.push(`Proceso: <b>${esc(_capProc)}</b>`);
+    if(_capFloor) _fp.push(`Planta: <b>${esc(String(_capFloor).toUpperCase())}</b>`);
+    if(_capWorst) _fp.push("Top opportunities (5/proc)");
+    const _flt=_fp.join(" · ");
+    $("capMeta").innerHTML=`<b>${d.date}</b>${_flt?` · ${_flt} <span style="color:var(--text-muted);font-size:11px">(click «Todos» para quitar)</span>`:""}`;
+    const wrap=$("capCards");
+    wrap.style.display="block";   // table view (container defaults to a card grid)
+    if(!detailRows.length){ wrap.innerHTML='<div class="cap-empty">No hay asociados con esos filtros.</div>'; $("capCsv").style.display="none"; return; }
+    const r0=(v,t)=>v!=null?Math.round(v):`<span style="color:#c98500"${t?` title="${t}"`:''}>—</span>`;
+    const av=r=>r.photo_url
+      ? `<img src="${esc(r.photo_url)}" style="width:34px;height:34px;border-radius:50%;object-fit:cover" onerror="this.outerHTML='<div style=&quot;width:34px;height:34px;border-radius:50%;background:var(--bg-input);display:flex;align-items:center;justify-content:center;color:var(--text-secondary)&quot;>?</div>'">`
+      : `<div style="width:34px;height:34px;border-radius:50%;background:var(--bg-input);display:flex;align-items:center;justify-content:center;color:var(--text-secondary)">?</div>`;
+    const _si=k=> _capSort.key===k ? (_capSort.dir<0?' ▼':' ▲') : '';
+    const _th=(k,lbl,tip)=>`<th data-cap-sort="${k}" style="cursor:pointer;user-select:none"${tip?` title="${esc(tip)}"`:''}>${lbl}${_si(k)}</th>`;
+    const errTh=errCols.map(l=>_th("err:"+l, esc(_shortErr(l)), l)).join("");
+    let h=`<table class="cap-table cap-rtable"><thead><tr>
+      <th></th>${_th("day","Day")}${_th("login","Login")}${_th("cohort","Cohort")}${_th("process","Process")}${_th("station","Estación")}${_th("rate","Rate")}${_th("vet","Vet")}${_th("idle","Notas")}${errTh}<th></th>
+    </tr></thead><tbody>`;
+    for(const r of detailRows){
+      const dm={}; (r.defects||[]).forEach(x=>{ dm[x.error]=x; });
+      const errTds=errCols.map(l=>{ const x=dm[l]; if(!x||!Number(x.defects)) return `<td style="text-align:center;color:var(--text-muted)">—</td>`; return `<td style="text-align:center"><span class="cap-def ${x.priority?'cap-def-hi':'cap-def-lo'}">${Number(x.defects)}</span></td>`; }).join("");
+      h+=`<tr>
+        <td>${av(r)}</td>
+        <td><span class="cap-day ${r.day===2?'d2':''}">Day ${r.day||'?'}</span></td>
+        <td><b>${esc(r.login)}</b>${r.manual?' <span class="cap-manual-badge">manual</span>':''}<br><span style="font-size:11px;color:var(--text-secondary)">${esc(r.name||'')}</span></td>
+        <td>${esc(r.cohort||'—')}</td>
+        <td title="${esc(r.subprocess||'')}">${esc(r.process||r.subprocess||'—')}</td>
+        <td>${esc(_capStation(r))}</td>
+        <td class="${_capRateCls(r.rate,r.vet_rate)}">${r0(r.rate,'No rate — needs FCLM')}</td>
+        <td>${r0(r.vet_rate)}</td>
+        <td style="text-align:left">${_capNotesChips(r)}</td>
+        ${errTds}
+        <td><button class="row-btn" data-drop="${esc(r.login)}" title="Remove" style="padding:2px 8px">✕</button></td>
+      </tr>`;
+    }
+    h+=`</tbody></table>`;
+    wrap.innerHTML=h;
     $("capCsv").style.display="";
     wrap.querySelectorAll("[data-drop]").forEach(b=>b.addEventListener("click",()=>{ const lg=b.dataset.drop.toLowerCase(); _drops.add(lg); _adds.delete(lg); _monRun(); }));
   }
   function _monCsv(){
     const d=_capData; if(!d||!d.rows.length) return;
-    const head=["Day","Login","Name","Manager","Station","Sub-process","Rate","Vet rate","Defects"];
+    const head=["Day","Login","Name","Cohort","Manager","Station","Sub-process","Rate","Vet rate","Defects"];
     const lines=[head.join(",")];
     for(const r of d.rows){ const defs=(r.defects||[]).map(x=>`${x.error}:${x.defects}`).join("; ");
-      lines.push([r.day||"",r.login,r.name||"",r.manager||"",r.station||"",r.subprocess||"",r.rate!=null?Math.round(r.rate):"",r.vet_rate!=null?Math.round(r.vet_rate):"",defs].map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")); }
+      lines.push([r.day||"",r.login,r.name||"",r.cohort||"",r.manager||"",r.station||"",r.subprocess||"",r.rate!=null?Math.round(r.rate):"",r.vet_rate!=null?Math.round(r.vet_rate):"",defs].map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")); }
     const b=new Blob([lines.join("\n")],{type:"text/csv"}); const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download=`captain_monitor_${d.date}_${d.fc}.csv`; a.click(); URL.revokeObjectURL(a.href);
   }
   // ── REPORTING (Day1 vs Day2) ──
@@ -5741,50 +6062,122 @@ setInterval(_checkNecroPermission, 15 * 60 * 1000);
       _compRender();
     }catch(e){ wrap.innerHTML=`<div class="cap-empty" style="color:#c0392b">Error: ${esc(e.message||String(e))}</div>`; }
   }
+  function _renderCompProcSummary(rows, d1, d2){
+    const host=$("capCompProc"); if(!host) return;
+    const lbl=$("capCompProcLbl"), det=$("capCompDetLbl");
+    if(!rows.length){ host.innerHTML=""; if(lbl) lbl.style.display="none"; if(det) det.style.display="none"; return; }
+    if(lbl) lbl.style.display=""; if(det) det.style.display="";
+    const acc={};
+    const bump=(a,rateD,vetD,defsD,which)=>{ if(rateD!=null&&isFinite(Number(rateD))){a[which+"Rate"]+=Number(rateD);a[which+"Rn"]++;} if(vetD!=null&&isFinite(Number(vetD))){a[which+"Vet"]+=Number(vetD);a[which+"Vn"]++;} a[which+"Def"]+=(defsD||[]).reduce((s,x)=>s+Number(x.defects||0),0); };
+    let TOT={n:0,d1Rate:0,d1Rn:0,d1Vet:0,d1Vn:0,d1Def:0,d2Rate:0,d2Rn:0,d2Vet:0,d2Vn:0,d2Def:0};
+    rows.forEach(r=>{ const p=String(r.process||r.subprocess||"").toUpperCase()||"—"; const a=acc[p]=acc[p]||{n:0,d1Rate:0,d1Rn:0,d1Vet:0,d1Vn:0,d1Def:0,d2Rate:0,d2Rn:0,d2Vet:0,d2Vn:0,d2Def:0}; a.n++; TOT.n++; bump(a,r.rate_d1,r.vet_d1,r.defects_d1,"d1"); bump(TOT,r.rate_d1,r.vet_d1,r.defects_d1,"d1"); bump(a,r.rate_d2,r.vet_d2,r.defects_d2,"d2"); bump(TOT,r.rate_d2,r.vet_d2,r.defects_d2,"d2"); });
+    const procs=Object.keys(acc).sort();
+    const avg=(s,c)=>c?Math.round(s/c):'—';
+    const row=(name,a)=>{
+      const r1=a.d1Rn?a.d1Rate/a.d1Rn:null, r2=a.d2Rn?a.d2Rate/a.d2Rn:null;
+      const dl=(r1!=null&&r2!=null)?(r2-r1):null;
+      const dcls=dl==null?'flat':(dl>0?'up':(dl<0?'down':'flat'));
+      const dtxt=dl==null?'—':(dl>0?`▲ +${Math.round(dl)}`:(dl<0?`▼ ${Math.round(dl)}`:'0'));
+      const cls1=_capRateCls(r1, a.d1Vn?a.d1Vet/a.d1Vn:null);
+      const cls2=_capRateCls(r2, a.d2Vn?a.d2Vet/a.d2Vn:null);
+      return `<tr><td><b>${esc(name)}</b></td><td>${a.n}</td><td class="${cls1}">${avg(a.d1Rate,a.d1Rn)}</td><td class="${cls2}">${avg(a.d2Rate,a.d2Rn)}</td><td class="cap-delta ${dcls}">${dtxt}</td><td>${avg(a.d1Vet,a.d1Vn)}</td><td>${avg(a.d2Vet,a.d2Vn)}</td><td>${(a.n?a.d1Def/a.n:0).toFixed(2)}</td><td>${(a.n?a.d2Def/a.n:0).toFixed(2)}</td></tr>`;
+    };
+    let h=`<table class="cap-err-tbl" style="min-width:640px"><thead><tr>
+        <th rowspan="2">Proceso</th><th rowspan="2">Asoc.</th>
+        <th colspan="3" style="text-align:center">TPH prom</th>
+        <th colspan="2" style="text-align:center">Vet TPH</th>
+        <th colspan="2" style="text-align:center">Err/asoc</th>
+      </tr>
+      <tr><th title="${esc(d1)}">D1</th><th title="${esc(d2)}">D2</th><th>Δ</th><th>D1</th><th>D2</th><th>D1</th><th>D2</th></tr>
+      </thead><tbody>`;
+    h+=row("Todos", TOT);
+    h+=procs.map(p=>row(p, acc[p])).join("");
+    host.innerHTML=h+`</tbody></table>`;
+  }
   function _compRender(){
     const d=_capComp; if(!d) return;
-    $("capCompMeta").innerHTML=`<b>${d.count}</b> associates · Day 1 = ${esc(d.date1)} → Day 2 = ${esc(d.date2)}`;
+    $("capCompMeta").innerHTML=`<b>${d.count}</b> asociados · Day 1 = ${esc(d.date1)} → Day 2 = ${esc(d.date2)}`;
     const rows=d.rows||[]; const wrap=$("capCompWrap");
+    _renderCompProcSummary(rows, d.date1, d.date2);
     if(!rows.length){ wrap.innerHTML='<div class="cap-empty">No associates for these dates.</div>'; $("capCompCsv").style.display="none"; return; }
-    const defList=a=>(a&&a.length)?a.map(x=>`<span class="cap-def">${esc(x.error)}: ${x.defects}</span>`).join(""):`<span class="cap-def none">0</span>`;
-    let h=`<table class="cap-table"><thead><tr><th>Login</th><th>Station</th><th>Sub-process</th>
-      <th>Rate D1<br><span style="font-weight:400">${esc(d.date1)}</span></th><th>Rate D2<br><span style="font-weight:400">${esc(d.date2)}</span></th><th>Δ Rate</th>
-      <th>Defects D1</th><th>Defects D2</th></tr></thead><tbody>`;
+    const defList=a=>(a&&a.length)?a.map(x=>{const n=Number(x.defects||0);const t=n>=8?'hi':(n>=3?'mid':'lo');return `<span class="cap-def cap-def-${t}">${esc(x.error)}: ${n}</span>`;}).join(""):`<span class="cap-def none">0</span>`;
+    const r0=v=>v!=null?Math.round(v):'<span style="color:#c98500">—</span>';
+    const _dt=s=>`<span style="font-weight:400;font-size:10px;color:var(--text-secondary)">${esc(s)}</span>`;
+    // Grouped header: Rate splits into D1 / D2 / Δ; Errores is ONE column with
+    // D1/D2 sub-headers inside each cell (owner's design 2026-08-13).
+    let h=`<table class="cap-table cap-rtable"><thead>
+      <tr>
+        <th rowspan="2">Login</th><th rowspan="2">Cohort</th><th rowspan="2">Process</th><th rowspan="2">Estación</th>
+        <th colspan="3" style="text-align:center">Rate</th>
+        <th rowspan="2">Errores</th>
+      </tr>
+      <tr>
+        <th>D1<br>${_dt(d.date1)}</th><th>D2<br>${_dt(d.date2)}</th><th>Δ</th>
+      </tr></thead><tbody>`;
     for(const r of rows){
       const dl=r.rate_delta;
       const dcls=dl==null?'flat':(dl>0?'up':(dl<0?'down':'flat'));
       const dtxt=dl==null?'—':(dl>0?`▲ +${Math.round(dl)}`:(dl<0?`▼ ${Math.round(dl)}`:'0'));
+      const _lbl=t=>`<span style="display:inline-block;min-width:24px;font-size:10px;font-weight:700;color:var(--text-secondary)">${t}</span>`;
       h+=`<tr>
         <td><b>${esc(r.login)}</b><br><span style="font-size:11px;color:var(--text-secondary)">${esc(r.name||'')}</span></td>
-        <td>${esc(r.station||'—')}</td>
-        <td>${esc(r.subprocess||'—')}</td>
-        <td>${r.rate_d1!=null?Math.round(r.rate_d1):'<span style="color:#c98500">—</span>'}</td>
-        <td>${r.rate_d2!=null?Math.round(r.rate_d2):'<span style="color:#c98500">—</span>'}</td>
+        <td>${esc(r.cohort||'—')}</td>
+        <td>${esc(r.process||r.subprocess||'—')}</td>
+        <td>${esc(_capStation(r))}</td>
+        <td class="${_capRateCls(r.rate_d1,r.vet_d1)}">${r0(r.rate_d1)}</td>
+        <td class="${_capRateCls(r.rate_d2,r.vet_d2)}">${r0(r.rate_d2)}</td>
         <td class="cap-delta ${dcls}">${dtxt}</td>
-        <td>${defList(r.defects_d1)}</td>
-        <td>${defList(r.defects_d2)}</td>
+        <td style="text-align:left">
+          <div style="margin:2px 0">${_lbl('D1')} ${defList(r.defects_d1)}</div>
+          <div style="margin:2px 0">${_lbl('D2')} ${defList(r.defects_d2)}</div>
+        </td>
       </tr>`;
     }
     h+=`</tbody></table>`; wrap.innerHTML=h; $("capCompCsv").style.display="";
   }
   function _compCsv(){
     const d=_capComp; if(!d||!d.rows.length) return;
-    const head=["Login","Name","Manager","Station","Sub-process",`Rate D1 (${d.date1})`,`Rate D2 (${d.date2})`,"Delta rate","Defects D1","Defects D2"];
+    const head=["Login","Name","Cohort","Process","Station","Sub-process",`Rate D1 (${d.date1})`,`Rate D2 (${d.date2})`,"Delta rate","Defects D1","Defects D2"];
     const lines=[head.join(",")];
     for(const r of d.rows){ const f=a=>(a||[]).map(x=>`${x.error}:${x.defects}`).join("; ");
-      lines.push([r.login,r.name||"",r.manager||"",r.station||"",r.subprocess||"",r.rate_d1!=null?Math.round(r.rate_d1):"",r.rate_d2!=null?Math.round(r.rate_d2):"",r.rate_delta!=null?Math.round(r.rate_delta):"",f(r.defects_d1),f(r.defects_d2)].map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")); }
+      lines.push([r.login,r.name||"",r.cohort||"",r.process||r.subprocess||"",r.station||"",r.subprocess||"",r.rate_d1!=null?Math.round(r.rate_d1):"",r.rate_d2!=null?Math.round(r.rate_d2):"",r.rate_delta!=null?Math.round(r.rate_delta):"",f(r.defects_d1),f(r.defects_d2)].map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")); }
     const b=new Blob([lines.join("\n")],{type:"text/csv"}); const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download=`captain_compare_${d.date1}_vs_${d.date2}_${d.fc}.csv`; a.click(); URL.revokeObjectURL(a.href);
   }
   // ── wiring ──
-  window._onCaptainTab=function(){ if(!_capData){ $("capDate").value=_ymd(0); _monRun(); } };
+  window._onCaptainTab=function(){ if(!$("capDate").value) $("capDate").value=_ymd(0); _renderCapDayPills(); if(!_capData) _monRun(); };
+  // Captain is on-demand only: _monRun() fires when the trainer opens the tab
+  // (window._onCaptainTab) or clicks Refresh — never from the auto-data pipeline.
   document.querySelectorAll(".cap-mode").forEach(b=>b.addEventListener("click",()=>_capMode(b.dataset.capMode)));
-  document.querySelectorAll("#capPaneMonitor .cap-quick").forEach(q=>q.addEventListener("click",()=>{
-    document.querySelectorAll("#capPaneMonitor .cap-quick").forEach(z=>z.classList.remove("on")); q.classList.add("on");
-    $("capDate").value=_ymd(parseInt(q.dataset.capDay)); _monRun();
-  }));
-  $("capDate") && $("capDate").addEventListener("change",()=>{ document.querySelectorAll("#capPaneMonitor .cap-quick").forEach(z=>z.classList.remove("on")); _monRun(); });
+  $("capDayPills") && $("capDayPills").addEventListener("click",e=>{ const p=e.target.closest("[data-date]"); if(!p)return; $("capDate").value=p.dataset.date; _renderCapDayPills(); _monRun(); });
+  $("capDate") && $("capDate").addEventListener("change",()=>{ _renderCapDayPills(); _monRun(); });
   $("capRun") && $("capRun").addEventListener("click",_monRun);
   $("capCsv") && $("capCsv").addEventListener("click",_monCsv);
+  $("capWorstBtn") && $("capWorstBtn").addEventListener("click",()=>{ _capWorst=!_capWorst; const b=$("capWorstBtn"); b.classList.toggle("act-primary",_capWorst); b.classList.toggle("act-secondary",!_capWorst); if(_capData)_monRender(); });
+  $("capProcTiles") && $("capProcTiles").addEventListener("click",e=>{ const c=e.target.closest("[data-proc]"); if(!c)return; const p=c.dataset.proc; _capProc=(p===_capProc)?"":p; if(_capData)_monRender(); });
+  // Harmonious single-select dropdowns (reuse Quality's outside-click-close list).
+  function _capBindSelect(btnId, panelId, listId, attr, setFn){
+    const btn=$(btnId), panel=$(panelId), list=$(listId);
+    if(!btn||!panel||!list) return;
+    try{ if(typeof _allDropdownPanels!=="undefined") _allDropdownPanels.push(panel); }catch(_){ }
+    btn.addEventListener("click",e=>{
+      e.stopPropagation();
+      const willOpen = panel.style.display==="none" || !panel.style.display;
+      try{ if(typeof _allDropdownPanels!=="undefined") _allDropdownPanels.forEach(p=>p.style.display="none"); }catch(_){ }
+      panel.style.display = willOpen ? "block" : "none";
+    });
+    list.addEventListener("click",e=>{
+      const o=e.target.closest("[data-"+attr+"]"); if(!o)return;
+      setFn(o.getAttribute("data-"+attr)||"");
+      panel.style.display="none";
+      if(_capData)_monRender();
+    });
+  }
+  _capBindSelect("capFloorBtn","capFloorPanel","capFloorList","floor", v=>{ _capFloor=v; });
+  _capBindSelect("capProcBtn","capProcPanel","capProcList","proc", v=>{ _capProc=v; });
+  const _capErrSortClick=e=>{ const c=e.target.closest("[data-err]"); if(!c)return; const key="err:"+c.dataset.err; _capSort=(_capSort.key===key)?{key:"",dir:-1}:{key,dir:-1}; if(_capData)_monRender(); };
+  $("capKpi") && $("capKpi").addEventListener("click",_capErrSortClick);
+  $("capErrSummary") && $("capErrSummary").addEventListener("click",_capErrSortClick);
+  $("capCards") && $("capCards").addEventListener("click",e=>{ const th=e.target.closest("th[data-cap-sort]"); if(!th)return; const k=th.dataset.capSort; if(_capSort.key===k) _capSort.dir*=-1; else _capSort={key:k, dir:(_TEXT_COLS.has(k)?1:-1)}; if(_capData)_monRender(); });
   function _add(){ const el=$("capAddLogin"); const lg=(el.value||"").trim().toLowerCase(); if(!lg) return; _adds.add(lg); _drops.delete(lg); el.value=""; _monRun(); }
   $("capAddBtn") && $("capAddBtn").addEventListener("click",_add);
   $("capAddLogin") && $("capAddLogin").addEventListener("keydown",e=>{ if(e.key==="Enter") _add(); });

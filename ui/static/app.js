@@ -1611,6 +1611,9 @@ function _alertPref(kind){
 }
 function _setAlertPref(kind, on){
   try{ localStorage.setItem(`argos_alert_${kind}`, on ? "1" : "0"); }catch(_){}
+  // Mirror to server prefs — pywebview wipes localStorage between sessions, so
+  // localStorage alone doesn't survive a relaunch (same as theme/lang). owner 2026-08-17.
+  try{ jpost(`${API}/api/prefs`, {[`alert_${kind}`]: on ? "1" : "0"}).catch(()=>{}); }catch(_){}
 }
 
 // Tear down a running poll so toggling OFF actually stops the auto-gen.
@@ -4623,6 +4626,21 @@ async function _initApp(){
   localStorage.setItem("argos-default-fc", defaultFc);
   if(prefs.theme) { document.documentElement.setAttribute("data-theme", prefs.theme); localStorage.setItem("argos-theme", prefs.theme); }
   if(prefs.lang) { _lang = prefs.lang; localStorage.setItem("argos-lang", prefs.lang); }
+  // Restore auto-data / alerts / density from SERVER prefs (pywebview wipes
+  // localStorage between sessions, so these need the same server-side mirror as
+  // theme/lang, else they reset to OFF on every relaunch). owner 2026-08-17.
+  if(prefs.density){
+    localStorage.setItem("argos-density", prefs.density);
+    if(prefs.density === "compact") document.documentElement.setAttribute("data-density","compact");
+    else document.documentElement.removeAttribute("data-density");
+  }
+  ["gca","quality"].forEach(k=>{ const pv = prefs["alert_"+k]; if(pv != null) localStorage.setItem("argos_alert_"+k, String(pv)); });
+  if(prefs.auto_data != null){
+    localStorage.setItem("argos_auto_data", String(prefs.auto_data));
+    if(String(prefs.auto_data) === "1" && typeof _applyPerfAuto === "function") _applyPerfAuto(true);
+  }
+  try{ if(typeof _syncAlertToggleUI === "function") _syncAlertToggleUI(); }catch(_){}
+  try{ if(window._canAlerts && typeof _applyAlertsAccess === "function") _applyAlertsAccess(window._canAlerts); }catch(_){}
   const sel=$("fcSelect");
   if(sel){ const opt=sel.querySelector(`option[value="${saved}"]`); if(opt) sel.value=saved; }
   const sbFc=$("sbFc"); if(sbFc) sbFc.textContent=currentFC;
@@ -5162,6 +5180,8 @@ function _applyPerfAuto(on){
   // Master auto-DATA switch. Persists across sessions; drives the 15-min
   // GCA→Perf→Quality loop. (renamed from argos_perf_auto → argos_auto_data)
   try{ localStorage.setItem("argos_auto_data", on ? "1" : "0"); }catch(_){}
+  // Mirror to server prefs too — pywebview wipes localStorage between sessions.
+  try{ jpost(`${API}/api/prefs`, {auto_data: on ? "1" : "0"}).catch(()=>{}); }catch(_){}
   if(on) _startPerfAuto(); else _stopPerfAuto();
 }
 // Settings toggle: set once, persists across sessions (localStorage). calvenpj 2026-07-24.
@@ -6262,6 +6282,8 @@ if(_spBtn && _spPanel){
       const v = btn.dataset.val;
       _applyDensity(v);
       try { localStorage.setItem("argos-density", v); } catch(_){}
+      // Mirror to server prefs — survives pywebview localStorage reset. owner 2026-08-17.
+      try { jpost(`${API}/api/prefs`, {density: v}).catch(()=>{}); } catch(_){}
       _syncDensityButtons();
     });
   });

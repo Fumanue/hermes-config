@@ -6118,7 +6118,26 @@ setInterval(_checkNecroPermission, 15 * 60 * 1000);
     const rows=d.rows||[]; const wrap=$("capCompWrap");
     _renderCompProcSummary(rows, d.date1, d.date2);
     if(!rows.length){ wrap.innerHTML='<div class="cap-empty">No associates for these dates.</div>'; $("capCompCsv").style.display="none"; return; }
-    const defList=a=>(a&&a.length)?a.map(x=>{const n=Number(x.defects||0);const t=n>=8?'hi':(n>=3?'mid':'lo');return `<span class="cap-def cap-def-${t}">${esc(x.error)}: ${n}</span>`;}).join(""):`<span class="cap-def none">0</span>`;
+    // Errores como BARRAS horizontales (mismo lenguaje visual que Calidad), no
+    // pills — más intuitivo. Ancho relativo al máximo de ese día; color por
+    // severidad. owner 2026-08-18.
+    const _compDefBars=a=>{
+      if(!a||!a.length) return `<span class="cap-def none">0</span>`;
+      const max=Math.max.apply(null, a.map(x=>Number(x.defects||0)).concat([1]));
+      return a.slice(0,6).map(x=>{
+        const n=Number(x.defects||0);
+        const pct=Math.max(6, Math.round(n/max*100));
+        const color=n>=8?'var(--red,#dc2626)':(n>=3?'var(--amber,#f59e0b)':'var(--accent,#2563eb)');
+        return `<div style="display:flex;align-items:center;gap:6px;margin:2px 0">
+          <div style="flex:0 0 150px;font-size:10.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(x.error)}">${esc(x.error)}</div>
+          <div style="flex:1;min-width:60px;background:var(--border);border-radius:4px;height:12px;position:relative;overflow:hidden">
+            <div style="position:absolute;inset:0;width:${pct}%;background:${color};border-radius:4px"></div>
+          </div>
+          <div style="flex:0 0 24px;text-align:right;font-size:11px;font-weight:700">${n}</div>
+        </div>`;
+      }).join("");
+    };
+    const defList=_compDefBars;
     const r0=v=>v!=null?Math.round(v):'<span style="color:#c98500">—</span>';
     const _dt=s=>`<span style="font-weight:400;font-size:10px;color:var(--text-secondary)">${esc(s)}</span>`;
     // Grouped header: Rate splits into D1 / D2 / Δ; Errores is ONE column with

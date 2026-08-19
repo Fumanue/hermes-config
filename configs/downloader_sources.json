@@ -16,8 +16,8 @@
     "DMA4": "100541"
   },
   "amzl_role_key": "DELIVERY",
-  "_amzl_lc_url_comment": "LC (Learning Curve) source for Delivery Stations. Argos downloads this 'Raw Data - Process Hours' export (drive.corp) each pipeline run and caches it as amzl_lc_cache.csv; amzl_lc.py reads that cache. Header is on row 3; columns include DS, Process, Login, LC, LC Hours. Without it every AA defaults to LC1.",
-  "amzl_lc_url": "https://drive.corp.amazon.com/view/fumanue@/LC%20DS%20Stations/DS%20Data.xlsx?download=true",
+  "_amzl_lc_url_comment": "LC (Learning Curve) source for Delivery Stations, on the SHARED 'Project Argos/DS LC' drive.corp folder (team-owned, not a personal account). Argos downloads this export each pipeline run and caches it as amzl_lc_cache.csv; amzl_lc.py reads that cache. CSV (header on row 1) and legacy xlsx (banner + header on row 3) are both accepted. Columns include DS, Process, Login, LC, LC Hours. Without it every AA defaults to LC1.",
+  "amzl_lc_url": "https://drive.corp.amazon.com/view/Project%20Argos/DS%20LC/LC%20Delivery%20Station.csv",
   "_amzl_curve_proc_comment": "Maps PPA process_id -> Learning Curve process key in amzl_curves.json (so the rate's process picks the right curve). 100021=Stow, 100541=ADTA Stow, 100407=Pick & Stage (P&S).",
   "amzl_curve_proc_by_id": {
     "100021": "stow",

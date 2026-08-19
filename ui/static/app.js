@@ -353,6 +353,87 @@ const PROCESS_GROUPS = {
 const PROCESS_GROUP_KEYS = ["PACK","PICK","ICQA","STOW","RECEIVE"];
 const ALL_PROCS_COUNT = PROCESS_GROUP_KEYS.length;
 
+// FC "Process" tree filter (owner 2026-08-19): OB / IB / ICQA → subprocess leaves,
+// each mapped to the data's Role values. The dropdown shows Rate + % to OP2 per
+// leaf and filters the board by role (state.procRoles = union of checked leaves).
+// Easy to move to a config JSON later.
+const PROCESS_TAXONOMY = [
+  {top:"OB", leaves:[
+    {sub:"AFE",  name:"Chuting",       roles:["AFE_PACK"]},
+    {sub:"AFE",  name:"Rebin",         roles:["AFE_REBIN"]},
+    {sub:"AFE",  name:"Induct",        roles:["AFE_INDUCT","INDUCT"]},
+    {sub:"Pack", name:"Pack Singles",  roles:["SM1","SINGLES","SNS1","SNS2"]},
+    {sub:"Pack", name:"Pack Multis",   roles:["SM","SM2","SMMIX","WS_SLAM","WS_VDF","P2R_PACK"]},
+    {sub:"Pick", name:"Pick Tote",     roles:["PICK_AR"]},
+    {sub:"Pick", name:"Pick to Rebin", roles:["P2R_PICK"]},
+  ]},
+  {top:"IB", leaves:[
+    {sub:"", name:"Receive", roles:["DECANT","PALLET_DECANT"]},
+    {sub:"", name:"Stow",    roles:["STOW","QUANTITY_STOW"]},
+  ]},
+  {top:"ICQA", leaves:[
+    {sub:"", name:"SBC", roles:["SBC","ICQA_SIMPLE_BIN_COUNT","ICQATR","BIN_FILTER","BIN FILTER"]},
+  ]},
+];
+function _ptStats(roles){
+  const set=new Set(roles.map(x=>String(x).toUpperCase()));
+  let rate=0,rn=0,pct=0,pn=0,n=0;
+  (state.all||[]).forEach(r=>{
+    if(!set.has(String(r.role||"").toUpperCase())) return;
+    n++;
+    const rt=Number(r.rate); if(isFinite(rt)&&rt>0){rate+=rt;rn++;}
+    const pc=Number(r.pct!=null?r.pct:r.pctAdj); if(isFinite(pc)){pct+=pc;pn++;}
+  });
+  return {n, rate: rn?Math.round(rate/rn):null, pct: pn?Math.round(pct/pn):null};
+}
+function _ptLabel(){
+  const lab=$("procTaxoLabel"), btn=$("procTaxoBtn"); if(!lab) return;
+  const sel=(state.procRoles instanceof Set)?state.procRoles:new Set();
+  if(!sel.size){ lab.textContent="All"; if(btn)btn.classList.remove("active"); return; }
+  const names=[];
+  PROCESS_TAXONOMY.forEach(t=>t.leaves.forEach(lf=>{ if(lf.roles.some(r=>sel.has(String(r).toUpperCase()))) names.push(lf.name); }));
+  lab.textContent = names.length<=2 ? names.join(", ") : `${names.slice(0,2).join(", ")} +${names.length-2}`;
+  if(btn) btn.classList.add("active");
+}
+function renderProcTaxo(){
+  const panel=$("procTaxoPanel"); if(!panel) return;
+  if(!(state.procRoles instanceof Set)) state.procRoles=new Set();
+  const sel=state.procRoles;
+  const rows=[];
+  rows.push(`<div class="pt-head"><span style="flex:0 0 15px"></span><span class="pt-sub"></span><span class="pt-name">Proceso</span><span class="pt-rate">Rate</span><span class="pt-pct">%OP2</span></div>`);
+  rows.push(`<label class="pt-row" style="font-weight:700"><input type="checkbox" data-pt="all" ${sel.size?"":"checked"}><span class="pt-sub"></span><span class="pt-name">Todos</span><span class="pt-rate"></span><span class="pt-pct"></span></label>`);
+  PROCESS_TAXONOMY.forEach((t,ti)=>{
+    rows.push(`<div class="pt-sec${ti===0?" pt-first":""}">${esc(t.top)}</div>`);
+    t.leaves.forEach(lf=>{
+      const st=_ptStats(lf.roles);
+      const on=lf.roles.some(r=>sel.has(String(r).toUpperCase()));
+      const rolesAttr=esc(lf.roles.map(r=>String(r).toUpperCase()).join("|"));
+      rows.push(`<label class="pt-row${st.n?"":" pt-empty"}"><input type="checkbox" data-pt="leaf" data-roles="${rolesAttr}" ${on?"checked":""}>`
+        +`<span class="pt-sub">${esc(lf.sub||"")}</span>`
+        +`<span class="pt-name">${esc(lf.name)}</span>`
+        +`<span class="pt-rate">${st.rate!=null?st.rate:"—"}</span>`
+        +`<span class="pt-pct">${st.pct!=null?st.pct+"%":"—"}</span></label>`);
+    });
+  });
+  panel.innerHTML=rows.join("");
+  panel.querySelectorAll('input[data-pt]').forEach(cb=>{
+    cb.addEventListener("change",()=>{
+      if(cb.dataset.pt==="all"){
+        if(cb.checked) state.procRoles=new Set();   // ALL
+      }else{
+        const roles=(cb.dataset.roles||"").split("|").filter(Boolean);
+        if(cb.checked) roles.forEach(r=>state.procRoles.add(r));
+        else roles.forEach(r=>state.procRoles.delete(r));
+      }
+      const allBox=panel.querySelector('input[data-pt="all"]');
+      if(allBox) allBox.checked = state.procRoles.size===0;
+      _ptLabel();
+      renderAll();
+    });
+  });
+  _ptLabel();
+}
+
 function roleMatchesProcess(role, proc){
   const r = String(role||"").toUpperCase();
   // Support multi-select: proc can be a Set of process groups
@@ -676,6 +757,7 @@ function norm(r){
     ||(login?`https://badgephotos.amazon.com/?Region=Master&FullsizeImage=Yes&uid=${encodeURIComponent(login)}`:"");
 
   const manager = String(r.manager??"").trim();
+  const managerLogin = String(r.manager_login??"").trim();
   // Pre-compute the lowercased search blob ONCE per row so the search
   // filter doesn't .toLowerCase() every cell on every keystroke.
   const _search = (login+" "+name+" "+role+" "+station+" "+dept+" "+cohort+" "+nhFlag).toLowerCase();
@@ -684,7 +766,7 @@ function norm(r){
   const pending_coachings = Array.isArray(r.pending_coachings) ? r.pending_coachings : [];
   const newHire = !!r.new_hire;
   const daysSinceHire = (r.days_since_hire==null ? null : Number(r.days_since_hire));
-  return{login,name,manager,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,coached_label:String(r.coached_label??"").trim(),notes,rate,rateAdj,pct,pctAdj,target,vetAvg,course_id,employee_id,transcript_url,photo_url,pending_coachings,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,newHire,daysSinceHire,idle_pct,idle_min,_search};
+  return{login,name,manager,managerLogin,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,coached_label:String(r.coached_label??"").trim(),notes,rate,rateAdj,pct,pctAdj,target,vetAvg,course_id,employee_id,transcript_url,photo_url,pending_coachings,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,newHire,daysSinceHire,idle_pct,idle_min,_search};
 }
 
 // Build the notes string to upload (rate + pct + comments)
@@ -1247,13 +1329,32 @@ function _applyPermissions(perms){
   });
 }
 
+// Coaching-role badge in the user pill: "ROL: Learning" (L&D team member) or
+// "ROL: OPS" (everyone else). Replaces the old SUPER ADMIN/ADMIN badge. Shown for
+// every user so it's clear which coaching mapping their uploads use. owner 2026-08-19.
+function _renderRoleBadge(admin){
+  const pill = document.getElementById("userPill"); if(!pill) return;
+  pill.querySelector(".admin-badge")?.remove();   // avoid duplicates on re-render
+  const isLd = !!(admin && admin.is_ld);
+  // Store role + bulk cap for the bulk-upload guardrail (blocks over-cap + double-confirm).
+  window._isLd = isLd;
+  window._bulkCap = Number((admin && admin.bulk_cap)) || (isLd ? 75 : 10);
+  const role = (admin && admin.coach_role) || (isLd ? "Learning" : "OPS");
+  const b = document.createElement("span");
+  b.className = "admin-badge" + (isLd ? " role-ld" : " role-ops");
+  b.textContent = "ROL: " + role;
+  b.title = isLd ? "L&D — el coaching se sube con el mapeo actual (Ops y L&D)"
+                 : "OPS — el coaching se sube siempre con el mapeo OPS";
+  pill.appendChild(b);
+}
+
 // Auth cache — only call /api/auth/me once per calendar day
 // Persisted in localStorage so a post-pipeline reload skips the auth fetch.
 let _authCache = (()=>{
   try{
     // v4: bumped to invalidate cached results from before team membership gate landed.
     try{ localStorage.removeItem("argos_auth_v3"); }catch(ex){}
-    const raw = localStorage.getItem("argos_auth_v4");
+    const raw = localStorage.getItem("argos_auth_v5");
     if(raw){ const p = JSON.parse(raw); if(p && p.date) return p; }
   }catch(ex){}
   return null;
@@ -1968,6 +2069,8 @@ async function loadUserInfo(){
     if($("tabGca")) $("tabGca").style.display = "";
     if($("tabMap")) $("tabMap").style.display = "";   // _applySiteBL hides it for DS
     if($("tabConfig")) $("tabConfig").style.display = "";   // Settings tab: all users (read-only unless admin)
+    // Coaching-role badge (ROL: Learning / OPS) for everyone.
+    _renderRoleBadge(d.admin);
     // Restore admin state from cache
     if(d.admin && d.admin.is_admin){
       window._isAdmin = true;
@@ -1990,7 +2093,7 @@ async function loadUserInfo(){
   try{
     const d = await jget(`${API}/api/auth/me`);
     _authCache = { date: today, data: d };
-    try{ localStorage.setItem("argos_auth_v4", JSON.stringify(_authCache)); }catch(ex){}
+    try{ localStorage.setItem("argos_auth_v5", JSON.stringify(_authCache)); }catch(ex){}
     const u = d.user || {};
     const login = u.login || "—";
 
@@ -2021,15 +2124,15 @@ async function loadUserInfo(){
     // Apply tab/feature permissions from server
     if(d.permissions) _applyPermissions(d.permissions);
 
-    // Admin badge & multi-site
+    // Coaching-role badge (ROL: Learning / ROL: OPS) — shown for EVERYONE, replaces
+    // the old SUPER ADMIN/ADMIN badge (owner 2026-08-19).
+    _renderRoleBadge(d.admin);
+
+    // Admin gating (tabs/config/multi-site) — no visible badge now.
     if(d.admin && d.admin.is_admin){
       window._isAdmin = true;
       window._isSuperAdmin = d.admin.is_super_admin || false;
       document.body.classList.add("is-admin");
-      const badge = document.createElement("span");
-      badge.className = "admin-badge";
-      badge.textContent = d.admin.is_super_admin ? "⚡ SUPER ADMIN" : "★ ADMIN";
-      $("userPill")?.appendChild(badge);
       // Show multi-site button in Quality
       if($("btnQualityMulti")) $("btnQualityMulti").style.display = "inline-flex";
       // Show Config tab
@@ -2111,10 +2214,69 @@ function switchTab(name){
   // GCA station-map FAB/popup: only lives on the GCA tab. Show the FAB when
   // entering GCA (if the popup isn't already open); hide FAB + popup elsewhere.
   if(window._updateGcaFabVisibility) window._updateGcaFabVisibility();
+  if(window._syncNavMenus) window._syncNavMenus();
 }
 document.querySelectorAll(".t-tab[data-tab]").forEach(tab=>
   tab.addEventListener("click",()=>switchTab(tab.dataset.tab))
 );
+
+// ── Nav dropdown menus (Execution / L&D) ────────────────────────────────────
+// The tabs live inside these panels but keep their .t-tab/data-tab wiring, so
+// switchTab still runs on click. These handlers just open/close the panel and
+// reflect the active tab on the owning menu button. owner 2026-08-19
+(function(){
+  const MENUS = [
+    {menu:"menuExecution", btn:"menuExecBtn", panel:"menuExecPanel", label:"Execution"},
+    {menu:"menuLD",        btn:"menuLDBtn",   panel:"menuLDPanel",   label:"L&D"},
+  ];
+  function closeAll(){
+    MENUS.forEach(m=>{ const el=$(m.menu), b=$(m.btn); if(el) el.classList.remove("open"); if(b) b.setAttribute("aria-expanded","false"); });
+  }
+  MENUS.forEach(m=>{
+    const btn=$(m.btn), menuEl=$(m.menu), panel=$(m.panel);
+    if(!btn||!menuEl) return;
+    btn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const willOpen=!menuEl.classList.contains("open");
+      closeAll();
+      if(willOpen){ menuEl.classList.add("open"); btn.setAttribute("aria-expanded","true"); }
+    });
+    // Clicking a tab inside the panel closes the menu (switchTab is wired above).
+    if(panel) panel.addEventListener("click",(e)=>{ if(e.target.closest(".t-tab")) closeAll(); });
+  });
+  document.addEventListener("click",closeAll);
+  // Reflect the active tab on its owning menu button (label + highlight) so the
+  // user sees where they are even with the tabs collapsed.
+  window._syncNavMenus=function(){
+    MENUS.forEach(m=>{
+      const menuEl=$(m.menu), btn=$(m.btn); if(!menuEl||!btn) return;
+      const active=menuEl.querySelector(".t-tab.on");
+      const caret=' <span class="t-menu-caret">▾</span>';
+      if(active){ btn.classList.add("has-active"); btn.innerHTML=esc(active.textContent.trim())+caret; }
+      else{ btn.classList.remove("has-active"); btn.innerHTML=esc(m.label)+caret; }
+    });
+  };
+  window._syncNavMenus();
+})();
+
+// ── Sidebar pin (rail+hover-overlay ↔ pinned-open), persisted like theme ─────
+(function(){
+  const KEY="argos_sb_pinned";
+  function apply(c){ document.body.classList.toggle("sb-pinned", !!c); }
+  window._applySbPinned = apply;
+  try{ apply(localStorage.getItem(KEY)==="1"); }catch(_){}   // instant (pre-prefs)
+  // Rail mode hides labels → give each item a tooltip so hovering shows the name.
+  document.querySelectorAll('.sidebar .t-tab').forEach(t=>{
+    const l=t.querySelector('.sb-lbl'); if(l && !t.title) t.title=l.textContent.trim();
+  });
+  const btn=$("sbCollapse");
+  if(btn) btn.addEventListener("click",()=>{
+    const c=!document.body.classList.contains("sb-pinned");
+    apply(c);
+    try{ localStorage.setItem(KEY, c?"1":"0"); }catch(_){}
+    try{ jpost(`${API}/api/prefs`,{sb_pinned:c?"1":"0"}).catch(()=>{}); }catch(_){}
+  });
+})();
 
 // ── FC selector ────────────────────────────────────────────
 $("fcSelect").addEventListener("change",()=>{
@@ -2133,8 +2295,45 @@ $("fcSelect").addEventListener("change",()=>{
 $("shiftSelect") && $("shiftSelect").addEventListener("change",()=>{
   currentShift=$("shiftSelect").value;
   _refreshInfoBarDates();
+  if(window._updateShiftChip) window._updateShiftChip();
   loadDashboard();
 });
+
+// ── Shift chip (topbar): colored Early/Late/Night, click to change ──────────
+function _shiftCat(key){
+  const k=String(key||"").toUpperCase();
+  if(k.includes("NIGHT")) return {c:"sh-night", ico:"🌙", lbl:"Night"};
+  if(k==="LATE"||k.includes("EVENING")||k==="CENTRAL") return {c:"sh-late", ico:"🌇", lbl:"Late"};
+  if(k==="EARLY"||k==="DAY"||k.includes("CYCLE")||k.includes("MORNING")) return {c:"sh-early", ico:"☀️", lbl:"Early"};
+  return {c:"", ico:"🕓", lbl:"Turno"};
+}
+function _updateShiftChip(){
+  const sel=$("shiftSelect"), chip=$("shiftChip"); if(!sel||!chip) return;
+  const opt=sel.options[sel.selectedIndex];
+  const cat=_shiftCat(sel.value || (opt?opt.value:""));
+  chip.className="shift-chip "+cat.c;
+  const ico=chip.querySelector(".shift-chip-ico"); if(ico) ico.textContent=cat.ico;
+  const lbl=chip.querySelector(".shift-chip-lbl");
+  if(lbl) lbl.textContent = cat.lbl!=="Turno" ? cat.lbl : (opt?String(opt.textContent).split("—")[0].trim():"Turno");
+}
+window._updateShiftChip=_updateShiftChip;
+(function(){
+  const chip=$("shiftChip"), menu=$("shiftMenu"), sel=$("shiftSelect");
+  if(!chip||!menu||!sel) return;
+  chip.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    if(menu.style.display!=="none"){ menu.style.display="none"; return; }
+    menu.innerHTML=Array.from(sel.options).map(o=>{
+      const cat=_shiftCat(o.value);
+      return `<button data-val="${esc(o.value)}" class="${o.value===sel.value?'on':''}">${cat.ico} ${esc(o.textContent)}</button>`;
+    }).join("");
+    menu.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+      sel.value=b.dataset.val; sel.dispatchEvent(new Event("change")); menu.style.display="none";
+    }));
+    menu.style.display="flex";
+  });
+  document.addEventListener("click",()=>{ if(menu.style.display!=="none") menu.style.display="none"; });
+})();
 
 // ── Manual time toggle ──────────────────────────────────
 (function(){
@@ -2232,6 +2431,7 @@ async function loadShifts(){
     if(!currentShift && d.current){ currentShift=""; }
     // Update info bar with FCLM dates
     _updateInfoBar(d.start_full, d.end_full);
+    if(window._updateShiftChip) window._updateShiftChip();   // recolor the topbar chip
   }catch(e){ console.warn("loadShifts error",e); }
 }
 
@@ -2256,7 +2456,7 @@ function msSetOpen(msId, open){
   if(!root) return;
   // Close all others first
   if(open){
-    ["procMs","subMs","mgrMs","tenureMs"].forEach(id=>{
+    ["procMs","subMs","mgrMs","tenureMs","floorMs","procTaxo"].forEach(id=>{
       if(id !== msId){
         const other=$(id);
         if(other) other.classList.remove("open");
@@ -2274,11 +2474,11 @@ function msIsOpen(msId){
   return root ? root.classList.contains("open") : false;
 }
 function msCloseAll(){
-  ["procMs","subMs","mgrMs","tenureMs"].forEach(id=>msSetOpen(id,false));
+  ["procMs","subMs","mgrMs","tenureMs","floorMs","procTaxo"].forEach(id=>msSetOpen(id,false));
 }
 document.addEventListener("click",(e)=>{
   const t=e.target;
-  if(!t.closest("#procMs") && !t.closest("#subMs") && !t.closest("#mgrMs") && !t.closest("#tenureMs")) msCloseAll();
+  if(!t.closest("#procMs") && !t.closest("#subMs") && !t.closest("#mgrMs") && !t.closest("#tenureMs") && !t.closest("#floorMs") && !t.closest("#procTaxo")) msCloseAll();
 });
 document.addEventListener("keydown",(e)=>{
   if(e.key==="Escape") msCloseAll();
@@ -2441,6 +2641,17 @@ function initProcessMs(){
   const btn2=$("subMsBtn");
   if(btn2) btn2.onclick=()=>msSetOpen("subMs", !msIsOpen("subMs"));
 
+  // Process control: FC uses the OB/IB/ICQA taxonomy tree (procTaxo); AMZL uses
+  // the flat delivery-role list (procMs). Toggle which one is visible + build the
+  // tree (with Rate + %OP2 per node) for FC. (owner 2026-08-19)
+  const _pm=$("procMs"), _pt=$("procTaxo");
+  if(_pm) _pm.style.display = isAmzl ? "" : "none";
+  if(_pt) _pt.style.display = isAmzl ? "none" : "";
+  if(!isAmzl){
+    renderProcTaxo();
+    const ptb=$("procTaxoBtn"); if(ptb) ptb.onclick=()=>msSetOpen("procTaxo", !msIsOpen("procTaxo"));
+  }
+
   // Manager multi-select: options = distinct ManagerName present in the data.
   const mgrNames = new Set();
   (state.all||[]).forEach(r=>{ const m=String(r.manager||"").trim(); if(m) mgrNames.add(m); });
@@ -2485,28 +2696,33 @@ function initProcessMs(){
 // longer has data so the filter can't get stuck on an empty plant. Hidden when
 // there's 0/1 floor (a single-plant view needs no filter). calvenpj 2026-07-24.
 function renderFloorFilter(){
-  const host=$("floorFilterBtns");
-  if(!host) return;
+  const wrap=$("floorMs");
+  if(!wrap) return;
+  const lbl=$("plantaLbl");
   const floors=activeFloors();               // e.g. ["p2","p3","p4"]
   // Prune stale selections (floor filtered out by a data change / FC switch).
   if(state.floor instanceof Set){
     for(const f of Array.from(state.floor)) if(!floors.includes(f)) state.floor.delete(f);
   }
-  if(floors.length<=1){ host.innerHTML=""; host.style.display="none"; if(state.floor) state.floor.clear(); return; }
-  host.style.display="inline-flex";
-  host.innerHTML=floors.map(f=>{
-    const num=f.replace(/[^0-9]/g,"")||f;
-    const on=state.floor.has(f);
-    return `<button class="pf${on?" on":""}" data-floor="${esc(f)}" title="Planta ${esc(num)}">P${esc(num)}</button>`;
-  }).join("");
-  host.querySelectorAll("[data-floor]").forEach(b=>{
-    b.onclick=()=>{
-      const f=b.dataset.floor;
-      if(state.floor.has(f)) state.floor.delete(f); else state.floor.add(f);
-      b.classList.toggle("on", state.floor.has(f));
-      renderAll();
-    };
+  // A single-plant view needs no filter — hide the control + its label.
+  if(floors.length<=1){
+    wrap.style.display="none"; if(lbl) lbl.style.display="none";
+    if(state.floor) state.floor.clear();
+    return;
+  }
+  wrap.style.display=""; if(lbl) lbl.style.display="";
+  // msRender uses value===label, but floors are stored lowercase (p2). Display
+  // "P2"/"P3" and translate back to the stored key on change.
+  const keyOf={};
+  const labels=floors.map(f=>{ const num=f.replace(/[^0-9]/g,"")||f; const lab="P"+num; keyOf[lab]=f; return lab; });
+  const selLabels=new Set(labels.filter(l=>state.floor.has(keyOf[l])));
+  msRender("floorMs", labels, selLabels, (newSet)=>{
+    state.floor.clear();
+    newSet.forEach(l=>{ if(keyOf[l]) state.floor.add(keyOf[l]); });
+    renderAll();
   });
+  const btn=$("floorMsBtn");
+  if(btn) btn.onclick=()=>msSetOpen("floorMs", !msIsOpen("floorMs"));
 }
 // ── KPI ────────────────────────────────────────────────────
 function syncKpiActive(){
@@ -2643,6 +2859,10 @@ function getFiltered(opts){
     } else if(state.sub instanceof Set && state.sub.size){
       rows=rows.filter(r=>state.sub.has(r.role));
     }
+  }
+  // FC process taxonomy tree → filter by exact Role (state.procRoles). Empty = ALL.
+  if(!_isAmzlView && state.procRoles instanceof Set && state.procRoles.size){
+    rows=rows.filter(r=>state.procRoles.has(String(r.role||"").toUpperCase()));
   }
   // Floor filter (FC-only) — keep rows on the selected physical plant(s). Empty
   // set = ALL. Rows whose station has no parseable floor are kept only when no
@@ -2800,6 +3020,11 @@ function renderTable(){
         text = raw.replace(/^.*?IDLE\s*:?\s*/i, "").trim();
       } else if (/Bin\s*Filter|Multiple\s*Event|Pick.*Short|Error\s*Indicator|Scan.*Sequence/i.test(raw)) {
         return ""; // Skip quality notes in Performance view
+      } else if (/Slam\s*Kick|Kickout|Slam\s*Wrong\s*Box|Wrong\s*Box|Missing\s*Item|Item\s*Missing|Unscannable|Damaged\s*Item|Item\s*Damaged|Shipment\s*Exception/i.test(raw)) {
+        // Quality defect surfaced as a note → label it "Quality", not "Note".
+        cls = "note-row note-quality";
+        label = "Quality";
+        text = raw;
       }
 
       // Safety cleanup if an old renderer concatenated label+text.
@@ -2825,7 +3050,7 @@ function renderTable(){
       :"";
 
     return`<tr class="${r.coached?"coached-row":""}">
-      <td class="td-assoc">
+      <td class="td-assoc"${r.coached?` title="✓ Coached${r.coached_label?` · hace ${esc(r.coached_label)}`:""}"`:""}>
         <div class="photo-wrap">
           <div class="photo-cell">
             ${photoHtml}
@@ -2847,7 +3072,7 @@ function renderTable(){
           </div>
         </div>
       </td>
-      <td class="bl-fc-only" title="${esc(r.manager||"")}"><span class="td-manager">${esc(r.manager||"—")}</span></td>
+      <td class="bl-fc-only" title="${esc(r.manager||"")}"><span class="td-manager">${esc((r.managerLogin && !/[,\s]/.test(r.managerLogin)) ? r.managerLogin : (r.manager||"—"))}</span></td>
       <td class="bl-fc-only"><span class="td-dept">${esc(r.dept)}</span></td>
       <td class="bl-fc-only"><span class="td-dept">${esc(r.cohort||"—")}</span>${(()=>{
         if(r.curve==="VETERAN") return '<div class="curve-label curve-vet">VET</div>';
@@ -2876,22 +3101,26 @@ function renderTable(){
         const warn = r.idle_pct>=20 ? ' style="color:var(--red,#e53e3e);font-weight:700"' : "";
         return `<span${warn}>${r.idle_pct.toFixed(1)}%${m}</span>`;
       })()}</td>
-      <td>${r.coached?(r.coached_label?`<span class="coached-chk" title="Último coaching">${esc(r.coached_label)}</span>`:`<span class="coached-chk"><span class="chk-circle">✓</span></span>`):""}</td>
-      <td>
-        <div style="display:flex;gap:4px;align-items:center">
-          <button class="row-btn" data-upload-login="${esc(r.login)}">↑ Upload</button>
-          ${(r.pending_coachings && r.pending_coachings.length)
-            ? (()=>{
-                // Soonest expiry across this associate's pending coachings (data
-                // already present — no extra call), shown in the button tooltip.
-                const exps = r.pending_coachings.map(c=>c.expiration).filter(Boolean).sort();
-                const exp = exps.length ? coachingExpiry(exps[0]) : null;
-                const tip = `Cerrar coaching pendiente (${r.pending_coachings.length})${exp?` — ${exp.text}`:""}`;
-                return `<button class="row-btn cc-row-close" data-ri="${ri}" title="${esc(tip)}">✓/✗${r.pending_coachings.length>1?" ("+r.pending_coachings.length+")":""}</button>`;
-              })()
-            : ""}
-        </div>
-      </td>
+      <td>${(()=>{
+        // Up to 2 stacked buttons (save horizontal space). Classify pending
+        // coachings by dept via the GCA legend owner ("L&D" -> L&D, else OPS):
+        //   • none pending           -> [↑ Upload]
+        //   • 1 pending L&D          -> [✓ Completar L&D] + [↑ Upload]
+        //   • 1 pending OPS          -> [✓ Completar OPS] + [↑ Upload]
+        //   • both OPS and L&D       -> [✓ Completar OPS] + [✓ Completar L&D]
+        // "Completar X" opens the complete/cancel modal DIRECTLY for that coaching.
+        const pend = r.pending_coachings || [];
+        const ld  = pend.filter(c => String(c.owner||"") === "L&D");
+        const ops = pend.filter(c => String(c.owner||"") !== "L&D");
+        const up  = `<button class="row-btn act-up" data-upload-login="${esc(r.login)}">↑ Upload</button>`;
+        const comp = (dept, list) => `<button class="row-btn act-comp ${dept==="L&D"?"act-comp-ld":"act-comp-ops"}" data-ri="${ri}" data-dept="${dept}" title="Completar / cancelar coaching ${dept}${list.length>1?` (${list.length} pendientes)`:""}">✓ ${dept}${list.length>1?` (${list.length})`:""}</button>`;
+        let btns;
+        if(!pend.length) btns = up;
+        else if(ld.length && ops.length) btns = comp("OPS",ops)+comp("L&D",ld);
+        else if(ld.length) btns = comp("L&D",ld)+up;
+        else btns = comp("OPS",ops)+up;
+        return `<div class="act-stack">${btns}</div>`;
+      })()}</td>
     </tr>`;
   }).join("");
 
@@ -2901,20 +3130,26 @@ function renderTable(){
   tb.querySelectorAll("[data-upload-login]").forEach(btn=>
     btn.addEventListener("click",()=>openUploadPrefill(btn.dataset.uploadLogin))
   );
-  // Close-coaching from a Performance row: open the popup listing each pending
-  // coaching (title+insight) with its own Complete/Cancel buttons.
-  tb.querySelectorAll(".cc-row-close").forEach(btn=>
+  // "Completar L&D / OPS": open the complete/cancel modal DIRECTLY for that
+  // dept's pending coaching (like GCA), skipping the pick-list. If a dept has
+  // >1 pending, fall back to the pick-list scoped to that dept.
+  tb.querySelectorAll(".act-comp").forEach(btn=>
     btn.addEventListener("click",()=>{
       const r = rows[Number(btn.dataset.ri)];
       if(!r) return;
-      openCloseFromRow(r.pending_coachings, {
-        fc: currentFC, login: r.login, name: r.name,
+      const dept = btn.dataset.dept;
+      const pend = (r.pending_coachings || []).filter(c =>
+        dept === "L&D" ? String(c.owner||"") === "L&D" : String(c.owner||"") !== "L&D");
+      if(!pend.length) return;
+      const ctx = { fc: currentFC, login: r.login, name: r.name,
         employee_id: r.employee_id, badge: r.employee_id,
-        process: r.process || r.role, role: r.role,
-        // No full reload — _markCoachingRowDone neutralizes the row's action in
-        // place; the coached state refreshes on the next natural pipeline/refresh.
-        onDone: null,
-      });
+        process: r.process || r.role, role: r.role, onDone: null };
+      if(pend.length === 1){
+        openCloseCoaching({ ...ctx, instanceId: pend[0].id, action: "complete",
+          coachingLabel: pend[0].insight || pend[0].course_title || "" });
+      } else {
+        openCloseFromRow(pend, ctx);
+      }
     })
   );
 }
@@ -3939,11 +4174,12 @@ function renderQuality(){
             if(sameTopic.length){
               html += `<button class="row-btn q-cc-close pending-close" data-login="${esc(login)}" data-fc="${esc(fc)}" data-eid="${esc(eid)}" data-pending="${esc(JSON.stringify(sameTopic))}" title="Ya hay un coaching de este topic subido — ciérralo (completar o cancelar)">⏳ ${t("q_pending_close")}</button>`;
             } else {
-              // If already coached, the button becomes an ACTIVE "Reupload" (re-coaching)
-              // — same upload handler, just relabeled + green tint. Only "No Course"
-              // (no course_uuid mapped) truly disables it.
-              const _upTitle = coached ? 'Ya coacheado — subir de nuevo (re-coaching)' : '';
-              html += `<button class="row-btn quality-upload${coached?' q-reupload':''}" data-login="${esc(login)}" data-fc="${esc(fc)}" data-course="${esc(courseId)}" data-error="${esc(errorType)}" data-total="${total}" data-sigma="${sigma}" title="${_upTitle}" ${!courseId ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>${!courseId?'No Course':coached?'↻ Reupload':'↑ Upload'}</button>`;
+              // Already coached ("ya se le dio") → DISABLE upload (no re-coaching);
+              // no course mapped → also disabled ("No Course"). owner 2026-08-19.
+              const _disabled = coached || !courseId;
+              const _lbl = !courseId ? 'No Course' : (coached ? '✓ Coacheado' : '↑ Upload');
+              const _upTitle = coached ? 'Ya coacheado — el upload está desactivado' : (!courseId ? 'Sin curso mapeado' : '');
+              html += `<button class="row-btn quality-upload${coached?' q-done':''}" data-login="${esc(login)}" data-fc="${esc(fc)}" data-course="${esc(courseId)}" data-error="${esc(errorType)}" data-total="${total}" data-sigma="${sigma}" title="${esc(_upTitle)}" ${_disabled ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>${_lbl}</button>`;
               // Other-topic pendings still get a generic close button.
               const otherPend = pend.filter(p => !sameTopic.includes(p));
               if(otherPend.length){
@@ -4060,12 +4296,21 @@ function _renderQualitySummary(filteredRows){
 async function bulkQualityUpload(){
   // Get all visible pending rows (not coached, has courseId)
   const search = String($("qualitySearchInput")?.value || "").trim().toLowerCase();
+  // Mirror renderQuality's filter chain EXACTLY so the bulk count == what the
+  // table shows (before this, bulk ignored the opportunities/anomaly/improved/
+  // hide-on-target toggles and matched errors by raw key, so it grabbed far more
+  // than the visible rows — e.g. 887 vs 183 shown). owner 2026-08-19
   let rows = qualityRows.slice();
   if(qFilterProcess.size) rows = rows.filter(r => { const p=String(qualityValue(r,["Process","process"],"")).toLowerCase(); for(const v of qFilterProcess){if(p.includes(v.toLowerCase()))return true;} return false; });
-  if(qFilterError.size) rows = rows.filter(r => qFilterError.has(qualityValue(r,["ErrorKey","error_key","errorKey"],"")));
+  if(qFilterError.size) rows = rows.filter(r => qFilterError.has(qualityErrorLabel(r)));
   if(qFilterSigma > 0) rows = rows.filter(r => Number(qualityValue(r,["sigma","Sigma"],0)) >= qFilterSigma);
+  if(qOnlyOpportunities) rows = rows.filter(r => Number(qualityValue(r,["sigma","Sigma"],0)) >= 2);
+  if(qOnlyAnomalies) rows = rows.filter(r => Number(qualityValue(r,["sigma","Sigma"],0)) >= 2 && _qIsAnomaly(r));
+  if(qOnlyImproved) rows = rows.filter(r => Number(qualityValue(r,["sigma","Sigma"],0)) >= 2 && _qIsImproved(r));
   if(qFilterCurve.size) rows = rows.filter(r => qFilterCurve.has(String(qualityValue(r,["curve","Curve"],"")).toUpperCase()));
   if(qualityPresentOnly) rows = rows.filter(qualityPresentValue);
+  if(qualityHideCoached) rows = rows.filter(r => { const v=qualityValue(r,["coached","Coached"],""); return !(String(v).toLowerCase()==="true"||String(v).toUpperCase()==="YES"); });
+  if(qualityHideOnTarget) rows = rows.filter(r => { const pct=parseFloat(qualityValue(r,["pct_to_target","Pct_to_Target"],"0")); return isNaN(pct)||pct<100; });
   if(search) rows = rows.filter(r => { const l=String(qualityValue(r,["login","Login"],"")).toLowerCase(); const e=String(qualityErrorLabel(r)).toLowerCase(); return l.includes(search)||e.includes(search); });
 
   // Filter: not coached + has course UUID
@@ -4076,7 +4321,8 @@ async function bulkQualityUpload(){
   });
 
   if(!pending.length){ alert("No pending uploads with valid courses in current view."); return; }
-  if(!confirm(`Upload coaching for ${pending.length} associates?\n\nThis will send ${pending.length} uploads to Guided Coaching.`)) return;
+  // Guardrail: role cap + BIG double-confirm before anything hits GCA.
+  if(!(await _bulkConfirm(pending.length))) return;
 
   const btn = $("btnQualityBulk");
   if(btn){ btn.disabled=true; btn.textContent=`0/${pending.length}`; }
@@ -4641,6 +4887,14 @@ async function _initApp(){
   }
   try{ if(typeof _syncAlertToggleUI === "function") _syncAlertToggleUI(); }catch(_){}
   try{ if(window._canAlerts && typeof _applyAlertsAccess === "function") _applyAlertsAccess(window._canAlerts); }catch(_){}
+  // Sidebar pinned-open state (server-persisted, survives pywebview wipe).
+  if(prefs && prefs.sb_pinned != null){
+    const _c = String(prefs.sb_pinned)==="1";
+    try{ localStorage.setItem("argos_sb_pinned", _c?"1":"0"); }catch(_){}
+    if(window._applySbPinned) window._applySbPinned(_c);
+  }
+  // "Novedades" popup once per new version (seen version lives in server prefs).
+  try{ _maybeShowChangelog(prefs && prefs.changelog_seen); }catch(_){}
   const sel=$("fcSelect");
   if(sel){ const opt=sel.querySelector(`option[value="${saved}"]`); if(opt) sel.value=saved; }
   const sbFc=$("sbFc"); if(sbFc) sbFc.textContent=currentFC;
@@ -4801,6 +5055,39 @@ $("bulk-preview-btn").addEventListener("click",()=>{
   $("bulk-preview").textContent=lines.map(l=>`${l.login.padEnd(16)} → ${l.notes||"(auto)"}`).join("\n");
   $("bulk-preview-wrap").style.display=lines.length?"block":"none";
 });
+// Bulk-upload guardrail: block over the role cap, else BIG double-confirm of the
+// count before anything hits GCA. Returns true only if the user confirms YES.
+function _bulkConfirm(count){
+  return new Promise(resolve=>{
+    const cap = Number(window._bulkCap) || (window._isLd ? 75 : 10);
+    const role = window._isLd ? "L&D" : "OPS";
+    const over = count > cap;
+    let ov = document.getElementById("bulkConfirmModal");
+    if(!ov){ ov=document.createElement("div"); ov.id="bulkConfirmModal"; document.body.appendChild(ov); }
+    // Overlay scrolls + card is height-capped so it never gets clipped at the top
+    // on short windows (flex-centering can't scroll a taller-than-viewport card).
+    ov.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9700;overflow-y:auto;padding:24px 12px";
+    ov.innerHTML = `<div style="background:var(--bg-card);border:2px solid ${over?'#dc2626':'var(--accent)'};border-radius:16px;max-width:520px;width:92%;max-height:calc(100vh - 56px);overflow-y:auto;padding:26px 28px;box-shadow:0 24px 70px rgba(0,0,0,.42);text-align:center;margin:auto">
+      <div style="font-size:40px;margin-bottom:6px">${over?'⛔':'⚠️'}</div>`
+      + (over
+        ? `<div style="font-size:20px;font-weight:800;margin-bottom:8px">Límite de subida excedido</div>
+           <div style="font-size:14px;color:var(--text-secondary);line-height:1.5">Tu rol <b>${role}</b> permite un máximo de <b>${cap}</b> coachings por subida en bulk.<br>Estás intentando subir <b style="color:#dc2626">${count}</b>. Súbelos en tandas más pequeñas.</div>
+           <div style="margin-top:18px"><button id="bcOk" class="row-btn" style="background:var(--accent);color:#fff;border-color:var(--accent);padding:9px 22px;font-weight:700">Entendido</button></div>`
+        : `<div style="font-size:22px;font-weight:900;line-height:1.35;margin-bottom:10px">¿SEGURO QUE QUIERES SUBIR<br><span style="color:var(--accent);font-size:30px">${count}</span> COACHING${count===1?'':'S'} A GCA?</div>
+           <div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">Se crearán coachings reales en GCA. Confirma que el número es correcto.</div>
+           <div style="display:flex;gap:12px;justify-content:center">
+             <button id="bcNo" class="row-btn" style="padding:10px 26px;font-weight:700">NO</button>
+             <button id="bcYes" class="row-btn" style="background:#16a34a;color:#fff;border-color:#16a34a;padding:10px 26px;font-weight:800">YES, subir ${count}</button>
+           </div>`)
+      + `</div>`;
+    ov.style.display="flex";
+    const close=(val)=>{ ov.style.display="none"; resolve(val); };
+    if(over){ ov.querySelector("#bcOk").onclick=()=>close(false); }
+    else{ ov.querySelector("#bcYes").onclick=()=>close(true); ov.querySelector("#bcNo").onclick=()=>close(false); }
+    ov.onclick=(e)=>{ if(e.target===ov) close(false); };
+  });
+}
+
 $("bulk-submit").addEventListener("click",async()=>{
   const lines=parseBulkLines();
   const fc=$("bulk-fc").value.trim()||currentFC;
@@ -4809,12 +5096,28 @@ $("bulk-submit").addEventListener("click",async()=>{
   const resEl=$("bulk-result");
   if(!lines.length){resEl.innerHTML=`<div class="upload-result err">No valid logins</div>`;return;}
 
-  const entries=lines.map(l=>{
+  // Dept we're uploading to: override wins, else the uploader's role.
+  const _tgtLd = deptOverride ? /l\s*&?\s*d|lnd|^ld$/i.test(deptOverride) : !!window._isLd;
+  const _deptTxt = _tgtLd ? "L&D" : "OPS";
+  const _hasPendSameDept = (login)=>{
+    const row=state.all.find(r=>r.login.toLowerCase()===String(login).toLowerCase());
+    const pend=(row&&row.pending_coachings)||[];
+    return pend.some(c=> _tgtLd ? String(c.owner||"")==="L&D" : String(c.owner||"")!=="L&D");
+  };
+  const _all=lines.map(l=>{
     const row=state.all.find(r=>r.login.toLowerCase()===l.login.toLowerCase());
     // Use provided notes; if empty, build from row data (rate + pct + comments)
     const notes=l.notes||(row?buildUploadNotes(row):"");
     return{login:l.login,fc,course_id:row?.course_id||defCourse||"",notes};
   });
+  // Never create a duplicate: skip associates who ALREADY have a PENDING coaching
+  // of the dept we're uploading (owner 2026-08-19: "si ya tiene uno de L&D, no
+  // subir uno nuevo"). Close/complete the existing one instead.
+  const entries=_all.filter(e=>!_hasPendSameDept(e.login));
+  const skipped=_all.length-entries.length;
+  if(!entries.length){
+    resEl.innerHTML=`<div class="upload-result" style="color:#a16207;border-color:#f59e0b">Nada que subir: los ${_all.length} ya tienen un coaching ${_deptTxt} pendiente (ciérralos primero).</div>`;return;
+  }
   // When a Dept override is set, the SERVER re-resolves each course_id for that
   // dept, so a per-row course_id isn't required here. Without an override we
   // still guard against missing courses (current behavior).
@@ -4824,13 +5127,16 @@ $("bulk-submit").addEventListener("click",async()=>{
       resEl.innerHTML=`<div class="upload-result err">Missing Course ID for: ${esc(missing.join(", "))}</div>`;return;
     }
   }
+  // Guardrail: role cap + BIG double-confirm before anything hits GCA.
+  if(!(await _bulkConfirm(entries.length))){ resEl.innerHTML=""; return; }
+  const _skipTxt = skipped?` · ${skipped} omitidos (ya con pendiente ${_deptTxt})`:"";
   const deptLabel=deptOverride?` (Dept → ${esc(deptOverride)})`:"";
-  resEl.innerHTML=`<div class="upload-result" style="color:#888;border-color:#ccc">Uploading ${entries.length} entries${deptLabel}…</div>`;
+  resEl.innerHTML=`<div class="upload-result" style="color:#888;border-color:#ccc">Uploading ${entries.length} entries${deptLabel}${_skipTxt}…</div>`;
   try{
     // Server accepts 'entries' key + optional dept_override (re-resolves course).
     const r=await jpost(`${API}/api/coaching/bulk`,{fc,entries,dept_override:deptOverride});
     if(r.ok){
-      resEl.innerHTML=`<div class="upload-result ok">✓ Uploaded ${r.uploaded??entries.length}${r.failed?` · ${r.failed} failed`:""}</div>`;
+      resEl.innerHTML=`<div class="upload-result ok">✓ Uploaded ${r.uploaded??entries.length}${r.failed?` · ${r.failed} failed`:""}${skipped?` · ${skipped} omitidos (ya pendientes)`:""}</div>`;
       await loadDashboard();
     }else{
       resEl.innerHTML=`<div class="upload-result err">Error: ${esc(r.error||"unknown")}</div>`;
@@ -5308,10 +5614,12 @@ async function _refreshAllQueue(opts){
     return;
   }
   _freshBusy = true;
-  if(btn){ btn.disabled = true; btn.textContent = firstRun ? "⏳ Cargando datos…" : "⟳ Actualizando…"; }
+  // Compact icon in the freshness pill: spin it while running (per-source progress
+  // is shown by the freshPerf/freshGca/freshQual segment spinners). owner 2026-08-19
+  if(btn){ btn.disabled = true; btn.classList.add("spin"); }
   if(pill && firstRun) pill.classList.add("firstrun");
   const fc = (localStorage.getItem("argos-default-fc") || currentFC || "BCN4");
-  const _step = (label)=>{ if(firstRun && btn) btn.textContent = `⏳ ${label}…`; };
+  const _step = (label)=>{};
   try{
     // Sequence: GCA → Performance → Quality (owner's order). Each pipeline is
     // multi-threaded internally on the server; they run one-after-another here so
@@ -5344,7 +5652,7 @@ async function _refreshAllQueue(opts){
     if(!silent) showToast({title:"Actualización incompleta", body:String(e&&e.message||e), type:"warn", ms:4000});
   }finally{
     _freshBusy = false;
-    if(btn){ btn.disabled = false; btn.textContent = "↻ Actualizar todo"; }
+    if(btn){ btn.disabled = false; btn.classList.remove("spin"); btn.textContent = "↻"; }
     if(pill) pill.classList.remove("firstrun");
     _refreshFreshness();
     try{ if(typeof loadDashboard === "function") loadDashboard(); }catch(_){}
@@ -5984,6 +6292,28 @@ setInterval(_checkNecroPermission, 15 * 60 * 1000);
     $("capPaneReport").style.display  = m==="report"?"":"none";
     if(m==="report" && !$("capD1").value){ $("capD1").value=_ymd(1); $("capD2").value=_ymd(0); }
   }
+  // Root-cause bars — reused by the Monitor's ROOT CAUSE overview panel AND the
+  // per-associate expand row. Same look as the Quality queue bars. owner 2026-08-19
+  const _RC_PAL=['#3b82f6','#f59e0b','#10b981','#ef4444','#8b5cf6'];
+  function _capRcBars(split,n){
+    const arr=Array.isArray(split)?split.slice(0,n||2):[];
+    if(!arr.length) return '';
+    return arr.map((s,i)=>{
+      const pct=Math.max(2,Math.min(100,Number(s.pct)||0));
+      const nm=String(s.name||'').replace(/\s*Filter$/i,'');
+      return `<div style="display:flex;align-items:center;gap:6px;margin:2px 0" title="${esc(s.name)}: ${s.pct}%">`
+        +`<div style="flex:0 0 120px;font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(nm)}</div>`
+        +`<div style="flex:1;background:var(--border);border-radius:3px;height:9px;position:relative;min-width:40px"><div style="position:absolute;inset:0;width:${pct}%;background:${_RC_PAL[i%_RC_PAL.length]};border-radius:3px"></div></div>`
+        +`<div style="flex:0 0 34px;font-size:10px;text-align:right;font-weight:700">${Number(s.pct)||0}%</div></div>`;
+    }).join('');
+  }
+  function _capRcOverview(ov){
+    if(!Array.isArray(ov)||!ov.length) return '';
+    const cards=ov.map(o=>`<div style="flex:0 0 auto;min-width:240px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:var(--bg-card)">`
+      +`<div style="font-size:11px;font-weight:800;margin-bottom:4px">${esc(o.error||'')}</div>`
+      +(_capRcBars(o.split,3)||'<span style="color:var(--text-muted);font-size:10px">sin RC</span>')+`</div>`).join('');
+    return `<div style="margin:4px 0 12px"><div style="font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--text-secondary);margin-bottom:6px">🔎 ROOT CAUSE · overview del turno</div><div style="display:flex;gap:10px;flex-wrap:wrap">${cards}</div></div>`;
+  }
   // ── MONITOR ──
   async function _monRun(){
     const date=$("capDate").value||_ymd(0);
@@ -6042,8 +6372,11 @@ setInterval(_checkNecroPermission, 15 * 60 * 1000);
     for(const r of detailRows){
       const dm={}; (r.defects||[]).forEach(x=>{ dm[x.error]=x; });
       const errTds=errCols.map(l=>{ const x=dm[l]; if(!x||!Number(x.defects)) return `<td style="text-align:center;color:var(--text-muted)">—</td>`; return `<td style="text-align:center"><span class="cap-def ${x.priority?'cap-def-hi':'cap-def-lo'}">${Number(x.defects)}</span></td>`; }).join("");
+      // Defects that carry a root-cause split → this AA is expandable.
+      const rcDefs=(r.defects||[]).filter(x=>Array.isArray(x.rc_split)&&x.rc_split.length);
+      const chev=rcDefs.length?`<button class="row-btn caprc-toggle" data-rc="${esc(r.login)}" title="Ver root cause" style="padding:0 4px;margin-right:3px">▸</button>`:'';
       h+=`<tr>
-        <td>${av(r)}</td>
+        <td style="white-space:nowrap">${chev}${av(r)}</td>
         <td><span class="cap-day ${r.day===2?'d2':''}">Day ${r.day||'?'}</span></td>
         <td><b>${esc(r.login)}</b>${r.manual?' <span class="cap-manual-badge">manual</span>':''}<br><span style="font-size:11px;color:var(--text-secondary)">${esc(r.name||'')}</span></td>
         <td>${esc(r.cohort||'—')}</td>
@@ -6055,11 +6388,24 @@ setInterval(_checkNecroPermission, 15 * 60 * 1000);
         ${errTds}
         <td><button class="row-btn" data-drop="${esc(r.login)}" title="Remove" style="padding:2px 8px">✕</button></td>
       </tr>`;
+      if(rcDefs.length){
+        h+=`<tr id="caprc-${esc(r.login)}" class="caprc-detail" style="display:none"><td colspan="99" style="background:var(--bg-input);padding:8px 14px">`
+          + rcDefs.map(dd=>`<div style="margin-bottom:8px"><div style="font-size:10.5px;font-weight:700;color:var(--text-secondary);margin-bottom:2px">${esc(dd.error)} · ${dd.defects}</div>${_capRcBars(dd.rc_split,3)}</div>`).join("")
+          + `</td></tr>`;
+      }
     }
     h+=`</tbody></table>`;
-    wrap.innerHTML=h;
+    wrap.innerHTML=_capRcOverview(d.rc_overview)+h;
     $("capCsv").style.display="";
     wrap.querySelectorAll("[data-drop]").forEach(b=>b.addEventListener("click",()=>{ const lg=b.dataset.drop.toLowerCase(); _drops.add(lg); _adds.delete(lg); _monRun(); }));
+    wrap.querySelectorAll(".caprc-toggle").forEach(b=>b.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const row=document.getElementById("caprc-"+b.dataset.rc);
+      if(!row) return;
+      const open=row.style.display==="none";
+      row.style.display=open?"":"none";
+      b.textContent=open?"▾":"▸";
+    }));
   }
   function _monCsv(){
     const d=_capData; if(!d||!d.rows.length) return;
@@ -6156,8 +6502,15 @@ setInterval(_checkNecroPermission, 15 * 60 * 1000);
       const dcls=dl==null?'flat':(dl>0?'up':(dl<0?'down':'flat'));
       const dtxt=dl==null?'—':(dl>0?`▲ +${Math.round(dl)}`:(dl<0?`▼ ${Math.round(dl)}`:'0'));
       const _lbl=t=>`<span style="display:inline-block;min-width:24px;font-size:10px;font-weight:700;color:var(--text-secondary)">${t}</span>`;
+      // Photo (with initial-letter fallback) + a red error flag = total quality
+      // defects across both days, so a trainer scans who has errors at a glance.
+      const _init=esc((r.login||'?').charAt(0).toUpperCase());
+      const _avImg=r.photo_url?`<img src="${esc(r.photo_url)}" alt="${esc(r.login)}" loading="lazy" decoding="async" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`:'';
+      const _avPh=`<div style="width:34px;height:34px;border-radius:50%;background:var(--bg-input);${r.photo_url?'display:none':'display:flex'};align-items:center;justify-content:center;color:var(--text-secondary);font-weight:700;font-size:13px;flex-shrink:0">${_init}</div>`;
+      const _tot=(Number(r.def_total_d1)||0)+(Number(r.def_total_d2)||0);
+      const _flag=_tot>0?`<span title="${_tot} errores de calidad (D1+D2)" style="display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:800;color:#fff;background:#dc2626;border-radius:8px;padding:1px 6px">⚑ ${_tot}</span>`:'';
       h+=`<tr>
-        <td><b>${esc(r.login)}</b><br><span style="font-size:11px;color:var(--text-secondary)">${esc(r.name||'')}</span></td>
+        <td><div style="display:flex;align-items:center;gap:8px">${_avImg}${_avPh}<div style="min-width:0"><div style="display:flex;align-items:center;gap:6px"><b>${esc(r.login)}</b>${_flag}</div><span style="font-size:11px;color:var(--text-secondary)">${esc(r.name||'')}</span></div></div></td>
         <td>${esc(r.cohort||'—')}</td>
         <td>${esc(r.process||r.subprocess||'—')}</td>
         <td>${esc(_capStation(r))}</td>
@@ -6380,9 +6733,65 @@ _applyI18n();
 
 // ═══ FAQ ═══
 let _faqInited = false;
+// ── Changelog / "Novedades" ─────────────────────────────────────────────────
+// Data from /api/changelog (config/argos/changelog.json, pushed via hermes-config).
+// Auto-popup once per new version (seen version persisted in server prefs so it
+// survives pywebview's localStorage wipe) + a permanent section in FAQ.
+let _changelogData = null;
+async function _loadChangelog(){
+  if(_changelogData) return _changelogData;
+  try{ _changelogData = await jget(`${API}/api/changelog`); }catch(_){ _changelogData = {latest:"", entries:[]}; }
+  return _changelogData;
+}
+function _changelogItemsHtml(entry){
+  return ((entry&&entry.items)||[]).map(it=>`<li style="margin:3px 0">${esc(it)}</li>`).join("");
+}
+async function _renderChangelogFaq(){
+  const host = $("faqChangelog"); if(!host) return;
+  const cl = await _loadChangelog();
+  const entries = (cl && cl.entries) || [];
+  if(!entries.length){ host.innerHTML = ""; return; }
+  host.innerHTML = `<div class="faq-section"><div style="font-weight:800;font-size:14px;margin:0 0 8px">🆕 Novedades</div>`
+    + entries.map(e=>`<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--bg-card)">
+        <div style="font-weight:700;font-size:12.5px">v${esc(e.version||"")}${e.title?` · ${esc(e.title)}`:""}<span style="float:right;color:var(--text-muted);font-weight:500;font-size:11px">${esc(e.date||"")}</span></div>
+        <ul style="margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--text-secondary)">${_changelogItemsHtml(e)}</ul>
+      </div>`).join("")
+    + `</div>`;
+}
+function _showChangelogPopup(entry){
+  if(!entry) return;
+  let ov = document.getElementById("changelogModal");
+  if(!ov){
+    ov = document.createElement("div");
+    ov.id = "changelogModal";
+    ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9600";
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML = `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;max-width:460px;width:90%;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,.35)">
+      <div style="font-size:18px;font-weight:800;margin-bottom:2px">🆕 Novedades</div>
+      <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:12px">v${esc(entry.version||"")}${entry.title?` · ${esc(entry.title)}`:""}</div>
+      <ul style="margin:0 0 16px;padding-left:20px;font-size:13px;color:var(--text-secondary);line-height:1.5">${_changelogItemsHtml(entry)}</ul>
+      <div style="text-align:right"><button id="clOkBtn" class="row-btn" style="background:var(--accent);color:#fff;border-color:var(--accent);padding:8px 18px;font-weight:700">Entendido</button></div>
+    </div>`;
+  ov.style.display = "flex";
+  const close = ()=>{ ov.style.display = "none"; };
+  const okb = ov.querySelector("#clOkBtn"); if(okb) okb.addEventListener("click", close);
+  ov.addEventListener("click", (e)=>{ if(e.target===ov) close(); });
+}
+async function _maybeShowChangelog(seen){
+  const cl = await _loadChangelog();
+  const latest = cl && cl.latest;
+  if(!latest || latest === seen) return;
+  const entry = (cl.entries||[]).find(e=>e.version===latest) || (cl.entries||[])[0];
+  _showChangelogPopup(entry);
+  try{ localStorage.setItem("argos_changelog_seen", latest); }catch(_){}
+  try{ jpost(`${API}/api/prefs`, {changelog_seen: latest}).catch(()=>{}); }catch(_){}
+}
+
 function _initFaq(){
   if(_faqInited) return;
   _faqInited = true;
+  _renderChangelogFaq();   // Novedades section at the top of FAQ
   // Accordion
   document.querySelectorAll(".faq-q").forEach(btn => {
     btn.addEventListener("click", () => {

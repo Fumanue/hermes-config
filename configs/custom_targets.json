@@ -80,31 +80,6 @@
         "key": "SNS2",
         "target_uph": 280,
         "applies_to_role": "SNS2"
-      },
-      {
-        "key": "SBC",
-        "target_uph": 200,
-        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
-      },
-      {
-        "key": "DECANT",
-        "target_uph": 60,
-        "applies_to_role": "DECANT"
-      },
-      {
-        "key": "QUANTITY_STOW",
-        "target_uph": 450,
-        "applies_to_role": "QUANTITY_STOW"
-      },
-      {
-        "key": "INDUCT",
-        "target_uph": 1000,
-        "applies_to_role": "INDUCT"
-      },
-      {
-        "key": "AFE_REBIN",
-        "target_uph": 400,
-        "applies_to_role": "AFE_REBIN"
       }
     ],
     "pack_applies_learning_curve": true,
@@ -129,7 +104,39 @@
     },
     "decant": {
       "location_pattern": "ws-rcv|dz-"
-    }
+    },
+    "process_targets": [
+      {
+        "key": "SBC",
+        "target_uph": 200,
+        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
+      },
+      {
+        "key": "DECANT",
+        "target_uph": 60,
+        "applies_to_role": "DECANT"
+      },
+      {
+        "key": "QUANTITY_STOW",
+        "target_uph": 450,
+        "applies_to_role": "QUANTITY_STOW"
+      },
+      {
+        "key": "INDUCT",
+        "target_uph": 1000,
+        "applies_to_role": "INDUCT"
+      },
+      {
+        "key": "AFE_REBIN",
+        "target_uph": 400,
+        "applies_to_role": "AFE_REBIN"
+      },
+      {
+        "key": "PALLET_DECANT",
+        "target_uph": 120,
+        "applies_to_role": "PALLET_DECANT"
+      }
+    ]
   },
   "BCN4": {
     "roboscout_checks": [
@@ -211,31 +218,6 @@
         "key": "SNS2",
         "target_uph": 280,
         "applies_to_role": "SNS2"
-      },
-      {
-        "key": "SBC",
-        "target_uph": 200,
-        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
-      },
-      {
-        "key": "DECANT",
-        "target_uph": 65,
-        "applies_to_role": "DECANT"
-      },
-      {
-        "key": "QUANTITY_STOW",
-        "target_uph": 450,
-        "applies_to_role": "QUANTITY_STOW"
-      },
-      {
-        "key": "INDUCT",
-        "target_uph": 1200,
-        "applies_to_role": "INDUCT"
-      },
-      {
-        "key": "AFE_REBIN",
-        "target_uph": 400,
-        "applies_to_role": "AFE_REBIN"
       }
     ],
     "pack_applies_learning_curve": true,
@@ -260,7 +242,39 @@
     },
     "decant": {
       "location_pattern": "ws-rcv|dz-"
-    }
+    },
+    "process_targets": [
+      {
+        "key": "SBC",
+        "target_uph": 200,
+        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
+      },
+      {
+        "key": "DECANT",
+        "target_uph": 65,
+        "applies_to_role": "DECANT"
+      },
+      {
+        "key": "QUANTITY_STOW",
+        "target_uph": 450,
+        "applies_to_role": "QUANTITY_STOW"
+      },
+      {
+        "key": "INDUCT",
+        "target_uph": 1200,
+        "applies_to_role": "INDUCT"
+      },
+      {
+        "key": "AFE_REBIN",
+        "target_uph": 400,
+        "applies_to_role": "AFE_REBIN"
+      },
+      {
+        "key": "PALLET_DECANT",
+        "target_uph": 120,
+        "applies_to_role": "PALLET_DECANT"
+      }
+    ]
   },
   "MAD7": {
     "roboscout_checks": [
@@ -352,31 +366,6 @@
         "key": "SNS2",
         "target_uph": 220,
         "applies_to_role": "SNS2"
-      },
-      {
-        "key": "SBC",
-        "target_uph": 200,
-        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
-      },
-      {
-        "key": "DECANT",
-        "target_uph": 60,
-        "applies_to_role": "DECANT"
-      },
-      {
-        "key": "QUANTITY_STOW",
-        "target_uph": 520,
-        "applies_to_role": "QUANTITY_STOW"
-      },
-      {
-        "key": "INDUCT",
-        "target_uph": 1000,
-        "applies_to_role": "INDUCT"
-      },
-      {
-        "key": "AFE_REBIN",
-        "target_uph": 400,
-        "applies_to_role": "AFE_REBIN"
       }
     ],
     "pack_applies_learning_curve": true,
@@ -401,7 +390,39 @@
     },
     "decant": {
       "location_pattern": "ws-rcv|dz-"
-    }
+    },
+    "process_targets": [
+      {
+        "key": "SBC",
+        "target_uph": 200,
+        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
+      },
+      {
+        "key": "DECANT",
+        "target_uph": 60,
+        "applies_to_role": "DECANT"
+      },
+      {
+        "key": "QUANTITY_STOW",
+        "target_uph": 520,
+        "applies_to_role": "QUANTITY_STOW"
+      },
+      {
+        "key": "INDUCT",
+        "target_uph": 1000,
+        "applies_to_role": "INDUCT"
+      },
+      {
+        "key": "AFE_REBIN",
+        "target_uph": 400,
+        "applies_to_role": "AFE_REBIN"
+      },
+      {
+        "key": "PALLET_DECANT",
+        "target_uph": 120,
+        "applies_to_role": "PALLET_DECANT"
+      }
+    ]
   },
   "RMU1": {
     "roboscout_checks": [
@@ -484,31 +505,6 @@
         "key": "SNS2",
         "target_uph": 280,
         "applies_to_role": "SNS2"
-      },
-      {
-        "key": "SBC",
-        "target_uph": 200,
-        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
-      },
-      {
-        "key": "DECANT",
-        "target_uph": 60,
-        "applies_to_role": "DECANT"
-      },
-      {
-        "key": "QUANTITY_STOW",
-        "target_uph": 450,
-        "applies_to_role": "QUANTITY_STOW"
-      },
-      {
-        "key": "INDUCT",
-        "target_uph": 1000,
-        "applies_to_role": "INDUCT"
-      },
-      {
-        "key": "AFE_REBIN",
-        "target_uph": 400,
-        "applies_to_role": "AFE_REBIN"
       }
     ],
     "pack_applies_learning_curve": true,
@@ -533,7 +529,39 @@
     },
     "decant": {
       "location_pattern": "ws-rcv|dz-"
-    }
+    },
+    "process_targets": [
+      {
+        "key": "SBC",
+        "target_uph": 200,
+        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
+      },
+      {
+        "key": "DECANT",
+        "target_uph": 60,
+        "applies_to_role": "DECANT"
+      },
+      {
+        "key": "QUANTITY_STOW",
+        "target_uph": 450,
+        "applies_to_role": "QUANTITY_STOW"
+      },
+      {
+        "key": "INDUCT",
+        "target_uph": 1000,
+        "applies_to_role": "INDUCT"
+      },
+      {
+        "key": "AFE_REBIN",
+        "target_uph": 400,
+        "applies_to_role": "AFE_REBIN"
+      },
+      {
+        "key": "PALLET_DECANT",
+        "target_uph": 120,
+        "applies_to_role": "PALLET_DECANT"
+      }
+    ]
   },
   "OVD1": {
     "roboscout_checks": [
@@ -616,31 +644,6 @@
         "key": "SNS2",
         "target_uph": 280,
         "applies_to_role": "SNS2"
-      },
-      {
-        "key": "SBC",
-        "target_uph": 200,
-        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
-      },
-      {
-        "key": "DECANT",
-        "target_uph": 60,
-        "applies_to_role": "DECANT"
-      },
-      {
-        "key": "QUANTITY_STOW",
-        "target_uph": 450,
-        "applies_to_role": "QUANTITY_STOW"
-      },
-      {
-        "key": "INDUCT",
-        "target_uph": 1000,
-        "applies_to_role": "INDUCT"
-      },
-      {
-        "key": "AFE_REBIN",
-        "target_uph": 400,
-        "applies_to_role": "AFE_REBIN"
       }
     ],
     "pack_applies_learning_curve": true,
@@ -665,7 +668,39 @@
     },
     "decant": {
       "location_pattern": "ws-rcv|dz-"
-    }
+    },
+    "process_targets": [
+      {
+        "key": "SBC",
+        "target_uph": 200,
+        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
+      },
+      {
+        "key": "DECANT",
+        "target_uph": 60,
+        "applies_to_role": "DECANT"
+      },
+      {
+        "key": "QUANTITY_STOW",
+        "target_uph": 450,
+        "applies_to_role": "QUANTITY_STOW"
+      },
+      {
+        "key": "INDUCT",
+        "target_uph": 1000,
+        "applies_to_role": "INDUCT"
+      },
+      {
+        "key": "AFE_REBIN",
+        "target_uph": 400,
+        "applies_to_role": "AFE_REBIN"
+      },
+      {
+        "key": "PALLET_DECANT",
+        "target_uph": 120,
+        "applies_to_role": "PALLET_DECANT"
+      }
+    ]
   },
   "SVQ1": {
     "roboscout_checks": [
@@ -748,31 +783,6 @@
         "key": "SNS2",
         "target_uph": 245,
         "applies_to_role": "SNS2"
-      },
-      {
-        "key": "SBC",
-        "target_uph": 200,
-        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
-      },
-      {
-        "key": "DECANT",
-        "target_uph": 60,
-        "applies_to_role": "DECANT"
-      },
-      {
-        "key": "QUANTITY_STOW",
-        "target_uph": 500,
-        "applies_to_role": "QUANTITY_STOW"
-      },
-      {
-        "key": "INDUCT",
-        "target_uph": 1000,
-        "applies_to_role": "INDUCT"
-      },
-      {
-        "key": "AFE_REBIN",
-        "target_uph": 400,
-        "applies_to_role": "AFE_REBIN"
       }
     ],
     "pack_applies_learning_curve": true,
@@ -797,6 +807,38 @@
     },
     "decant": {
       "location_pattern": "ws-rcv|dz-"
-    }
+    },
+    "process_targets": [
+      {
+        "key": "SBC",
+        "target_uph": 200,
+        "applies_to_role": "ICQA_SIMPLE_BIN_COUNT"
+      },
+      {
+        "key": "DECANT",
+        "target_uph": 60,
+        "applies_to_role": "DECANT"
+      },
+      {
+        "key": "QUANTITY_STOW",
+        "target_uph": 500,
+        "applies_to_role": "QUANTITY_STOW"
+      },
+      {
+        "key": "INDUCT",
+        "target_uph": 1000,
+        "applies_to_role": "INDUCT"
+      },
+      {
+        "key": "AFE_REBIN",
+        "target_uph": 400,
+        "applies_to_role": "AFE_REBIN"
+      },
+      {
+        "key": "PALLET_DECANT",
+        "target_uph": 120,
+        "applies_to_role": "PALLET_DECANT"
+      }
+    ]
   }
 }

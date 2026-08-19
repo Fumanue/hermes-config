@@ -95,6 +95,14 @@
         "process_id": "100110",
         "location_pattern": "ws-rcv|dz-",
         "unit_type": "CASE"
+      },
+      {
+        "employee_id_source": "Pallet_Decant_1003019.csv",
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Pallet_decant_split",
+        "role_override": "PALLET_DECANT",
+        "process_id": "100110",
+        "unit_type": "CASE"
       }
     ]
   },
@@ -193,6 +201,14 @@
         "role_override": "DECANT",
         "process_id": "100110",
         "location_pattern": "ws-rcv|dz-",
+        "unit_type": "CASE"
+      },
+      {
+        "employee_id_source": "Pallet_Decant_1003019.csv",
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Pallet_decant_split",
+        "role_override": "PALLET_DECANT",
+        "process_id": "100110",
         "unit_type": "CASE"
       }
     ]
@@ -308,6 +324,14 @@
         "process_id": "100110",
         "location_pattern": "ws-rcv|dz-",
         "unit_type": "CASE"
+      },
+      {
+        "employee_id_source": "Pallet_Decant_1003019.csv",
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Pallet_decant_split",
+        "role_override": "PALLET_DECANT",
+        "process_id": "100110",
+        "unit_type": "CASE"
       }
     ]
   },
@@ -406,6 +430,14 @@
         "role_override": "DECANT",
         "process_id": "100110",
         "location_pattern": "ws-rcv|dz-",
+        "unit_type": "CASE"
+      },
+      {
+        "employee_id_source": "Pallet_Decant_1003019.csv",
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Pallet_decant_split",
+        "role_override": "PALLET_DECANT",
+        "process_id": "100110",
         "unit_type": "CASE"
       }
     ]
@@ -506,6 +538,14 @@
         "process_id": "100110",
         "location_pattern": "ws-rcv|dz-",
         "unit_type": "CASE"
+      },
+      {
+        "employee_id_source": "Pallet_Decant_1003019.csv",
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Pallet_decant_split",
+        "role_override": "PALLET_DECANT",
+        "process_id": "100110",
+        "unit_type": "CASE"
       }
     ]
   },
@@ -601,6 +641,14 @@
         "role_override": "DECANT",
         "process_id": "100110",
         "location_pattern": "ws-rcv|dz-",
+        "unit_type": "CASE"
+      },
+      {
+        "employee_id_source": "Pallet_Decant_1003019.csv",
+        "file": "FCLM_1003019.csv",
+        "function_contains": "Pallet_decant_split",
+        "role_override": "PALLET_DECANT",
+        "process_id": "100110",
         "unit_type": "CASE"
       }
     ]

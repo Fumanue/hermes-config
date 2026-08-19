@@ -1,0 +1,5 @@
+{
+  "_comment": "Max coachings a single BULK upload may send to GCA, by uploader role. Guardrail against accidental mass-uploads (a lead once created 800+ by mistake). The server ENFORCES this; the UI also blocks over-cap and always double-confirms the count. Push via hermes-config to tune without a rebuild.",
+  "ld": 75,
+  "ops": 10
+}

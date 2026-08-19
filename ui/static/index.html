@@ -529,6 +529,79 @@ html.theme-transitioning *::after{
 .t-tab{padding:7px 16px;display:flex;align-items:center;font-size:12.5px;color:var(--text-secondary);cursor:pointer;font-weight:500;border-radius:18px;transition:all .2s}
 .t-tab:hover{color:var(--text);background:var(--accent-light)}
 .t-tab.on{color:#fff;background:var(--tab-active);font-weight:600;box-shadow:0 2px 8px var(--shadow)}
+/* NAV DROPDOWN MENUS (Execution / L&D) + FAQ icon */
+.t-menu{position:relative;display:inline-flex}
+.t-menu-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border:none;background:transparent;color:var(--text-secondary);font-size:12.5px;font-weight:600;cursor:pointer;border-radius:18px;transition:all .2s;white-space:nowrap}
+.t-menu-btn:hover{color:var(--text);background:var(--accent-light)}
+.t-menu-btn.has-active{color:#fff;background:var(--tab-active);box-shadow:0 2px 8px var(--shadow)}
+.t-menu-caret{font-size:9px;opacity:.8}
+.t-menu-panel{position:absolute;top:calc(100% + 6px);left:0;min-width:180px;background:var(--bg-card);border:1px solid var(--border-strong);border-radius:14px;box-shadow:0 12px 36px var(--shadow);z-index:200;display:none;padding:6px;flex-direction:column;gap:2px}
+.t-menu.open .t-menu-panel{display:flex}
+.t-menu-panel .t-tab{padding:8px 12px;border-radius:8px;font-size:12.5px;font-weight:500;color:var(--text)}
+.t-menu-panel .t-tab.on{color:#fff;background:var(--tab-active);font-weight:700;box-shadow:none}
+.t-tab-icon{padding:7px 11px;font-size:15px;border:none;background:transparent;cursor:pointer;line-height:1}
+/* LEFT SIDEBAR NAV (owner 2026-08-19) */
+/* Thin rail by default so the table keeps its width; it expands to a labeled
+   OVERLAY on hover (doesn't reflow the table), or stays open when pinned. */
+:root{--sb-rail:44px;--sb-open:212px}
+body{padding-left:var(--sb-rail);transition:padding-left .18s ease}
+body.sb-pinned{padding-left:var(--sb-open)}
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sb-rail);background:var(--bg-card);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:150;overflow:hidden;transition:width .18s ease}
+/* Auto-expand on hover as an OVERLAY (owner prefers this). The rail reserves a
+   thin width so the table isn't pushed; hovering floats the full menu over the
+   content (with a shadow), and 📌 pins it open (pushes/reflows). */
+.sidebar:hover,body.sb-pinned .sidebar{width:var(--sb-open)}
+.sidebar:hover:not(.sb-pinned),body:not(.sb-pinned) .sidebar:hover{box-shadow:6px 0 34px -8px rgba(0,0,0,.35)}
+.sidebar::after{content:'';position:absolute;top:0;bottom:0;right:0;width:2px;background:var(--gradient)}
+.sb-head{padding:14px 0 12px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;justify-content:center}
+.sidebar:hover .sb-head,body.sb-pinned .sb-head{padding:14px 12px 12px;justify-content:flex-start}
+.sb-head{align-items:center}
+.sb-head .t-logo{display:flex;align-items:center;gap:9px;padding-right:0}
+.sb-head .t-logo svg{display:block}
+/* Rail (collapsed): logo perfectly centered, no leftover gap from the hidden brand */
+body:not(.sb-pinned) .sb-head .t-logo{gap:0;justify-content:center;width:100%}
+body:not(.sb-pinned) .sb-head .t-logo-default,
+body:not(.sb-pinned) .sb-head .t-logo-kokiri{margin:0 auto}
+.sb-brand{display:none;flex-direction:column;min-width:0;overflow:hidden}
+.sidebar:hover .sb-brand,body.sb-pinned .sb-brand{display:flex}
+.sb-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 8px;display:flex;flex-direction:column;gap:2px}
+.sb-sec{display:none;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);font-weight:800;padding:12px 10px 4px}
+.sidebar:hover .sb-sec,body.sb-pinned .sb-sec{display:block}
+.sidebar .t-tab{display:flex;align-items:center;gap:11px;padding:9px 0;justify-content:center;border-radius:10px;font-size:13px;font-weight:600;color:var(--text-secondary);cursor:pointer;white-space:nowrap;width:100%;box-shadow:none}
+.sidebar:hover .t-tab,body.sb-pinned .sidebar .t-tab{justify-content:flex-start;padding:9px 11px}
+.sidebar .t-tab:hover{background:var(--accent-light);color:var(--text)}
+.sidebar .t-tab.on{background:var(--tab-active);color:#fff;box-shadow:0 2px 8px var(--shadow)}
+.sb-ico{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+.sb-lbl{display:none}
+.sidebar:hover .sb-lbl,body.sb-pinned .sb-lbl{display:inline}
+.sb-bottom{padding:8px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:2px;flex-shrink:0}
+.sb-collapse{background:transparent;border:none;color:var(--text-muted);font-size:15px;cursor:pointer;padding:5px 9px;border-radius:8px;line-height:1;align-self:center}
+.sidebar:hover .sb-collapse,body.sb-pinned .sb-collapse{align-self:flex-end}
+.sb-collapse:hover{background:var(--accent-light);color:var(--text)}
+/* Sidebar context controls (FC / manual / preferences, moved from the topbar) */
+.sb-fc{display:none;align-items:center;gap:8px;padding:6px 11px}
+body.sb-pinned .sb-fc,.sidebar:hover .sb-fc{display:flex}
+.sb-fc-lbl{font-size:10px;font-weight:800;color:var(--text-muted);letter-spacing:.06em;flex-shrink:0}
+.sb-fc select{flex:1;min-width:0}
+.sb-act{display:flex;align-items:center;gap:11px;padding:9px 11px;justify-content:center;border-radius:10px;font-size:13px;font-weight:600;color:var(--text-secondary);cursor:pointer;background:transparent;border:none;width:100%}
+body.sb-pinned .sb-act,.sidebar:hover .sb-act{justify-content:flex-start}
+.sb-act:hover{background:var(--accent-light);color:var(--text)}
+.sb-act .sb-ico{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+.sb-sep{height:1px;background:var(--border);margin:4px 6px}
+.sb-bottom .t-manual-wrap{display:none}
+body.sb-pinned .sb-bottom .t-manual-wrap.on,.sidebar:hover .sb-bottom .t-manual-wrap.on{display:flex;flex-direction:column;gap:4px;padding:2px 8px 6px}
+/* Shift chip (topbar): Early ☀️ amarillo · Late 🌇 naranja · Night 🌙 morado */
+.shift-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border-strong);border-radius:18px;padding:5px 12px;font-size:11.5px;font-weight:800;cursor:pointer;background:var(--bg-card);color:var(--text);white-space:nowrap}
+.shift-chip .ms-caret{font-size:9px;opacity:.7}
+/* Translucent tints so the chip harmonizes with ANY active theme (light/dark/
+   graphite) while keeping the Early/Late/Night color cue + readable text. */
+.shift-chip.sh-early{background:rgba(202,138,4,.16);border-color:rgba(202,138,4,.5);color:#ca8a04}
+.shift-chip.sh-late{background:rgba(234,88,12,.16);border-color:rgba(234,88,12,.5);color:#f97316}
+.shift-chip.sh-night{background:rgba(139,92,246,.20);border-color:rgba(139,92,246,.55);color:#a78bfa}
+.shift-menu{position:absolute;top:calc(100% + 6px);right:0;min-width:160px;background:var(--bg-card);border:1px solid var(--border-strong);border-radius:12px;box-shadow:0 12px 36px var(--shadow);z-index:200;padding:6px;display:flex;flex-direction:column;gap:2px}
+.shift-menu button{text-align:left;background:transparent;border:none;color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap}
+.shift-menu button:hover{background:var(--accent-light)}
+.shift-menu button.on{background:var(--accent-light);font-weight:700}
 .t-filters{display:flex;align-items:center;gap:6px;padding-left:12px;flex-shrink:1;min-width:0}
 .tf-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);font-weight:600}
 
@@ -544,10 +617,22 @@ html.theme-transitioning *::after{
 .ms-item:hover{background:var(--accent-light)}
 .ms-item input[type="checkbox"]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
 .ms-sep{height:1px;background:var(--border);margin:4px 8px}
+/* Process taxonomy tree (OB/IB/ICQA · Rate · %OP2) */
+.pt-panel .pt-sec{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);font-weight:800;padding:8px 10px 3px;border-top:1px solid var(--border);margin-top:4px}
+.pt-panel .pt-sec.pt-first{border-top:none;margin-top:0}
+.pt-head{display:flex;gap:8px;padding:2px 10px 4px;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);font-weight:700}
+.pt-row{display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:8px;cursor:pointer;font-size:12px;color:var(--text)}
+.pt-row:hover{background:var(--accent-light)}
+.pt-row input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.pt-sub{flex:0 0 62px;font-size:10px;color:var(--text-muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pt-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.pt-rate{flex:0 0 46px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.pt-pct{flex:0 0 50px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-secondary)}
+.pt-row.pt-empty{opacity:.42}
 
 /* FC + SHIFT */
 #fcSelect{border:1px solid var(--border-strong);background:var(--bg-input);padding:6px 14px;border-radius:18px;font-size:12px;color:var(--accent-text);font-weight:600;cursor:pointer;outline:none;appearance:none}
-.t-right{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px;margin-left:auto;flex-shrink:1;min-width:0;padding-left:8px}
+.t-right{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px;margin-left:auto;flex-shrink:1;min-width:0;padding-left:8px}
 .t-user{display:flex;align-items:center;gap:5px;padding:4px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;font-size:11px;color:var(--text);white-space:nowrap}
 .t-user-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
 .t-user-dot.loading{background:var(--orange);animation:pulse 1.5s infinite}
@@ -573,9 +658,11 @@ html.theme-transitioning *::after{
 .t-fresh-seg.stale{color:var(--orange,#d97706)}
 .t-fresh-seg.loading{color:var(--accent);animation:pulse 1.2s infinite}
 .t-fresh-sep{width:1px;height:11px;background:var(--border-strong,var(--border))}
-.t-fresh-btn{flex-shrink:0;padding:5px 12px;border-radius:14px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:10.5px;font-weight:700;cursor:pointer;white-space:nowrap}
-.t-fresh-btn:hover:not(:disabled){filter:brightness(1.1)}
-.t-fresh-btn:disabled{opacity:.55;cursor:progress}
+.t-fresh-btn{flex-shrink:0;margin-left:3px;padding:1px 6px;border-radius:9px;border:none;background:transparent;color:var(--accent);font-size:14px;font-weight:700;line-height:1;cursor:pointer;white-space:nowrap}
+.t-fresh-btn:hover:not(:disabled){background:var(--accent);color:#fff}
+.t-fresh-btn:disabled{opacity:.6;cursor:progress}
+@keyframes spin{to{transform:rotate(360deg)}}
+.t-fresh-btn.spin{animation:spin .9s linear infinite;display:inline-block}
 /* First-run: make the freshness widget POP so the user sees data loading on a
    cold start (instead of thinking it's frozen and hitting Start Pipeline). */
 .t-fresh.firstrun{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-light,rgba(124,58,237,.25));animation:pulse 1.4s infinite}
@@ -623,7 +710,9 @@ html.theme-transitioning *::after{
 [data-density="compact"] .cap-err-tbl td,[data-density="compact"] .cap-err-tbl th{padding:4px 8px !important;font-size:11px !important;line-height:1.2 !important}
 [data-density="compact"] .main-table td,[data-density="compact"] .main-table th{padding:4px 6px !important}
 /* Row avatars (inline width:34px on the img) — shrink in compact. */
-[data-density="compact"] .main-table td img,
+/* Performance photo stays the same in Compacta as in Cómoda (owner 2026-08-19):
+   shrinking only the <img> left it mismatched inside the 46px cell. Captain
+   tables keep their smaller compact avatar. */
 [data-density="compact"] .cap-table td img,
 [data-density="compact"] .cap-rtable td img{width:26px !important;height:26px !important}
 /* Tighten Captain KPI strip + section labels + summary tiles. */
@@ -785,7 +874,7 @@ body.is-admin .cc-row-close, body.is-admin .cc-complete, body.is-admin .cc-cance
    positioned and give the flex panel no height, collapsing it to 0. */
 #panel-map.active{display:block;overflow:auto}
 .table-wrap{flex:1;overflow-y:auto;overflow-x:auto}
-.main-table{width:100%;border-collapse:collapse;font-size:14px}
+.main-table{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed}
 /* AMZL (Delivery Station) view: hide FC-only columns (Station, Notes) and the
    warehouse station map. Driven by body[data-bl="amzl"]. */
 body[data-bl="amzl"] .bl-fc-only{display:none !important}
@@ -845,18 +934,20 @@ body[data-bl="amzl"] .curve-label{font-size:13px}
 .col-resizer.dragging{opacity:1;background:var(--accent)}
 .col-resizing{cursor:col-resize !important}
 .col-resizing *{cursor:col-resize !important;user-select:none !important}
-.main-table th{background:var(--bg-table-head);padding:12px 12px;text-align:center;font-weight:600;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap}
+.main-table th{background:var(--bg-table-head);padding:10px 8px;text-align:center;font-weight:600;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap}
 .main-table th:first-child{text-align:left}
-.main-table td{padding:9px 12px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--text)}
+.main-table td{padding:9px 8px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--text);overflow:hidden;text-overflow:ellipsis}
 .main-table tr:hover td{background:var(--row-hover)}
 .main-table .td-assoc{text-align:left}
 .td-manager{font-size:11.5px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;display:inline-block;vertical-align:middle}
 .main-table .login-link{color:var(--blue);text-decoration:none;font-weight:600;font-size:13px}
 .main-table .login-link:hover{color:var(--accent)}
 .photo-wrap{display:flex;align-items:center;gap:8px}
-.photo-cell{width:36px;height:36px;border-radius:50%;overflow:visible;flex-shrink:0;border:2px solid var(--border);position:relative}
-.photo-cell img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.no-photo{width:100%;height:100%;background:var(--bg-input);display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:14px;border-radius:50%}
+/* Square (rounded) headshot instead of a tight circle: the badge photo shows
+   fully so the face is readable, not cropped to a tiny circle. owner 2026-08-19 */
+.photo-cell{width:46px;height:46px;border-radius:9px;overflow:visible;flex-shrink:0;border:2px solid var(--border);position:relative}
+.photo-cell img{width:100%;height:100%;object-fit:cover;object-position:center 22%;border-radius:8px}
+.no-photo{width:100%;height:100%;background:var(--bg-input);display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:14px;border-radius:8px}
 .prio-badge{position:absolute;top:-4px;right:-4px;font-size:10px;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;z-index:2}
 /* First-days (new-hire) badge — associate in their day 1..N grace window, excluded
    from coaching flags. Green = "welcome/new", distinct from the amber priority badge. */
@@ -884,12 +975,32 @@ body[data-bl="amzl"] .curve-label{font-size:13px}
 .note-rs .note-dot{background:var(--blue)}.note-rs .note-label{color:var(--blue)}
 .note-quality .note-dot{background:#e11d48}.note-quality .note-label{color:#fb7185}
 .note-default .note-dot{background:var(--text-dim)}.note-default .note-label{color:var(--text-muted)}
-.td-notes{text-align:left!important;max-width:380px}
+/* Notes are the core of the table — never clip them. Higher specificity than
+   `.main-table td` so white-space/overflow actually win: notes WRAP inside their
+   column instead of being cut to one line. */
+/* Notes on a single line (legible); the flex Notes column is wide enough so they
+   don't wrap OR get cut (owner 2026-08-19: wrapping looked messy). */
+.main-table td.td-notes{text-align:left!important;overflow:visible;white-space:nowrap}
+.main-table td.td-notes .note-text{white-space:nowrap}
+.main-table td.td-notes .note-row{align-items:center}
+/* ACCIÓN column: up to 2 buttons stacked vertically to save horizontal space */
+.act-stack{display:flex;flex-direction:column;gap:4px;align-items:stretch}
+.act-stack .row-btn{width:100%;justify-content:center;text-align:center;white-space:nowrap;font-size:11px;padding:5px 10px;overflow:visible}
+/* Chip-style (translucent) so it harmonizes with the theme instead of a loud
+   solid green; fills solid on hover for the confirm affordance. */
+/* Completar chips — L&D green, OPS blue (distinct), translucent to match the theme. */
+.act-stack .act-comp{font-weight:700;border:1px solid}
+.act-stack .act-comp-ld{background:rgba(22,163,74,.14);color:#16a34a;border-color:rgba(22,163,74,.5)}
+.act-stack .act-comp-ld:hover{background:#16a34a;color:#fff;border-color:#16a34a}
+.act-stack .act-comp-ops{background:rgba(37,99,235,.14);color:#2563eb;border-color:rgba(37,99,235,.5)}
+.act-stack .act-comp-ops:hover{background:#2563eb;color:#fff;border-color:#2563eb}
 
 /* COACHED */
-.coached-row td{background:var(--coached-bg)!important;opacity:.72}
-.coached-row td:first-child{border-left:3px solid var(--green)}
-.coached-row .login-name{text-decoration:line-through;text-decoration-color:var(--green);text-decoration-thickness:1.5px}
+.coached-row td{background:var(--coached-bg)!important;opacity:.82}
+.coached-row td:first-child{border-left:4px solid #16a34a}
+/* Strikethrough more prominent + consistent across themes (fixed vivid green,
+   thicker). Covers Performance (.login-name) AND Quality (.login-link). */
+.coached-row .login-name,.coached-row .login-link{text-decoration:line-through;text-decoration-color:#16a34a;text-decoration-thickness:3px}
 .coached-chk .chk-circle{background:var(--green);color:#fff;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;box-shadow:0 0 6px rgba(5,150,105,0.4)}
 .row-btn{padding:4px 11px;font-size:10.5px;border-radius:12px;border:1px solid var(--border-strong);background:var(--bg-input);color:var(--text);cursor:pointer;font-weight:500;transition:all .15s}
 .row-btn:hover:not(:disabled){background:var(--accent-light);border-color:var(--accent-border);color:var(--accent-text)}
@@ -1245,6 +1356,8 @@ table.cap-table tr:hover td{background:var(--row-hover,rgba(0,0,0,.03))}
 
 /* Admin badge & multi-site */
 .admin-badge{display:inline-flex;align-items:center;margin-left:8px;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:900;letter-spacing:.06em;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-transform:uppercase}
+.admin-badge.role-ld{background:linear-gradient(135deg,#16a34a,#0ea5e9)}
+.admin-badge.role-ops{background:linear-gradient(135deg,#f59e0b,#d97706)}
 .act-multi{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border-color:#7c3aed;font-size:11px;padding:4px 12px}
 .act-multi:hover{background:linear-gradient(135deg,#6d28d9,#4338ca)}
 /* Multi-site modal */
@@ -2045,54 +2158,84 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   <button id="necroPermDismiss" title="Ocultar / Dismiss" style="margin-left:10px;background:transparent;border:1px solid #b45309;color:#92400e;border-radius:6px;padding:1px 8px;cursor:pointer;font-size:12px">×</button>
 </div>
 
-<!-- TOPBAR -->
+<!-- LEFT SIDEBAR (nav) -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-head">
+    <div class="t-logo">
+      <div class="t-logo-sq t-logo-default">
+        <svg width="30" height="30" viewBox="0 0 34 34" fill="none">
+          <defs><linearGradient id="argosG" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#1e40af"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient></defs>
+          <circle cx="17" cy="17" r="15" stroke="url(#argosG)" stroke-width="2.2" fill="none"/>
+          <circle cx="17" cy="17" r="9.5" stroke="url(#argosG)" stroke-width="1.2" fill="none" opacity="0.35"/>
+          <circle cx="17" cy="17" r="5.5" fill="url(#argosG)"/>
+          <circle cx="17" cy="17" r="2.2" fill="#fff"/>
+          <circle cx="17" cy="3.5" r="1.6" fill="#7c3aed"/>
+          <circle cx="28" cy="10" r="1.3" fill="#a855f7"/>
+          <circle cx="28.5" cy="23" r="1.3" fill="#ec4899"/>
+          <circle cx="5.5" cy="10" r="1.3" fill="#a855f7"/>
+          <circle cx="5" cy="23" r="1.3" fill="#ec4899"/>
+          <circle cx="17" cy="30.5" r="1.6" fill="#f472b6"/>
+        </svg>
+      </div>
+      <div class="t-logo-kokiri">
+        <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
+          <polygon points="16,3 22,14 10,14" fill="#d4aa38" opacity="0.95"/>
+          <polygon points="10,14 16,25 4,25" fill="#d4aa38" opacity="0.75"/>
+          <polygon points="22,14 28,25 16,25" fill="#d4aa38" opacity="0.75"/>
+          <rect x="15.2" y="26" width="1.6" height="5" rx=".6" fill="#5ccf5c" opacity=".9"/>
+          <rect x="13" y="29.5" width="6" height="1.2" rx=".5" fill="#d4aa38" opacity=".9"/>
+        </svg>
+      </div>
+      <div class="sb-brand"><span class="title-gradient">Project Argos</span><span class="subtitle" data-i18n="subtitle">Your L&D / Operational One Stop Tool</span></div>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-sec">Execution</div>
+    <div class="t-tab on" data-tab="dashboard"><span class="sb-ico">📊</span><span class="sb-lbl">Performance</span></div>
+    <div class="t-tab" data-tab="quality" id="tabQuality" style="display:none"><span class="sb-ico">✅</span><span class="sb-lbl">Quality</span></div>
+    <div class="t-tab" data-tab="map" id="tabMap" style="display:none"><span class="sb-ico">🗺️</span><span class="sb-lbl">Map</span></div>
+    <div class="t-tab" data-tab="targets"><span class="sb-ico">🎯</span><span class="sb-lbl">Targets</span></div>
+    <div class="t-tab" data-tab="gca" id="tabGca" style="display:none"><span class="sb-ico">🤝</span><span class="sb-lbl">GCA</span></div>
+    <div class="sb-sec">L&amp;D</div>
+    <div class="t-tab" data-tab="captain" id="tabCaptain" style="display:none"><span class="sb-ico">🧑‍✈️</span><span class="sb-lbl">Captain</span></div>
+    <div class="t-tab" data-tab="courses" id="tabCourses"><span class="sb-ico">📚</span><span class="sb-lbl">Courses</span></div>
+  </nav>
+  <div class="sb-bottom">
+    <!-- Context controls moved from the topbar (owner 2026-08-19): FC + manual time
+         + preferences. FC/manual show only when the sidebar is expanded/hovered. -->
+    <div class="sb-fc">
+      <span class="sb-fc-lbl">FC</span>
+      <select id="fcSelect" class="t-fc-sel">
+        <option value="BCN1">BCN1</option>
+        <option value="BCN4" selected>BCN4</option>
+        <option value="MAD4">MAD4</option>
+        <option value="MAD6">MAD6</option>
+        <option value="MAD7">MAD7</option>
+        <option value="MAD9">MAD9</option>
+        <option value="OVD1">OVD1</option>
+        <option value="RMU1">RMU1</option>
+        <option value="SVQ1">SVQ1</option>
+        <option value="VLC1">VLC1</option>
+      </select>
+    </div>
+    <div id="manualTimeWrap" class="t-manual-wrap">
+      <input type="datetime-local" id="manualStart" class="t-time-input" title="Fecha/hora inicio" />
+      <span class="t-time-sep">→</span>
+      <input type="datetime-local" id="manualEnd" class="t-time-input" title="Fecha/hora fin" />
+    </div>
+    <button class="sb-act" id="btnManualTime" title="Modo manual de hora"><span class="sb-ico">🕐</span><span class="sb-lbl">Hora manual</span></button>
+    <button class="sb-act" id="btnSettings" title="Preferencias"><span class="sb-ico">⚙️</span><span class="sb-lbl">Preferencias</span></button>
+    <div class="sb-sep"></div>
+    <div class="t-tab" data-tab="shifttracker" id="tabShiftTracker" style="display:none"><span class="sb-ico">📈</span><span class="sb-lbl">Shift Tracker</span></div>
+    <div class="t-tab" data-tab="faq" id="tabFaq"><span class="sb-ico">❓</span><span class="sb-lbl">FAQ</span></div>
+    <div class="t-tab" data-tab="config" id="tabConfig" style="display:none"><span class="sb-ico">🛠️</span><span class="sb-lbl">Settings</span></div>
+    <button class="sb-collapse" id="sbCollapse" title="Fijar el menú abierto / auto (rail + hover)">📌</button>
+  </div>
+</aside>
+
+<!-- TOPBAR (slim: context controls) -->
 <div class="topbar">
   <div class="t-row1">
-  <div class="t-logo">
-    <!-- Default logo (light/dark) -->
-    <div class="t-logo-sq t-logo-default">
-      <svg width="30" height="30" viewBox="0 0 34 34" fill="none">
-        <defs><linearGradient id="argosG" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#1e40af"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient></defs>
-        <circle cx="17" cy="17" r="15" stroke="url(#argosG)" stroke-width="2.2" fill="none"/>
-        <circle cx="17" cy="17" r="9.5" stroke="url(#argosG)" stroke-width="1.2" fill="none" opacity="0.35"/>
-        <circle cx="17" cy="17" r="5.5" fill="url(#argosG)"/>
-        <circle cx="17" cy="17" r="2.2" fill="#fff"/>
-        <circle cx="17" cy="3.5" r="1.6" fill="#7c3aed"/>
-        <circle cx="28" cy="10" r="1.3" fill="#a855f7"/>
-        <circle cx="28.5" cy="23" r="1.3" fill="#ec4899"/>
-        <circle cx="5.5" cy="10" r="1.3" fill="#a855f7"/>
-        <circle cx="5" cy="23" r="1.3" fill="#ec4899"/>
-        <circle cx="17" cy="30.5" r="1.6" fill="#f472b6"/>
-      </svg>
-    </div>
-    <!-- Kokiri logo: Triforce + Master Sword -->
-    <div class="t-logo-kokiri">
-      <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
-        <!-- Triforce -->
-        <polygon points="16,3 22,14 10,14" fill="#d4aa38" opacity="0.95"/>
-        <polygon points="10,14 16,25 4,25" fill="#d4aa38" opacity="0.75"/>
-        <polygon points="22,14 28,25 16,25" fill="#d4aa38" opacity="0.75"/>
-        <!-- Master Sword hint (small, bottom) -->
-        <rect x="15.2" y="26" width="1.6" height="5" rx=".6" fill="#5ccf5c" opacity=".9"/>
-        <rect x="13" y="29.5" width="6" height="1.2" rx=".5" fill="#d4aa38" opacity=".9"/>
-      </svg>
-    </div>
-    <div><span class="title-gradient">Project Argos</span><span class="subtitle" data-i18n="subtitle">Your L&D / Operational One Stop Tool</span></div>
-  </div>
-  <div class="t-nav">
-    <div class="t-tab on"  data-tab="dashboard" data-i18n="tab_performance">Performance</div>
-    <div class="t-tab" data-tab="map" id="tabMap" style="display:none">🗺️ Map</div>
-    <!--<div class="t-tab" data-tab="history" data-i18n="tab_history">History</div>-->
-    <div class="t-tab" data-tab="targets" data-i18n="tab_targets">Targets</div>
-    <div class="t-tab" data-tab="quality" id="tabQuality" data-i18n="tab_quality" style="display:none">Quality</div>
-    <div class="t-tab" data-tab="captain" id="tabCaptain" style="display:none">🧭 Captain</div>
-    <div class="t-tab" data-tab="courses" id="tabCourses">📚 Courses</div>
-    <div class="t-tab" data-tab="faq" data-i18n="tab_faq">FAQ</div>
-    <div class="t-tab" data-tab="gca" id="tabGca" style="display:none">GCA</div>
-    <div class="t-tab" data-tab="shifttracker" id="tabShiftTracker" style="display:none">📈 Shift Tracker</div>
-    <div class="t-tab" data-tab="config" id="tabConfig" style="display:none">⚙️ Settings</div>
-
-  </div>
   <div style="flex:1"></div>
   <div class="t-right">
     <div class="t-midway" id="midwayPill" data-state="loading" title="Estado de Midway">
@@ -2114,66 +2257,25 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <span class="t-fresh-seg" id="freshGca">GCA —</span>
       <span class="t-fresh-sep"></span>
       <span class="t-fresh-seg" id="freshQual">Q —</span>
+      <button class="t-fresh-btn" id="btnRefreshAll" title="Actualizar Performance, GCA y Quality en orden (uno tras otro)">↻</button>
     </div>
-    <button class="t-fresh-btn" id="btnRefreshAll" title="Actualizar Performance, GCA y Quality en orden (uno tras otro)">↻ Actualizar todo</button>
     <div class="t-user" id="userPill" title="Checking user...">
       <span class="t-user-dot loading" id="userDot"></span>
       <span class="t-user-name" id="userName">Checking…</span>
       <span class="t-user-sep"></span>
       <span class="t-user-role" id="userRole">—</span>
     </div>
-    <div class="t-fc-wrap">
-      <span class="t-fc-label">FC</span>
-      <select id="fcSelect" class="t-fc-sel">
-        <option value="BCN1">BCN1</option>
-        <option value="BCN4" selected>BCN4</option>
-        <option value="MAD4">MAD4</option>
-        <option value="MAD6">MAD6</option>
-        <option value="MAD7">MAD7</option>
-        <option value="MAD9">MAD9</option>
-        <option value="OVD1">OVD1</option>
-        <option value="RMU1">RMU1</option>
-        <option value="SVQ1">SVQ1</option>
-        <option value="VLC1">VLC1</option>
-      </select>
-    </div>
-    <div id="shiftWrap" style="display:flex;align-items:center;gap:4px">
-      <select id="shiftSelect" class="t-fc-sel" style="min-width:110px">
-        <option value="">Auto-detect</option>
-      </select>
-    </div>
-    <div id="manualTimeWrap" class="t-manual-wrap">
-      <input type="datetime-local" id="manualStart" class="t-time-input" title="Fecha/hora inicio" />
-      <span class="t-time-sep">→</span>
-      <input type="datetime-local" id="manualEnd" class="t-time-input" title="Fecha/hora fin" />
-    </div>
-    <button id="btnCaptainMode" class="settings-btn bl-fc-only" title="Captain Mode — report de Day-1/Day-2 con errores de calidad">🧭</button>
-    <button id="btnDeliveryMode" class="settings-btn" title="Modo Delivery (AMZL)">🚚</button>
-    <button id="btnManualTime" class="settings-btn" title="Modo manual de hora">🕐</button>
-    <button class="settings-btn" id="btnSettings" title="Preferences">⚙️</button>
-  </div>
-  </div>
-  <div class="t-infobar">
-    <span class="info-label">FCLM</span>
-    <span class="info-dates" id="infoFclmDates">—</span>
-    <span class="info-sep">|</span>
-    <span class="tf-label" data-i18n="lbl_process">Process</span>
-    <div class="ms" id="procMs">
-      <button class="ms-btn" id="procMsBtn" type="button" aria-haspopup="listbox" aria-expanded="false">
-        <span class="ms-label" id="procMsLabel">All</span>
-        <span class="ms-caret">▾</span>
-      </button>
-      <div class="ms-panel" id="procMsPanel" role="listbox" aria-multiselectable="true"></div>
-    </div>
-    <span class="tf-label bl-fc-only" data-i18n="lbl_sub">Sub</span>
-    <div class="ms bl-fc-only" id="subMs">
-      <button class="ms-btn" id="subMsBtn" type="button" aria-haspopup="listbox" aria-expanded="false" style="min-width:155px">
-        <span class="ms-label" id="subMsLabel">All</span>
-        <span class="ms-caret">▾</span>
-      </button>
-      <div class="ms-panel" id="subMsPanel" role="listbox" aria-multiselectable="true"></div>
+    <!-- Shift as a COLORED CHIP (Early=☀️ amarillo · Late=🌇 naranja · Night=🌙 morado);
+         click to change. FC/manual/preferences live in the sidebar now. owner 2026-08-19 -->
+    <div id="shiftWrap" style="position:relative;display:flex;align-items:center;gap:4px">
+      <button type="button" id="shiftChip" class="shift-chip" title="Turno — click para cambiar"><span class="shift-chip-ico">🕓</span><span class="shift-chip-lbl">Turno</span><span class="ms-caret">▾</span></button>
+      <select id="shiftSelect" class="t-fc-sel" style="display:none;min-width:110px"><option value="">Auto-detect</option></select>
+      <div id="shiftMenu" class="shift-menu" style="display:none"></div>
     </div>
   </div>
+  </div>
+  <!-- FCLM date range removed + Process/Sub moved down into the filter toolbar
+       (owner 2026-08-19). infoFclmDates lives on in JS as a harmless no-op. -->
 </div>
 
 <!-- ═══ SETTINGS POPOVER ═══ -->
@@ -2340,16 +2442,40 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <div class="ms-panel" id="mgrMsPanel" role="listbox" aria-multiselectable="true"></div>
     </div>
     <div class="sep bl-fc-only"></div>
-    <span class="tb-label bl-fc-only" title="Filtrar por planta física">PLANTA</span>
-    <span id="floorFilterBtns" class="bl-fc-only" style="display:inline-flex;gap:4px"></span>
+    <span class="tb-label" data-i18n="lbl_process">Process</span>
+    <!-- AMZL: flat delivery-role multi-select (JS shows it only in AMZL). -->
+    <div class="ms" id="procMs" title="Filtrar por proceso" style="display:none">
+      <button class="ms-btn" id="procMsBtn" type="button" aria-haspopup="listbox" aria-expanded="false" style="min-width:110px">
+        <span class="ms-label" id="procMsLabel">All</span>
+        <span class="ms-caret">▾</span>
+      </button>
+      <div class="ms-panel" id="procMsPanel" role="listbox" aria-multiselectable="true"></div>
+    </div>
+    <!-- FC: hierarchical OB / IB / ICQA tree with Rate + % to OP2 per node. -->
+    <div class="ms" id="procTaxo" title="Proceso (OB / IB / ICQA) con Rate y % to OP2">
+      <button class="ms-btn" id="procTaxoBtn" type="button" aria-haspopup="true" aria-expanded="false" style="min-width:130px">
+        <span class="ms-label" id="procTaxoLabel">All</span>
+        <span class="ms-caret">▾</span>
+      </button>
+      <div class="ms-panel pt-panel" id="procTaxoPanel" role="menu" style="min-width:360px;max-height:440px;overflow-y:auto"></div>
+    </div>
+    <!-- Hidden subMs kept so its JS wiring (initProcessMs/msRender) stays inert
+         after the tree replaced the flat Process/Sub filters. -->
+    <div class="ms" id="subMs" style="display:none">
+      <button class="ms-btn" id="subMsBtn" type="button" aria-expanded="false"><span class="ms-label" id="subMsLabel">All</span></button>
+      <div class="ms-panel" id="subMsPanel"></div>
+    </div>
+    <div class="sep bl-fc-only"></div>
+    <span class="tb-label bl-fc-only" id="plantaLbl" title="Filtrar por planta física">PLANTA</span>
+    <div class="ms bl-fc-only" id="floorMs" title="Filtrar por planta física (multi-select)">
+      <button class="ms-btn" id="floorMsBtn" type="button" aria-haspopup="listbox" aria-expanded="false" style="min-width:80px">
+        <span class="ms-label" id="floorMsLabel">All</span>
+        <span class="ms-caret">▾</span>
+      </button>
+      <div class="ms-panel" id="floorMsPanel" role="listbox" aria-multiselectable="true"></div>
+    </div>
     <div class="sep"></div>
     <div class="max-wrap"><span class="max-lbl">MAX</span><input class="max-input" id="maxInput" type="number" min="1" max="9999" value="200"></div>
-    <div class="sep bl-fc-only"></div>
-    <span class="tb-label bl-fc-only">Curve</span>
-    <button class="nf on bl-fc-only" data-curve="ALL" id="curveAll">ALL</button>
-    <button class="nf bl-fc-only" data-curve="NH">NH</button>
-    <button class="nf bl-fc-only" data-curve="XT">XT</button>
-    <button class="nf bl-fc-only" data-curve="VETERAN">VET</button>
     <div class="sep bl-fc-only"></div>
     <span class="tb-label bl-fc-only">T</span>
     <div class="ms bl-fc-only" id="tenureMs" title="Filter by tenure week (multi-select)">
@@ -2360,7 +2486,6 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
       <div class="ms-panel" id="tenureMsPanel" role="listbox" aria-multiselectable="true"></div>
     </div>
     <div class="sep bl-fc-only"></div>
-    <button class="toggle-btn bl-fc-only" id="toggleFirstDays" style="display:none" title="Mostrar solo asociados en sus primeros días (Day 1 / Day 2)"><span id="firstDaysIcon">○</span> 🆕 <span data-i18n="btn_first_days">First days</span></button>
     <button class="toggle-btn" id="toggleCoached"><span id="coachToggleIcon">○</span> <span data-i18n="btn_hide_coached">Hide Coached</span></button>
     <div class="sep bl-fc-only"></div>
     <select id="noteFilterSelect" class="bl-fc-only" style="padding:4px 8px;font-size:11px;border-radius:6px;border:1px solid var(--border-strong);background:var(--bg-input);color:var(--text);cursor:pointer">
@@ -2396,13 +2521,13 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
     <table class="main-table">
       <thead>
         <tr>
-          <th class="th-left" style="width:260px" data-i18n="th_associate">Associate</th>
-          <th data-k="manager" class="th-left bl-fc-only" style="width:130px" data-i18n="th_manager">Manager</th>
-          <th data-k="dept"    class="bl-fc-only" style="width:60px" data-i18n="th_dept">Dept</th>
-          <th data-k="cohort"  class="bl-fc-only" style="width:90px" data-i18n="th_cohort">Cohort</th>
+          <th style="width:180px;text-align:center" data-i18n="th_associate">Associate</th>
+          <th data-k="manager" class="bl-fc-only" style="width:96px;text-align:center" data-i18n="th_manager">Manager</th>
+          <th data-k="dept"    class="bl-fc-only" style="width:46px" data-i18n="th_dept">Dept</th>
+          <th data-k="cohort"  class="bl-fc-only" style="width:74px" data-i18n="th_cohort">Cohort</th>
           <th data-k="lc"      class="bl-amzl-only" style="width:110px">Learning Curve</th>
-          <th data-k="role"    style="width:150px" data-i18n="th_role">Role</th>
-          <th data-k="station" class="bl-fc-only" style="width:135px" data-i18n="th_station">Station</th>
+          <th data-k="role"    style="width:112px" data-i18n="th_role">Role</th>
+          <th data-k="station" class="bl-fc-only" style="width:118px" data-i18n="th_station">Station</th>
           <th data-k="sigma"   style="width:68px" data-i18n="th_prio">Prio</th>
           <th data-k="rate"    style="width:80px" data-i18n="th_rate">Rate</th>
           <th data-k="tphadj"  class="bl-amzl-only" style="width:95px">
@@ -2429,10 +2554,9 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
             </span></span>
           </th>
           <th data-k="pct"     style="width:90px" data-i18n="th_pct_target">% to Target</th>
-          <th class="th-left bl-fc-only" style="width:430px" data-i18n="th_notes">Notes</th>
+          <th class="th-left bl-fc-only" style="min-width:340px" data-i18n="th_notes">Notes</th>
           <th class="bl-amzl-only" style="width:140px">Idle</th>
-          <th style="width:78px" data-i18n="th_coached">Coached</th>
-          <th style="width:95px" data-i18n="th_action">Action</th>
+          <th style="width:120px" data-i18n="th_action">Action</th>
         </tr>
       </thead>
       <tbody id="tbody">
@@ -2655,6 +2779,9 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
           <div class="faq-hero-sub" data-i18n="faq_subtitle">How Project Argos works — formulas, curves, and coaching logic</div>
         </div>
       </div>
+
+      <!-- Novedades / changelog (filled by _renderChangelogFaq from /api/changelog) -->
+      <div id="faqChangelog"></div>
 
       <div class="faq-section" id="faqAccordion">
         <div class="faq-item bl-amzl-only">

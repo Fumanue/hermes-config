@@ -6588,16 +6588,19 @@ function _cfgRenderTargets(){
   const fcs = Object.keys(_cfgTargetsData).filter(fc => !filter || fc === filter).sort();
   const showFcCol = !filter;
   let html = `<table class="cfg-table"><thead><tr>${showFcCol?'<th>FC</th>':''}<th>Role</th><th style="width:100px">Target UPH</th><th style="width:40px"></th></tr></thead><tbody>`;
+  const SECTIONS = [["pack_line_targets","Pack"],["process_targets","Proceso"]];
   for(const fc of fcs){
     if(showFcCol) html += `<tr class="cfg-group-row"><td colspan="4"><span class="cfg-fc-pill">${esc(fc)}</span></td></tr>`;
-    const targets = (_cfgTargetsData[fc]||{}).pack_line_targets || [];
-    for(let i=0; i<targets.length; i++){
-      const t = targets[i];
-      html += `<tr>
-        <td>${esc(t.key || t.applies_to_role || "")}</td>
-        <td><input type="number" data-fc="${esc(fc)}" data-idx="${i}" class="cfg-uph-input" value="${t.target_uph||0}"></td>
-        <td><button class="cfg-del-btn" data-fc="${esc(fc)}" data-idx="${i}" data-section="targets" title="Delete">×</button></td>
-      </tr>`;
+    for(const [arr,label] of SECTIONS){
+      const targets = (_cfgTargetsData[fc]||{})[arr] || [];
+      for(let i=0; i<targets.length; i++){
+        const t = targets[i];
+        html += `<tr>
+          <td>${esc(t.key || t.applies_to_role || "")} <span style="font-size:9.5px;color:var(--text-muted)">· ${label}</span></td>
+          <td><input type="number" data-fc="${esc(fc)}" data-arr="${arr}" data-idx="${i}" class="cfg-uph-input" value="${t.target_uph||0}"></td>
+          <td><button class="cfg-del-btn" data-fc="${esc(fc)}" data-arr="${arr}" data-idx="${i}" data-section="targets" title="Delete">×</button></td>
+        </tr>`;
+      }
     }
   }
   html += `</tbody></table>
@@ -6607,15 +6610,20 @@ function _cfgRenderTargets(){
     </select>
     <input id="cfgAddTargetRole" class="cfg-add-input" placeholder="Role (e.g. SM)" style="width:120px">
     <input id="cfgAddTargetUPH" type="number" class="cfg-add-input" placeholder="UPH" style="width:70px">
+    <select id="cfgAddTargetArr" class="cfg-add-input" style="width:90px" title="Pack line vs otro proceso">
+      <option value="process_targets">Proceso</option>
+      <option value="pack_line_targets">Pack</option>
+    </select>
     <button class="cfg-add-btn" id="cfgAddTargetBtn">+ Add</button>
   </div>`;
   $("cfgTargetsBody").innerHTML = html;
   $("cfgAddTargetBtn") && $("cfgAddTargetBtn").addEventListener("click",()=>{
     const fc = $("cfgAddTargetFc").value, role = $("cfgAddTargetRole").value.trim().toUpperCase(), uph = parseInt($("cfgAddTargetUPH").value)||0;
+    const arr = $("cfgAddTargetArr").value || "process_targets";
     if(!fc||!role||!uph){ _cfgToast("Fill FC, Role and UPH",true); return; }
-    if(!_cfgTargetsData[fc]) _cfgTargetsData[fc] = {pack_line_targets:[]};
-    if(!_cfgTargetsData[fc].pack_line_targets) _cfgTargetsData[fc].pack_line_targets = [];
-    _cfgTargetsData[fc].pack_line_targets.push({key:role, applies_to_role:role, target_uph:uph});
+    if(!_cfgTargetsData[fc]) _cfgTargetsData[fc] = {};
+    if(!_cfgTargetsData[fc][arr]) _cfgTargetsData[fc][arr] = [];
+    _cfgTargetsData[fc][arr].push({key:role, applies_to_role:role, target_uph:uph});
     _cfgRenderTargets();
   });
 }
@@ -6626,12 +6634,13 @@ async function _cfgSaveTargets(){
   let hasInvalid = false;
   for(const inp of inputs){
     const fc = inp.dataset.fc;
+    const arr = inp.dataset.arr || "pack_line_targets";
     const idx = parseInt(inp.dataset.idx);
     const val = parseFloat(inp.value) || 0;
     if(val <= 0){ inp.style.borderColor="#e53e3e"; hasInvalid=true; }
     else { inp.style.borderColor=""; }
-    if(_cfgTargetsData[fc]?.pack_line_targets?.[idx]){
-      _cfgTargetsData[fc].pack_line_targets[idx].target_uph = val;
+    if(_cfgTargetsData[fc]?.[arr]?.[idx]){
+      _cfgTargetsData[fc][arr][idx].target_uph = val;
     }
   }
   if(hasInvalid){ _cfgToast("⚠ Some targets have UPH ≤ 0", true); return; }
@@ -7062,9 +7071,9 @@ document.addEventListener("click",(e)=>{
   if(!confirm("Delete this entry?")) return;
   const section = btn.dataset.section;
   if(section === "targets"){
-    const fc = btn.dataset.fc, idx = parseInt(btn.dataset.idx);
-    if(_cfgTargetsData[fc]?.pack_line_targets){
-      _cfgTargetsData[fc].pack_line_targets.splice(idx, 1);
+    const fc = btn.dataset.fc, arr = btn.dataset.arr || "pack_line_targets", idx = parseInt(btn.dataset.idx);
+    if(_cfgTargetsData[fc]?.[arr]){
+      _cfgTargetsData[fc][arr].splice(idx, 1);
       _cfgRenderTargets();
     }
   } else if(section === "quality"){

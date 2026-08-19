@@ -1,0 +1,20 @@
+{
+  "_comment": "Changelog / 'Novedades' shown in the app. Push via hermes-config (no rebuild). `latest` drives the auto-popup: when it differs from the user's saved changelog_seen pref, the popup shows once, then marks it seen. FAQ renders the full `entries` list. Newest entry first.",
+  "latest": "1.3.0",
+  "entries": [
+    {
+      "version": "1.3.0",
+      "date": "2026-08-19",
+      "title": "Menú lateral + seguros de subida",
+      "items": [
+        "NUEVO menú lateral (sidebar) para la navegación: Execution (Performance, Quality, Map, Targets, GCA) y L&D (Captain, Courses). Se despliega al pasar el ratón y se puede fijar con 📌.",
+        "Bulk Upload con TOPE por rol: OPS máximo 10 coachings por subida, L&D máximo 75. Evita subidas masivas por error.",
+        "Bulk Upload pide DOBLE CONFIRMACIÓN con el número exacto antes de enviar nada a GCA.",
+        "Anti-duplicado: el bulk OMITE a los asociados que ya tienen un coaching pendiente de ese proceso (no crea otro).",
+        "Columna Acción simplificada: botones 'Completar L&D / OPS' que abren el cierre directo, + Upload.",
+        "La columna Manager ahora muestra el LOGIN del manager.",
+        "Refresh de Quality más rápido y tabla de Performance más limpia."
+      ]
+    }
+  ]
+}

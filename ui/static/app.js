@@ -372,7 +372,10 @@ const PROCESS_TAXONOMY = [
     {sub:"", name:"Stow",    roles:["STOW","QUANTITY_STOW"]},
   ]},
   {top:"ICQA", leaves:[
-    {sub:"", name:"SBC", roles:["SBC","ICQA_SIMPLE_BIN_COUNT","ICQATR","BIN_FILTER","BIN FILTER"]},
+    // "ICQA - SBC" is the real Role value the roster/dashboard sends (confirmed
+    // live 2026-08-20) — the old list only had legacy/alt spellings that never
+    // matched any real row, so this leaf silently filtered nothing. owner 2026-08-20.
+    {sub:"", name:"SBC", roles:["ICQA - SBC","SBC","ICQA_SIMPLE_BIN_COUNT","ICQATR","BIN_FILTER","BIN FILTER"]},
   ]},
 ];
 function _ptStats(roles){
@@ -2510,11 +2513,19 @@ function msLabelFor(msId, selectedSet, allCount){
   if(btn) btn.classList.add("active");
 }
 
-function msRender(msId, options, selectedSet, onChange){
+function msRender(msId, options, selectedSet, onChange, msOpts){
   const panel=$(msId+"Panel");
   if(!panel) return;
+  const searchable = !!(msOpts && msOpts.searchable);
 
-  const allCount = options.length;
+  // Options can be plain strings, or {value,label,extra} for richer rows
+  // (e.g. Manager: value=name used for filtering, label shows "Name — login",
+  // extra carries the login so the search box can match on it too).
+  const _opts = options.map(o => (o && typeof o === "object")
+    ? {value:o.value, label:o.label!=null?o.label:String(o.value), extra:o.extra||""}
+    : {value:o, label:String(o), extra:""});
+
+  const allCount = _opts.length;
   const isAll = (!selectedSet || selectedSet.size===0 || selectedSet.size>=allCount);
 
   const rows = [];
@@ -2525,13 +2536,17 @@ function msRender(msId, options, selectedSet, onChange){
     </label>
     <div class="ms-sep"></div>
   `);
+  if(searchable){
+    rows.push(`<div class="ms-search-wrap"><input type="text" class="ms-search" data-ms="search" placeholder="Buscar nombre o login…" autocomplete="off"></div>`);
+  }
 
-  for(const opt of options){
-    const checked = isAll ? true : selectedSet.has(opt);
+  for(const opt of _opts){
+    const checked = isAll ? true : selectedSet.has(opt.value);
+    const searchBlob = esc(`${opt.label} ${opt.extra}`.toLowerCase());
     rows.push(`
-      <label class="ms-item">
-        <input type="checkbox" data-ms="opt" value="${esc(String(opt))}" ${checked ? "checked" : ""}>
-        <span>${esc(String(opt))}</span>
+      <label class="ms-item" data-search="${searchBlob}">
+        <input type="checkbox" data-ms="opt" value="${esc(String(opt.value))}" ${checked ? "checked" : ""}>
+        <span>${esc(opt.label)}</span>
       </label>
     `);
   }
@@ -2543,6 +2558,19 @@ function msRender(msId, options, selectedSet, onChange){
   _fresh.innerHTML = rows.join("");
   panel.parentNode.replaceChild(_fresh, panel);
   const _p = _fresh;
+
+  if(searchable){
+    const searchBox = _p.querySelector('input[data-ms="search"]');
+    if(searchBox){
+      searchBox.addEventListener("click",(e)=>e.stopPropagation());
+      searchBox.addEventListener("input",()=>{
+        const needle = searchBox.value.trim().toLowerCase();
+        _p.querySelectorAll('.ms-item[data-search]').forEach(item=>{
+          item.classList.toggle("ms-hidden", !!needle && !item.dataset.search.includes(needle));
+        });
+      });
+    }
+  }
 
   _p.addEventListener("change",(e)=>{
     const target = e.target;
@@ -2662,14 +2690,22 @@ function initProcessMs(){
     const ptb=$("procTaxoBtn"); if(ptb) ptb.onclick=()=>msSetOpen("procTaxo", !msIsOpen("procTaxo"));
   }
 
-  // Manager multi-select: options = distinct ManagerName present in the data.
+  // Manager multi-select: options = distinct ManagerName present in the data,
+  // shown with their login so the searchable box can match on either.
   const mgrNames = new Set();
-  (state.all||[]).forEach(r=>{ const m=String(r.manager||"").trim(); if(m) mgrNames.add(m); });
-  const mgrOptions = Array.from(mgrNames).sort((a,b)=>a.localeCompare(b));
+  const mgrLoginByName = new Map();
+  (state.all||[]).forEach(r=>{
+    const m=String(r.manager||"").trim();
+    if(!m) return;
+    mgrNames.add(m);
+    if(!mgrLoginByName.has(m) && r.managerLogin && !/[,\s]/.test(r.managerLogin)) mgrLoginByName.set(m, r.managerLogin);
+  });
+  const mgrOptions = Array.from(mgrNames).sort((a,b)=>a.localeCompare(b))
+    .map(name => { const login = mgrLoginByName.get(name)||""; return {value:name, label: login ? `${name} — ${login}` : name, extra: login}; });
   msRender("mgrMs", mgrOptions, (state.mgr instanceof Set)? state.mgr : new Set(), (newSet)=>{
     state.mgr = newSet;
     renderAll();
-  });
+  }, {searchable:true});
   const mBtn=$("mgrMsBtn");
   if(mBtn) mBtn.onclick=()=>msSetOpen("mgrMs", !msIsOpen("mgrMs"));
 

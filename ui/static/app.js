@@ -819,21 +819,25 @@ function norm(r){
   // AMZL only: per-associate target (Vet_AVG × curve Factor) and the site Vet baseline.
   const target     = (r.target!=null && r.target!=="") ? Number(r.target) : NaN;
   const vetAvg     = (r.vet_avg!=null && r.vet_avg!=="") ? Number(r.vet_avg) : NaN;
+  const lcFactor   = (r.lc_factor!=null && r.lc_factor!=="") ? Number(r.lc_factor) : NaN;
 
   // AMZL TPH Adjusted — the rate the associate WOULD have if their idle time
   // didn't count. idle_pct = idle hours / total hours (%), so removing idle:
-  //   rate_adj = rate / (1 - idle_pct/100)   and   pct_adj = pct / (1 - idle_pct/100)
-  // In AMZL the P1/P2/P3 flags + coaching are driven by the ADJUSTED %, so idle
-  // time isn't held against the associate. No idle data (or FC site) -> no
-  // adjustment, flags fall back to the raw rate/pct exactly as before.
+  //   rate_adj = rate / (1 - idle_pct/100)
+  // Shown ONLY in its own informational "TPH Adj." column now — % to Target
+  // and the P1/P2/P3 flags went back to the RAW % (owner 2026-08-20: "vamos a
+  // cambiar la lógica... el % to target lo haremos sin TPH Adj"; flags too, so
+  // the displayed % and who gets flagged for coaching stay consistent).
   const _isAmzlRow = (typeof siteBL === "function") && siteBL(currentFC) === "AMZL";
   const _idlePctAdj = (r.idle_pct!=null && r.idle_pct!=="") ? Number(r.idle_pct) : null;
   const _idleFrac = (_isAmzlRow && _idlePctAdj!=null && Number.isFinite(_idlePctAdj)
                      && _idlePctAdj > 0 && _idlePctAdj < 100) ? (1 - _idlePctAdj/100) : null;
   const rateAdj = (Number.isFinite(rate) && _idleFrac) ? (rate / _idleFrac) : rate;
-  const pctAdj  = (Number.isFinite(pct)  && _idleFrac) ? (pct  / _idleFrac) : pct;
+  const pctAdj  = pct;   // no longer idle-adjusted — kept as an alias so every
+                         // existing pctAdj reader (prio, display, CSV export)
+                         // now sees the raw %.
 
-  // Priority thresholds (driven by the ADJUSTED % in AMZL): P3:<80 | P2:80-90 | P1:90-100 | OK:>=100
+  // Priority thresholds (raw %, no idle adjustment): P3:<80 | P2:80-90 | P1:90-100 | OK:>=100
   let prio = 0;
   if(Number.isFinite(pctAdj)){
     if(pctAdj < 80)  prio = 3;
@@ -873,7 +877,7 @@ function norm(r){
   const pending_coachings = Array.isArray(r.pending_coachings) ? r.pending_coachings : [];
   const newHire = !!r.new_hire;
   const daysSinceHire = (r.days_since_hire==null ? null : Number(r.days_since_hire));
-  return{login,name,manager,managerLogin,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,coached_label:String(r.coached_label??"").trim(),notes,rate,rateAdj,pct,pctAdj,target,vetAvg,course_id,employee_id,transcript_url,photo_url,pending_coachings,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,newHire,daysSinceHire,idle_pct,idle_min,_search};
+  return{login,name,manager,managerLogin,dept,cohort,nhFlag,curve,homeProcess,tenure_wk,role,station,stationRaw,sigma,prio,coached,coached_label:String(r.coached_label??"").trim(),notes,rate,rateAdj,pct,pctAdj,target,vetAvg,lcFactor,course_id,employee_id,transcript_url,photo_url,pending_coachings,process:inferProcess(role),mode:Number(r.mode||0),is_priority:!!r.is_priority,newHire,daysSinceHire,idle_pct,idle_min,_search};
 }
 
 // Build the notes string to upload (rate + pct + comments)
@@ -1467,49 +1471,63 @@ let _authCache = (()=>{
   return null;
 })();
 
+// Small topbar badge instead of a full-width banner (owner 2026-08-20):
+// "!" = optional (dismissible, remembers dismissal per version) — "!!!" =
+// mandatory (changelog.json entry for that version has "mandatory":true) and
+// can NOT be dismissed, but never blocks using the rest of the app.
 async function checkForUpdate(){
-  // Non-blocking: if the server can't reach GitHub or returns an error,
-  // we just hide the banner. Never throws to the user.
+  const badge = document.getElementById("updateBadge");
+  const panel = document.getElementById("updatePanel");
+  if(!badge || !panel) return;
   try{
     const dismissed = (()=>{ try { return localStorage.getItem("argos_update_dismissed") || ""; } catch(_) { return ""; } })();
     const v = await jget(`${API}/api/system/version`);
-    // Show the running version in the status bar regardless of whether an
-    // update is available — useful for support ("¿qué versión tienes?").
     if(v && v.current){
       const el = document.getElementById("sbVersion");
       if(el) el.textContent = "v" + v.current;
     }
-    if(!v || !v.update_available || !v.latest) return;
-    if(dismissed === v.latest) return;  // user already dismissed this version
-    const banner = document.createElement("div");
-    banner.id = "updateBanner";
-    banner.style.cssText = [
-      "position:fixed","top:0","left:0","right:0","z-index:9000",
-      "background:linear-gradient(90deg,#f59e0b,#d97706)",
-      "color:#1a1a1a","font-family:'Segoe UI',sans-serif","font-size:13px",
-      "font-weight:600","padding:8px 16px","display:flex",
-      "align-items:center","justify-content:center","gap:14px",
-      "box-shadow:0 2px 8px rgba(0,0,0,.4)",
-    ].join(";");
-    banner.innerHTML = `
-      <span>${t("upd_available")} <b>v${v.latest}</b> (${t("upd_yours")} v${v.current}). ${t("upd_note")}</span>
-      <button id="updateBannerApply" style="background:#1a1a1a;border:1px solid rgba(0,0,0,.4);color:#fef3c7;padding:5px 14px;border-radius:4px;cursor:pointer;font-weight:600">${t("upd_apply")}</button>
-      <span id="updateBannerStatus" style="opacity:.9;font-weight:500"></span>
-      <button id="updateBannerClose" style="background:rgba(0,0,0,.15);border:1px solid rgba(0,0,0,.25);color:#1a1a1a;padding:3px 10px;border-radius:4px;cursor:pointer;font-weight:600">&times;</button>
-    `;
-    document.body.appendChild(banner);
-    document.body.style.paddingTop = (banner.offsetHeight + (parseInt(getComputedStyle(document.body).paddingTop) || 0)) + "px";
-    document.getElementById("updateBannerClose").addEventListener("click", () => {
+    if(!v || !v.update_available || !v.latest){ badge.style.display = "none"; return; }
+
+    let mandatory = false;
+    try{
+      const cl = await window._loadChangelog();
+      const entry = (cl && cl.entries || []).find(e => e.version === v.latest);
+      mandatory = !!(entry && entry.mandatory);
+    }catch(_){ /* changelog fetch is best-effort — default to optional */ }
+
+    if(!mandatory && dismissed === v.latest){ badge.style.display = "none"; return; }
+
+    badge.classList.remove("optional","mandatory");
+    badge.classList.add(mandatory ? "mandatory" : "optional");
+    badge.textContent = mandatory ? "!!!" : "!";
+    badge.style.display = "flex";
+    badge.title = mandatory
+      ? `Actualización OBLIGATORIA disponible: v${v.latest}`
+      : `Actualización disponible: v${v.latest}`;
+
+    document.getElementById("tupTitle").textContent = mandatory
+      ? "⚠️ Actualización obligatoria"
+      : "Actualización disponible";
+    document.getElementById("tupBody").innerHTML =
+      `${t("upd_available")} <b>v${v.latest}</b> (${t("upd_yours")} v${v.current}). ${t("upd_note")}`;
+    document.getElementById("tupClose").style.display = mandatory ? "none" : "";
+
+    const applyBtn = document.getElementById("tupApply");
+    const status = document.getElementById("tupStatus");
+    status.textContent = "";
+    applyBtn.disabled = false;
+
+    badge.onclick = () => panel.classList.toggle("open");
+    document.getElementById("tupClose").onclick = () => {
       try { localStorage.setItem("argos_update_dismissed", v.latest); } catch(_) {}
-      banner.remove();
-      document.body.style.paddingTop = "";
+      panel.classList.remove("open");
+      badge.style.display = "none";
+    };
+    document.addEventListener("click", (e) => {
+      if(!panel.contains(e.target) && e.target !== badge) panel.classList.remove("open");
     });
-    document.getElementById("updateBannerApply").addEventListener("click", async () => {
-      const btn = document.getElementById("updateBannerApply");
-      const status = document.getElementById("updateBannerStatus");
-      btn.disabled = true;
-      btn.style.opacity = ".6";
-      btn.style.cursor = "default";
+    applyBtn.onclick = async () => {
+      applyBtn.disabled = true;
       status.textContent = t("upd_downloading");
       try{
         const r = await fetch(`${API}/api/system/apply-update`, {method:"POST"});
@@ -1519,19 +1537,15 @@ async function checkForUpdate(){
         } else {
           const msg = (j && j.error) ? j.error : t("upd_unknown");
           status.textContent = `${t("upd_failed")} ${msg} — ${t("upd_ask_fumanue")}`;
-          btn.disabled = false;
-          btn.style.opacity = "1";
-          btn.style.cursor = "pointer";
+          applyBtn.disabled = false;
         }
       } catch(ex){
         status.textContent = t("upd_no_server");
-        btn.disabled = false;
-        btn.style.opacity = "1";
-        btn.style.cursor = "pointer";
+        applyBtn.disabled = false;
       }
-    });
+    };
   }catch(ex){
-    // swallow — silent fallback
+    // swallow — silent fallback, badge just stays hidden
   }
 }
 
@@ -3100,25 +3114,8 @@ function renderTable(){
       ?`<span class="td-target" title="AVG Vet Rate del turno: ${Number.isFinite(r.vetAvg)?Math.round(r.vetAvg):'—'}">${Math.round(r.target)}</span>`
       :`<span style="color:var(--text-dim)">—</span>`;
 
-    // Vet Rate (AMZL only) — the site veteran-average baseline (100% reference).
-    const vetRateCell=Number.isFinite(r.vetAvg)
-      ?`<span class="td-target" title="AVG rate de los veteranos en turno (baseline 100%)">${Math.round(r.vetAvg)}</span>`
-      :`<span style="color:var(--text-dim)">—</span>`;
-
-    // % to Vet Rate (AMZL only) — associate rate vs the veteran baseline, no
-    // curve adjustment (harsher than % to Target, which is curve-adjusted).
-    const vetPct=(Number.isFinite(r.rate)&&Number.isFinite(r.vetAvg)&&r.vetAvg>0)
-      ? (r.rate/r.vetAvg*100) : NaN;
-    let vetPctCell=`<span style="color:var(--text-dim)">—</span>`;
-    if(Number.isFinite(vetPct)){
-      const c=vetPct<65?"c-bad":vetPct<90?"c-warn":"c-ok";
-      vetPctCell=`<span class="td-pct ${c}">${vetPct.toFixed(1)}%</span>`;
-    }
-
-    // % to Target — colour coded, no label. Uses the ADJUSTED % so it stays
-    // consistent with the P1/P2/P3 flag (which is idle-adjusted in AMZL).
-    // pctAdj === pct when there's no idle adjustment (all FC rows), so FC is
-    // unchanged. Tooltip surfaces the raw % when they differ.
+    // % to Target — colour coded, no label. Raw % (no idle adjustment), same
+    // number the P1/P2/P3 flag is computed from. owner 2026-08-20.
     const _pctShown = Number.isFinite(r.pctAdj) ? r.pctAdj : r.pct;
     let pctCell=`<span style="color:var(--text-dim)">—</span>`;
     if(Number.isFinite(_pctShown)){
@@ -3240,15 +3237,14 @@ function renderTable(){
       <td class="bl-amzl-only">${(()=>{
         const lc = esc(r.nhFlag||"LC1");
         const cls = (r.curve==="VETERAN") ? "curve-vet" : "curve-nh";
-        return `<div class="curve-label ${cls}">${lc}</div>`;
+        const pctLc = Number.isFinite(r.lcFactor) ? ` <span style="opacity:.75;font-weight:600">(${Math.round(r.lcFactor*100)}%)</span>` : "";
+        return `<div class="curve-label ${cls}">${lc}${pctLc}</div>`;
       })()}</td>
       <td><span class="role-badge" title="${esc(r.role)}">${esc(roleDisplayName(r.role))}</span></td>
       <td class="bl-fc-only" title="${esc(r.stationRaw||r.station)}"><span class="td-station">${esc(r.station)}</span></td>
       <td><span class="pr ${pr}">${esc(prLbl)}</span></td>
       <td>${rateCell}</td>
       <td class="bl-amzl-only">${tphAdjCell}</td>
-      <td class="bl-amzl-only">${vetRateCell}</td>
-      <td class="bl-amzl-only">${vetPctCell}</td>
       <td class="bl-amzl-only">${targetCell}</td>
       <td>${pctCell}</td>
       <td class="td-notes bl-fc-only">${notesHtml}</td>
@@ -6904,6 +6900,11 @@ async function _loadChangelog(){
   try{ _changelogData = await jget(`${API}/api/changelog`); }catch(_){ _changelogData = {latest:"", entries:[]}; }
   return _changelogData;
 }
+// Exposed on window: this function is declared inside the DOMContentLoaded
+// closure, but checkForUpdate() (declared outside it, near the top of the
+// file) needs to read changelog.json to know if the latest version is
+// "mandatory". Same cross-boundary issue as window.renderAll. owner 2026-08-20.
+window._loadChangelog = _loadChangelog;
 function _changelogItemsHtml(entry){
   return ((entry&&entry.items)||[]).map(it=>`<li style="margin:3px 0">${esc(it)}</li>`).join("");
 }

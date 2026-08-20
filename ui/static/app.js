@@ -4068,7 +4068,7 @@ function renderQuality(){
   _renderQualitySummary(rows);
 
   if(!rows.length){
-    body.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:40px;color:#999">No quality opportunities found.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:40px;color:#999">No quality opportunities found.</td></tr>`;
     return;
   }
 
@@ -4105,7 +4105,7 @@ function renderQuality(){
     const photo = badgePhotoUrl(login);
 
     return `<tr class="${coached?'coached-row':''}">
-      <td class="td-assoc" style="text-align:left;padding-left:20px">
+      <td class="td-assoc"${coached?' title="✓ Coacheado"':''} style="text-align:left;padding-left:20px">
         <div class="photo-wrap">
           <div class="photo-cell"><img src="${esc(photo)}" loading="lazy" decoding="async" onerror="this.style.display='none'" /></div>
           <div class="ident">
@@ -4131,23 +4131,20 @@ function renderQuality(){
       })()}</td>
       <td title="${esc(_stationRaw)}"><span class="td-station">${esc(_stationDisp)}</span></td>
       <td>${present?'<span class="present-chk">✓</span>':'<span class="present-dash">—</span>'}</td>
-      <td>${coached
-            ? '<span class="coached-chk"><span class="chk-circle">✓</span></span>'
-            : (r.reactive
-                ? '<span class="q-reactive-flag" title="Recibió un coaching REACTIVO (HIGH_DEFECTS) de este topic. No cuenta como coaching manual.">⚡ Reactivo</span>'
-                : '—')}</td>
       <td style="text-align:left">${(()=>{
         // Post-coaching outcome icon (rate-based) — shown before the split:
         //   🎉 improved (rate dropped) · ⚠️ anomaly (no drop) · 🕒 observing (<1d).
         const _pre = r.rc_pre_rate, _post = r.rc_post_rate, _lc = r.rc_last_coaching;
         const _rateTip = (_pre!=null&&_post!=null) ? ` · ${_pre}→${_post} err/día` : "";
-        let anomaly = "";
+        let anomaly = !coached && r.reactive
+          ? '<span class="q-reactive-flag" title="Recibió un coaching REACTIVO (HIGH_DEFECTS) de este topic. No cuenta como coaching manual.">⚡ Reactivo</span>'
+          : "";
         if(_qIsAnomaly(r)){
-          anomaly = `<span style="font-size:13px;margin-right:4px;cursor:help" title="Anomalía — no mejoró tras el coaching${_lc?` (${esc(_lc)})`:""}${_rateTip}">⚠️</span>`;
+          anomaly += `<span style="font-size:13px;margin-right:4px;cursor:help" title="Anomalía — no mejoró tras el coaching${_lc?` (${esc(_lc)})`:""}${_rateTip}">⚠️</span>`;
         } else if(_qIsImproved(r)){
-          anomaly = `<span style="font-size:13px;margin-right:4px;cursor:help" title="Improvement — bajó la tasa de errores tras el coaching${_lc?` (${esc(_lc)})`:""}${_rateTip}">🎉</span>`;
+          anomaly += `<span style="font-size:13px;margin-right:4px;cursor:help" title="Improvement — bajó la tasa de errores tras el coaching${_lc?` (${esc(_lc)})`:""}${_rateTip}">🎉</span>`;
         } else if(_qIsObserving(r)){
-          anomaly = `<span style="font-size:13px;margin-right:4px;cursor:help" title="En observación — coaching muy reciente${_lc?` (${esc(_lc)})`:""}; aún sin datos para juzgar (≥1 día)">🕒</span>`;
+          anomaly += `<span style="font-size:13px;margin-right:4px;cursor:help" title="En observación — coaching muy reciente${_lc?` (${esc(_lc)})`:""}; aún sin datos para juzgar (≥1 día)">🕒</span>`;
         }
         // At-a-glance root-cause split (top 2) — like the Performance notes.
         const split = Array.isArray(r.rc_split) ? r.rc_split : [];
@@ -4217,7 +4214,7 @@ function renderQuality(){
   // Pagination controls
   if(totalPages > 1){
     const paginationEl = document.createElement("tr");
-    paginationEl.innerHTML = `<td colspan="14" style="text-align:center;padding:8px 0">
+    paginationEl.innerHTML = `<td colspan="13" style="text-align:center;padding:8px 0">
       <button class="q-page-btn" ${window._qPage<=1?'disabled':''} onclick="window._qPage--;renderQuality()">← Prev</button>
       <span style="margin:0 12px;font-size:11px;color:var(--text-secondary)">Page ${window._qPage} of ${totalPages} (${rows.length} rows)</span>
       <button class="q-page-btn" ${window._qPage>=totalPages?'disabled':''} onclick="window._qPage++;renderQuality()">Next →</button>

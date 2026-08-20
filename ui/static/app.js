@@ -7,9 +7,9 @@ const I18N = {
     lbl_updated: "Actualizado", lbl_live: "Live", lbl_created: "Creado y Desarrollado por", lbl_theme: "Tema", lbl_lang: "Idioma",
     alerts_settings_title: "🔔 Alertas automáticas",
     alerts_settings_hint: "Opt-in. Cuando las activas, Argos revisa tu FC en segundo plano y te avisa. Detalles en la pestaña FAQ.",
-    kpi_p3: "Prioridad 3", kpi_p3_sub: "Por debajo de 80%",
+    kpi_p3: "Prioridad 1", kpi_p3_sub: "Por debajo de 80%",
     kpi_p2: "Prioridad 2",
-    kpi_p1: "Prioridad 1",
+    kpi_p1: "Prioridad 3",
     kpi_on_target: "On Target", kpi_on_target_sub: "Por encima de 100%",
     kpi_total: "Total Activos", kpi_total_sub: "Ops + L&D",
     kpi_coached: "Coached", kpi_coached_sub: "Este turno",
@@ -161,9 +161,9 @@ const I18N = {
     lbl_updated: "Updated", lbl_live: "Live", lbl_created: "Created and Developed by", lbl_theme: "Theme", lbl_lang: "Language",
     alerts_settings_title: "🔔 Automatic alerts",
     alerts_settings_hint: "Opt-in. When enabled, Argos checks your FC in the background and notifies you. Details in the FAQ tab.",
-    kpi_p3: "Priority 3", kpi_p3_sub: "Below 80%",
+    kpi_p3: "Priority 1", kpi_p3_sub: "Below 80%",
     kpi_p2: "Priority 2",
-    kpi_p1: "Priority 1",
+    kpi_p1: "Priority 3",
     kpi_on_target: "On Target", kpi_on_target_sub: "Above 100%",
     kpi_total: "Total Active", kpi_total_sub: "Ops + L&D",
     kpi_coached: "Coached", kpi_coached_sub: "This shift",
@@ -436,7 +436,13 @@ function renderProcTaxo(){
   panel.querySelectorAll('input[data-pt]').forEach(cb=>{
     cb.addEventListener("change",()=>{
       if(cb.dataset.pt==="all"){
-        if(cb.checked) state.procRoles=new Set();   // ALL
+        if(cb.checked){
+          state.procRoles=new Set();   // ALL
+          // Visually uncheck every leaf too — state.procRoles is empty now,
+          // but the leaf checkboxes keep whatever DOM state they had before
+          // this click unless we clear them explicitly. owner 2026-08-20.
+          panel.querySelectorAll('input[data-pt="leaf"]').forEach(lc=>{ lc.checked=false; });
+        }
       }else{
         const roles=(cb.dataset.roles||"").split("|").filter(Boolean);
         if(cb.checked) roles.forEach(r=>state.procRoles.add(r));
@@ -778,8 +784,10 @@ function norm(r){
   const manager = String(r.manager??"").trim();
   const managerLogin = String(r.manager_login??"").trim();
   // Pre-compute the lowercased search blob ONCE per row so the search
-  // filter doesn't .toLowerCase() every cell on every keystroke.
-  const _search = (login+" "+name+" "+role+" "+station+" "+dept+" "+cohort+" "+nhFlag).toLowerCase();
+  // filter doesn't .toLowerCase() every cell on every keystroke. Includes the
+  // friendly ROL name (e.g. "Chuting") alongside the raw role code (AFE_PACK)
+  // so search matches whichever one the user sees/types. owner 2026-08-20.
+  const _search = (login+" "+name+" "+role+" "+roleDisplayName(role)+" "+station+" "+dept+" "+cohort+" "+nhFlag).toLowerCase();
   const idle_pct = (r.idle_pct!=null && r.idle_pct!=="") ? Number(r.idle_pct) : null;
   const idle_min = (r.idle_min!=null && r.idle_min!=="") ? Number(r.idle_min) : null;
   const pending_coachings = Array.isArray(r.pending_coachings) ? r.pending_coachings : [];
@@ -2797,7 +2805,10 @@ function syncKpiActive(){
       state.prio.has(f);
     t.classList.toggle("active-filter",!!active);
   });
-  const labels=["3","2","1","0"].filter(p=>state.prio.has(p)).map(p=>p==="0"?"OK":"P"+p);
+  // Display numbering is inverted from the internal bucket key (bucket "3" =
+  // worst = shown as "P1"). See prioLabel(). owner 2026-08-20.
+  const _prioDisplayNum={"3":"1","2":"2","1":"3"};
+  const labels=["3","2","1","0"].filter(p=>state.prio.has(p)).map(p=>p==="0"?"OK":"P"+_prioDisplayNum[p]);
   $("sbFilter").textContent=labels.join("+")||"None";
 }
 
@@ -2846,10 +2857,14 @@ function rowSigmaBucket(sigma){
   if(sigma===1) return "1";
   return "0";
 }
+// Display numbering is INVERTED from the internal severity bucket: P1 = most
+// urgent (sigma>=3, worst %), P3 = least urgent of the three flagged tiers.
+// owner 2026-08-20 (was P3=worst before; renamed so "Priority 1" reads as the
+// top priority, matching the incident-severity convention).
 function prioLabel(sigma){
-  if(sigma>=3) return "P3";
+  if(sigma>=3) return "P1";
   if(sigma===2) return "P2";
-  if(sigma===1) return "P1";
+  if(sigma===1) return "P3";
   return "OK";
 }
 
@@ -6929,9 +6944,9 @@ function _faqHtml(key){
       <p style="margin-top:8px">Fuente: Historial de horas (2025 → actualidad), por proceso. El tenure se calcula POR PROCESO — un asociado puede ser VET en PACK pero NH en PICK.</p>`,
     faq_a4: `<p><b>Performance Dashboard:</b></p>
       <ul>
-        <li><b>Prioridad 3</b> (rojo): % to Target &lt; 80%</li>
+        <li><b>Prioridad 1</b> (rojo): % to Target &lt; 80%</li>
         <li><b>Prioridad 2</b> (naranja): % to Target 80–99%</li>
-        <li><b>Prioridad 1</b> (verde): % to Target 100–110%</li>
+        <li><b>Prioridad 3</b> (verde): % to Target 100–110%</li>
         <li><b>On Target</b> (azul): ≥ 110%</li>
       </ul>
       <p style="margin-top:8px"><b>Quality Dashboard:</b></p>
@@ -6988,9 +7003,9 @@ function _faqHtml(key){
       <p style="margin-top:8px">Source: Hours history (2025 → present), per process. Tenure is calculated PER PROCESS — an associate can be VET in PACK but NH in PICK.</p>`,
     faq_a4: `<p><b>Performance Dashboard:</b></p>
       <ul>
-        <li><b>Priority 3</b> (red): % to Target &lt; 80%</li>
+        <li><b>Priority 1</b> (red): % to Target &lt; 80%</li>
         <li><b>Priority 2</b> (orange): % to Target 80–99%</li>
-        <li><b>Priority 1</b> (green): % to Target 100–110%</li>
+        <li><b>Priority 3</b> (green): % to Target 100–110%</li>
         <li><b>On Target</b> (blue): ≥ 110%</li>
       </ul>
       <p style="margin-top:8px"><b>Quality Dashboard:</b></p>

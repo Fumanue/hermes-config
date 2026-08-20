@@ -670,6 +670,25 @@ body.sb-pinned .sb-bottom .t-manual-wrap.on,.sidebar:hover .sb-bottom .t-manual-
 .t-fresh-sep{width:1px;height:11px;background:var(--border-strong,var(--border))}
 .t-fresh-btn{flex-shrink:0;margin-left:3px;padding:1px 6px;border-radius:9px;border:none;background:transparent;color:var(--accent);font-size:14px;font-weight:700;line-height:1;cursor:pointer;white-space:nowrap}
 .t-fresh-btn:hover:not(:disabled){background:var(--accent);color:#fff}
+/* Update nag — a small topbar badge instead of the old full-width banner.
+   "!" = optional (dismissible), "!!!" = mandatory (owner marks it in
+   changelog.json, can't be dismissed). owner 2026-08-20. */
+.t-update-badge{position:relative;flex-shrink:0;display:none;align-items:center;justify-content:center;
+  min-width:26px;height:26px;padding:0 8px;border-radius:14px;border:none;cursor:pointer;
+  font-weight:800;font-size:13px;line-height:1;letter-spacing:.02em;color:#1a1a1a}
+.t-update-badge.optional{background:linear-gradient(135deg,#fbbf24,#f59e0b)}
+.t-update-badge.mandatory{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;animation:pulse 1.6s infinite}
+.t-update-panel{display:none;position:absolute;top:calc(100% + 8px);right:0;z-index:400;width:320px;
+  background:var(--bg-card);border:1px solid var(--border-strong);border-radius:14px;box-shadow:0 12px 36px var(--shadow);
+  padding:14px}
+.t-update-panel.open{display:block}
+.t-update-panel .tup-title{font-size:13px;font-weight:800;margin-bottom:4px}
+.t-update-panel .tup-body{font-size:12px;color:var(--text-secondary);line-height:1.5;margin-bottom:10px}
+.t-update-panel .tup-row{display:flex;gap:8px;align-items:center}
+.t-update-panel .tup-apply{flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 10px;font-weight:700;font-size:12.5px;cursor:pointer}
+.t-update-panel .tup-apply:disabled{opacity:.6;cursor:default}
+.t-update-panel .tup-close{background:transparent;border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;font-size:12.5px;cursor:pointer;color:var(--text-secondary)}
+.t-update-panel .tup-status{font-size:11.5px;color:var(--text-muted);margin-top:8px}
 .t-fresh-btn:disabled{opacity:.6;cursor:progress}
 @keyframes spin{to{transform:rotate(360deg)}}
 .t-fresh-btn.spin{animation:spin .9s linear infinite;display:inline-block}
@@ -2248,6 +2267,18 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
   <div class="t-row1">
   <div style="flex:1"></div>
   <div class="t-right">
+    <div style="position:relative">
+      <button type="button" class="t-update-badge" id="updateBadge" title="Actualización disponible">!</button>
+      <div class="t-update-panel" id="updatePanel">
+        <div class="tup-title" id="tupTitle">Actualización disponible</div>
+        <div class="tup-body" id="tupBody"></div>
+        <div class="tup-row">
+          <button class="tup-apply" id="tupApply">Actualizar ahora</button>
+          <button class="tup-close" id="tupClose">×</button>
+        </div>
+        <div class="tup-status" id="tupStatus"></div>
+      </div>
+    </div>
     <div class="t-midway" id="midwayPill" data-state="loading" title="Estado de Midway">
       <span class="t-midway-dot"></span>
       <span class="t-midway-label" id="midwayLabel">Midway</span>
@@ -2548,13 +2579,6 @@ tr:hover .cfg-del-btn:hover{opacity:1;background:#e53e3e22;color:#e53e3e}
               <b>Ej:</b> Rate 240 con 20% idle → 240 ÷ 0,80 = <b>300</b>
             </span></span>
           </th>
-          <th data-k="vetrate" class="bl-amzl-only" style="width:85px">
-            Vet Rate<span class="info-ic" tabindex="0">ⓘ<span class="info-pop">
-              <b>Veteran Rate</b><br>
-              <span class="ip-muted">Rate medio de los veteranos en turno para este proceso. Es el baseline 100% del que sale el Target.</span>
-            </span></span>
-          </th>
-          <th data-k="vetpct"  class="bl-amzl-only" style="width:95px">% to Vet Rate</th>
           <th data-k="target"  class="bl-amzl-only" style="width:95px">
             Target<span class="info-ic" tabindex="0">ⓘ<span class="info-pop">
               <b>Objetivo individual</b><br>

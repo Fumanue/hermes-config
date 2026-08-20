@@ -378,6 +378,20 @@ const PROCESS_TAXONOMY = [
     {sub:"", name:"SBC", roles:["ICQA - SBC","SBC","ICQA_SIMPLE_BIN_COUNT","ICQATR","BIN_FILTER","BIN FILTER"]},
   ]},
 ];
+// Raw Role -> friendly taxonomy name (e.g. "AFE_PACK" -> "Chuting"), for the
+// main table's ROL column. Falls back to the raw role when not in the taxonomy
+// (AMZL delivery roles, or anything not yet mapped). owner 2026-08-20.
+const ROLE_DISPLAY_NAME = (() => {
+  const m = {};
+  PROCESS_TAXONOMY.forEach(t => t.leaves.forEach(lf => {
+    lf.roles.forEach(r => { m[String(r).toUpperCase()] = lf.name; });
+  }));
+  return m;
+})();
+function roleDisplayName(role){
+  const r = String(role||"").trim();
+  return ROLE_DISPLAY_NAME[r.toUpperCase()] || r || "—";
+}
 function _ptStats(roles){
   const set=new Set(roles.map(x=>String(x).toUpperCase()));
   let rate=0,rn=0,pct=0,pn=0,n=0;
@@ -431,7 +445,9 @@ function renderProcTaxo(){
       const allBox=panel.querySelector('input[data-pt="all"]');
       if(allBox) allBox.checked = state.procRoles.size===0;
       _ptLabel();
-      renderAll();
+      // renderAll is declared inside the DOMContentLoaded closure below; this
+      // function is declared outside it, so it must go through window.renderAll.
+      if(window.renderAll) window.renderAll();
     });
   });
   _ptLabel();
@@ -3131,7 +3147,7 @@ function renderTable(){
         const cls = (r.curve==="VETERAN") ? "curve-vet" : "curve-nh";
         return `<div class="curve-label ${cls}">${lc}</div>`;
       })()}</td>
-      <td><span class="role-badge">${esc(r.role)}</span></td>
+      <td><span class="role-badge" title="${esc(r.role)}">${esc(roleDisplayName(r.role))}</span></td>
       <td class="bl-fc-only" title="${esc(r.stationRaw||r.station)}"><span class="td-station">${esc(r.station)}</span></td>
       <td><span class="pr ${pr}">${esc(prLbl)}</span></td>
       <td>${rateCell}</td>
@@ -3277,6 +3293,13 @@ function renderAll(){
   if(window._renderPerfMap) window._renderPerfMap();
   if(window._loadPprRates) window._loadPprRates();
 }
+// Exposed on window: renderAll lives inside the DOMContentLoaded closure, but
+// renderProcTaxo() (the OB/IB/ICQA taxonomy filter) is declared earlier, OUTSIDE
+// that closure, and needs to trigger a re-render after a leaf checkbox change.
+// Without this, calling renderAll() from there throws "renderAll is not defined"
+// silently in the checkbox's change handler — the label/checkbox updates but the
+// table never re-filters. owner 2026-08-20.
+window.renderAll = renderAll;
 
 // ── Download CSV ───────────────────────────────────────────
 $("btnDownloadCSV").addEventListener("click",async()=>{

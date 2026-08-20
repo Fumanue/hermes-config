@@ -1,7 +1,24 @@
 {
   "_comment": "Changelog / 'Novedades' shown in the app. Push via hermes-config (no rebuild). `latest` drives the auto-popup: when it differs from the user's saved changelog_seen pref, the popup shows once, then marks it seen. FAQ renders the full `entries` list. Newest entry first.",
-  "latest": "1.3.0",
+  "latest": "1.3.1",
   "entries": [
+    {
+      "version": "1.3.1",
+      "date": "2026-08-20",
+      "title": "Prioridad 1-2-3 invertida + filtro de Proceso arreglado",
+      "items": [
+        "⚠️ CAMBIO IMPORTANTE: la numeración de Prioridad se invirtió. Prioridad 1 es ahora la MÁS urgente (antes era Prioridad 3). Prioridad 2 sigue igual. Prioridad 3 es ahora la menos urgente de las 3.",
+        "Filtro de Proceso (OB/IB/ICQA) arreglado: antes no filtraba la tabla aunque marcaras las casillas (bug de fondo, ya corregido).",
+        "Filtro de Proceso ahora es más detallado: Quantity Stow, Decant y Pallet Decant separados; líneas de Pack (SM1, SNS1, SNS2, SM, SM2, SMMIX, WS Slam, WS VDF, Pack Multis) desglosadas.",
+        "Cada grupo (AFE, Pack, Pick, Receive, Stow) se puede desplegar/colapsar y seleccionar completo con un solo check.",
+        "Los procesos sin actividad hoy ya no se muestran (antes salían atenuados ocupando espacio).",
+        "La columna ROL en Performance ahora muestra nombres amigables (ej. 'Chuting' en vez de 'AFE_PACK'); la búsqueda funciona con ambos.",
+        "Filtro de Manager: ahora se puede buscar por nombre o por login.",
+        "Quality: se quitó la columna Coached — el asociado ya coacheado se muestra con el nombre tachado (como en Performance).",
+        "Ubicación en GCA simplificada: solo estación, sin el proceso técnico al lado.",
+        "El banner de 'Midway expirada' se auto-corrige más rápido cuando la sesión ya es válida."
+      ]
+    },
     {
       "version": "1.3.0",
       "date": "2026-08-19",

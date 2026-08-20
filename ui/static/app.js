@@ -357,37 +357,77 @@ const ALL_PROCS_COUNT = PROCESS_GROUP_KEYS.length;
 // each mapped to the data's Role values. The dropdown shows Rate + % to OP2 per
 // leaf and filters the board by role (state.procRoles = union of checked leaves).
 // Easy to move to a config JSON later.
+// Structure: top (OB/IB/ICQA) -> subs (collapsible groups: AFE/Pack/Pick/
+// Receive/Stow/...) -> leaves (one per REAL role code — never merge two
+// distinct sub-processes into one leaf, e.g. Stow vs Quantity Stow, or Decant
+// vs Pallet Decant, are kept separate even though they used to share a leaf).
+// owner 2026-08-20 — split per user request (sub-process detail was collapsed
+// away and specific lines like Quantity Stow / Pallet Decant / SM1/SNS1/SNS2
+// were invisible as their own filterable rows).
 const PROCESS_TAXONOMY = [
-  {top:"OB", leaves:[
-    {sub:"AFE",  name:"Chuting",       roles:["AFE_PACK"]},
-    {sub:"AFE",  name:"Rebin",         roles:["AFE_REBIN"]},
-    {sub:"AFE",  name:"Induct",        roles:["AFE_INDUCT","INDUCT"]},
-    {sub:"Pack", name:"Pack Singles",  roles:["SM1","SINGLES","SNS1","SNS2"]},
-    {sub:"Pack", name:"Pack Multis",   roles:["SM","SM2","SMMIX","WS_SLAM","WS_VDF","P2R_PACK"]},
-    {sub:"Pick", name:"Pick Tote",     roles:["PICK_AR"]},
-    {sub:"Pick", name:"Pick to Rebin", roles:["P2R_PICK"]},
+  {top:"OB", subs:[
+    {sub:"AFE", leaves:[
+      {name:"Chuting", roles:["AFE_PACK"]},
+      {name:"Rebin",   roles:["AFE_REBIN"]},
+      {name:"Induct",  roles:["AFE_INDUCT","INDUCT"]},
+    ]},
+    {sub:"Pack", leaves:[
+      {name:"SM1",        roles:["SM1"]},
+      {name:"SNS1",       roles:["SNS1"]},
+      {name:"SNS2",       roles:["SNS2"]},
+      {name:"Singles",    roles:["SINGLES"]},
+      {name:"SM",         roles:["SM"]},
+      {name:"SM2",        roles:["SM2"]},
+      {name:"SMMIX",      roles:["SMMIX"]},
+      {name:"WS Slam",    roles:["WS_SLAM"]},
+      {name:"WS VDF",     roles:["WS_VDF"]},
+      {name:"Pack Multis", roles:["P2R_PACK"]},
+    ]},
+    {sub:"Pick", leaves:[
+      {name:"Pick Tote",     roles:["PICK_AR"]},
+      {name:"Pick to Rebin", roles:["P2R_PICK"]},
+    ]},
   ]},
-  {top:"IB", leaves:[
-    {sub:"", name:"Receive", roles:["DECANT","PALLET_DECANT"]},
-    {sub:"", name:"Stow",    roles:["STOW","QUANTITY_STOW"]},
+  {top:"IB", subs:[
+    {sub:"Receive", leaves:[
+      {name:"Decant",         roles:["DECANT"]},
+      {name:"Pallet Decant",  roles:["PALLET_DECANT"]},
+    ]},
+    {sub:"Stow", leaves:[
+      {name:"Stow",          roles:["STOW"]},
+      {name:"Quantity Stow", roles:["QUANTITY_STOW"]},
+    ]},
   ]},
-  {top:"ICQA", leaves:[
-    // "ICQA - SBC" is the real Role value the roster/dashboard sends (confirmed
-    // live 2026-08-20) — the old list only had legacy/alt spellings that never
-    // matched any real row, so this leaf silently filtered nothing. owner 2026-08-20.
-    {sub:"", name:"SBC", roles:["ICQA - SBC","SBC","ICQA_SIMPLE_BIN_COUNT","ICQATR","BIN_FILTER","BIN FILTER"]},
+  {top:"ICQA", subs:[
+    {sub:"", leaves:[
+      // "ICQA - SBC" is the real Role value the roster/dashboard sends (confirmed
+      // live 2026-08-20) — the old list only had legacy/alt spellings that never
+      // matched any real row, so this leaf silently filtered nothing.
+      {name:"SBC", roles:["ICQA - SBC","SBC","ICQA_SIMPLE_BIN_COUNT","ICQATR","BIN_FILTER","BIN FILTER"]},
+    ]},
   ]},
 ];
+// Every {sub, leaves} group across every top, flattened once for iteration.
+function _ptAllSubs(){
+  const out=[];
+  PROCESS_TAXONOMY.forEach(t=>t.subs.forEach(s=>out.push({top:t.top, sub:s.sub, leaves:s.leaves})));
+  return out;
+}
 // Raw Role -> friendly taxonomy name (e.g. "AFE_PACK" -> "Chuting"), for the
 // main table's ROL column. Falls back to the raw role when not in the taxonomy
 // (AMZL delivery roles, or anything not yet mapped). owner 2026-08-20.
 const ROLE_DISPLAY_NAME = (() => {
   const m = {};
-  PROCESS_TAXONOMY.forEach(t => t.leaves.forEach(lf => {
+  _ptAllSubs().forEach(s => s.leaves.forEach(lf => {
     lf.roles.forEach(r => { m[String(r).toUpperCase()] = lf.name; });
   }));
   return m;
 })();
+// Which sub-groups are expanded in the panel (persists across re-renders).
+// Starts with everything expanded so behaviour matches the old flat list until
+// the user collapses something. Keyed "top>>sub".
+let _ptOpenSubs = null;
+function _ptSubKey(top, sub){ return top+">>"+sub; }
 function roleDisplayName(role){
   const r = String(role||"").trim();
   return ROLE_DISPLAY_NAME[r.toUpperCase()] || r || "—";
@@ -408,7 +448,7 @@ function _ptLabel(){
   const sel=(state.procRoles instanceof Set)?state.procRoles:new Set();
   if(!sel.size){ lab.textContent="All"; if(btn)btn.classList.remove("active"); return; }
   const names=[];
-  PROCESS_TAXONOMY.forEach(t=>t.leaves.forEach(lf=>{ if(lf.roles.some(r=>sel.has(String(r).toUpperCase()))) names.push(lf.name); }));
+  _ptAllSubs().forEach(s=>s.leaves.forEach(lf=>{ if(lf.roles.some(r=>sel.has(String(r).toUpperCase()))) names.push(lf.name); }));
   lab.textContent = names.length<=2 ? names.join(", ") : `${names.slice(0,2).join(", ")} +${names.length-2}`;
   if(btn) btn.classList.add("active");
 }
@@ -416,34 +456,73 @@ function renderProcTaxo(){
   const panel=$("procTaxoPanel"); if(!panel) return;
   if(!(state.procRoles instanceof Set)) state.procRoles=new Set();
   const sel=state.procRoles;
+  // Lazy-seed: everything expanded on first render.
+  if(_ptOpenSubs===null){
+    _ptOpenSubs=new Set(_ptAllSubs().map(s=>_ptSubKey(s.top,s.sub)));
+  }
   const rows=[];
-  rows.push(`<div class="pt-head"><span style="flex:0 0 15px"></span><span class="pt-sub"></span><span class="pt-name">Proceso</span><span class="pt-rate">Rate</span><span class="pt-pct">%OP2</span></div>`);
-  rows.push(`<label class="pt-row" style="font-weight:700"><input type="checkbox" data-pt="all" ${sel.size?"":"checked"}><span class="pt-sub"></span><span class="pt-name">Todos</span><span class="pt-rate"></span><span class="pt-pct"></span></label>`);
+  rows.push(`<div class="pt-head"><span style="flex:0 0 15px"></span><span class="pt-name">Proceso</span><span class="pt-rate">Rate</span><span class="pt-pct">%OP2</span></div>`);
+  rows.push(`<label class="pt-row" style="font-weight:700"><input type="checkbox" data-pt="all" ${sel.size?"":"checked"}><span class="pt-name">Todos</span><span class="pt-rate"></span><span class="pt-pct"></span></label>`);
   PROCESS_TAXONOMY.forEach((t,ti)=>{
-    rows.push(`<div class="pt-sec${ti===0?" pt-first":""}">${esc(t.top)}</div>`);
-    t.leaves.forEach(lf=>{
-      const st=_ptStats(lf.roles);
-      const on=lf.roles.some(r=>sel.has(String(r).toUpperCase()));
-      const rolesAttr=esc(lf.roles.map(r=>String(r).toUpperCase()).join("|"));
-      rows.push(`<label class="pt-row${st.n?"":" pt-empty"}"><input type="checkbox" data-pt="leaf" data-roles="${rolesAttr}" ${on?"checked":""}>`
-        +`<span class="pt-sub">${esc(lf.sub||"")}</span>`
-        +`<span class="pt-name">${esc(lf.name)}</span>`
-        +`<span class="pt-rate">${st.rate!=null?st.rate:"—"}</span>`
-        +`<span class="pt-pct">${st.pct!=null?st.pct+"%":"—"}</span></label>`);
+    let topHasAny=false;
+    const secRows=[];
+    t.subs.forEach(s=>{
+      const allRoles=s.leaves.flatMap(lf=>lf.roles);
+      const st=_ptStats(allRoles);
+      if(!st.n) return; // no associates on ANY role in this group today — hide it entirely
+      topHasAny=true;
+      const key=_ptSubKey(t.top,s.sub);
+      const open=_ptOpenSubs.has(key);
+      const groupRolesUpper=allRoles.map(r=>String(r).toUpperCase());
+      const selCount=groupRolesUpper.filter(r=>sel.has(r)).length;
+      const groupChecked=selCount>0 && selCount===groupRolesUpper.length;
+      const groupIndeterminate=selCount>0 && selCount<groupRolesUpper.length;
+      if(s.sub){
+        secRows.push(`<div class="pt-subhead">`
+          +`<input type="checkbox" data-pt="subselect" data-roles="${esc(groupRolesUpper.join("|"))}" data-indet="${groupIndeterminate?"1":"0"}" ${groupChecked?"checked":""}>`
+          +`<span class="pt-subhead-toggle" data-pt="subtoggle" data-key="${esc(key)}">`
+          +`<span class="pt-chev">${open?"▾":"▸"}</span>`
+          +`<span class="pt-name">${esc(s.sub)}</span></span>`
+          +`<span class="pt-rate">${st.rate!=null?st.rate:"—"}</span>`
+          +`<span class="pt-pct">${st.pct!=null?st.pct+"%":"—"}</span></div>`);
+      }
+      if(!s.sub || open){
+        s.leaves.forEach(lf=>{
+          const lst=_ptStats(lf.roles);
+          if(!lst.n) return; // hide leaves with nobody on them today
+          const on=lf.roles.some(r=>sel.has(String(r).toUpperCase()));
+          const rolesAttr=esc(lf.roles.map(r=>String(r).toUpperCase()).join("|"));
+          secRows.push(`<label class="pt-row pt-leaf"><input type="checkbox" data-pt="leaf" data-roles="${rolesAttr}" ${on?"checked":""}>`
+            +`<span class="pt-name">${esc(lf.name)}</span>`
+            +`<span class="pt-rate">${lst.rate!=null?lst.rate:"—"}</span>`
+            +`<span class="pt-pct">${lst.pct!=null?lst.pct+"%":"—"}</span></label>`);
+        });
+      }
     });
+    if(topHasAny){
+      rows.push(`<div class="pt-sec${ti===0?" pt-first":""}">${esc(t.top)}</div>`);
+      rows.push(...secRows);
+    }
   });
   panel.innerHTML=rows.join("");
+  // Indeterminate is a DOM-only property, can't be set via the HTML attribute.
+  panel.querySelectorAll('input[data-pt="subselect"]').forEach(cb=>{ cb.indeterminate = cb.dataset.indet==="1"; });
+  panel.querySelectorAll('[data-pt="subtoggle"]').forEach(el=>{
+    el.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const key=el.dataset.key;
+      if(_ptOpenSubs.has(key)) _ptOpenSubs.delete(key); else _ptOpenSubs.add(key);
+      renderProcTaxo();
+    });
+  });
   panel.querySelectorAll('input[data-pt]').forEach(cb=>{
     cb.addEventListener("change",()=>{
       if(cb.dataset.pt==="all"){
-        if(cb.checked){
-          state.procRoles=new Set();   // ALL
-          // Visually uncheck every leaf too — state.procRoles is empty now,
-          // but the leaf checkboxes keep whatever DOM state they had before
-          // this click unless we clear them explicitly. owner 2026-08-20.
-          panel.querySelectorAll('input[data-pt="leaf"]').forEach(lc=>{ lc.checked=false; });
-        }
+        if(cb.checked) state.procRoles=new Set();   // ALL — the repaint below re-derives every checkbox from this
       }else{
+        // "leaf" and "subselect" (whole sub-process group) share the same
+        // roles-list mechanism — a group checkbox just carries every role in
+        // that group instead of one leaf's roles.
         const roles=(cb.dataset.roles||"").split("|").filter(Boolean);
         if(cb.checked) roles.forEach(r=>state.procRoles.add(r));
         else roles.forEach(r=>state.procRoles.delete(r));
@@ -454,6 +533,7 @@ function renderProcTaxo(){
       // renderAll is declared inside the DOMContentLoaded closure below; this
       // function is declared outside it, so it must go through window.renderAll.
       if(window.renderAll) window.renderAll();
+      renderProcTaxo(); // repaint so leaf checks + group checkbox tri-state stay in sync
     });
   });
   _ptLabel();

@@ -1505,12 +1505,9 @@ function _systemNotify(title, body){
   }catch(_){ /* non-fatal */ }
 }
 
-// Format an associate's location for the alert: "Station · ProcessPath".
+// Format an associate's location for the alert: station only (no process path).
 function _fmtReactivoLoc(it){
-  const parts = [];
-  if(it.station) parts.push(it.station);
-  if(it.process_path) parts.push(it.process_path);
-  return parts.join(" · ");
+  return it.station || "";
 }
 
 function _alertNewReactivo(newItems, fc){
@@ -1854,6 +1851,10 @@ window.testAlertsNow = testAlertsNow;
 // 1s so we can detect mwinit_active and show the YubiKey toast quickly.
 const MIDWAY_POLL_SLOW_MS = 15 * 60 * 1000;  // 15 min
 const MIDWAY_POLL_FAST_MS = 1000;
+const MIDWAY_POLL_RECOVERY_MS = 15 * 1000;   // while state is bad, retry every 15s so the
+                                              // offline banner clears itself right after a
+                                              // silent/manual Midway refresh instead of
+                                              // waiting up to 15 min for the next slow poll.
 let _midwayPollTimer = null;
 let _midwayPollMode  = "slow";
 
@@ -1908,6 +1909,13 @@ async function pollMidwayOnce(){
     paintMidwayPill(d);
     if(d && d.mwinit_active) showMwinitToast(); else hideMwinitToast();
     updateOfflineBanner(d, true);
+    // Self-heal the offline banner: if Midway looks bad, switch to a quick
+    // 15s recovery poll so it clears itself as soon as the cookie is fixed
+    // (mwinit run outside the app, silent AEA refresh, etc.) instead of the
+    // banner sitting there for up to 15 minutes until the next slow poll.
+    const bad = d && (d.state === "missing" || d.state === "expired");
+    if(bad && _midwayPollMode === "slow") startMidwayPoll("recovery");
+    else if(!bad && _midwayPollMode === "recovery") startMidwayPoll("slow");
     return d;
   } catch(_){
     // The local server is unreachable — almost certainly the app is starting
@@ -1946,11 +1954,13 @@ window.addEventListener("online",  () => updateOfflineBanner({state:"ok"}, true)
 window.addEventListener("offline", () => updateOfflineBanner({state:"missing"}, true));
 
 function startMidwayPoll(mode){
-  // mode: "slow" (10 min) or "fast" (1 s). Idempotent.
+  // mode: "slow" (15 min), "recovery" (15s, while Midway state is bad), or "fast" (1s). Idempotent.
   if(_midwayPollMode === mode && _midwayPollTimer) return;
   if(_midwayPollTimer){ clearInterval(_midwayPollTimer); _midwayPollTimer = null; }
   _midwayPollMode = mode;
-  const interval = mode === "fast" ? MIDWAY_POLL_FAST_MS : MIDWAY_POLL_SLOW_MS;
+  const interval = mode === "fast" ? MIDWAY_POLL_FAST_MS
+                  : mode === "recovery" ? MIDWAY_POLL_RECOVERY_MS
+                  : MIDWAY_POLL_SLOW_MS;
   _midwayPollTimer = setInterval(pollMidwayOnce, interval);
 }
 
@@ -9593,7 +9603,7 @@ document.addEventListener("click",(e)=>{
             const who = esc(it.login || it.employee_id || "—");
             const what = esc(it.insight || it.course_title || "");
             const safeId = esc(it.id || "");
-            const loc = [it.station, it.process_path].filter(Boolean).join(" · ");
+            const loc = it.station || "";
             const locHtml = loc ? `<div style="font-size:11px;color:var(--text-secondary)">📍 ${esc(loc)}</div>` : "";
             return `<div class="hd-row">
               <div><b>${who}</b>${what?` · <span style="color:var(--text-secondary)">${what}</span>`:""}${locHtml}</div>
@@ -10287,11 +10297,9 @@ document.addEventListener("click",(e)=>{
         const isPresent = isActive || isOnSite;
         // Station now comes from Roster_SCC CurrentStationId (owner 2026-08-17), so
         // it's the CURRENT station for anyone on-shift — no longer a stale ELS fix.
-        // Show it for ON_SITE too, not just ACTIVE. process_path is still ELS-only,
-        // so append it only when ACTIVE (a live fix); otherwise show station alone.
-        const stationInfo = it.station
-          ? ((isActive && it.process_path) ? `${it.station} · ${it.process_path}` : it.station)
-          : "";
+        // Show it for ON_SITE too, not just ACTIVE. process_path dropped from the
+        // GCA location display — owner 2026-08-20 (station alone is enough here).
+        const stationInfo = it.station || "";
         // Last-seen line (ELS arrivalTimestamp) — only meaningful when NOT present:
         // "last seen 5d ago" flags a stale pending the coach can likely cancel.
         const _ls = !isPresent ? lastSeen(it.last_seen_ms) : null;
